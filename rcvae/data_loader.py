@@ -64,6 +64,11 @@ def load_file(filename, backup_url=None,
 def load_celeba(file_path, attr_path, source_attr="Black_Hair", target_attr="Blond_Hair", max_n_images=None, save=True):
     data_path = os.path.dirname(file_path)
 
+    if os.path.exists(os.path.join(data_path, "source_images.npy")):
+        source_images = np.load(os.path.join(data_path, "source_images.npy"))
+        target_images = np.load(os.path.join(data_path, "target_images.npy"))
+        return source_images, target_images
+
     def load_attr_list(file_path, max_n_images):
         indices = []
         attributes = []
