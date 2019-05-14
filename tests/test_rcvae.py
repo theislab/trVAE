@@ -25,7 +25,7 @@ def train_celeba(z_dim=50,
                  ):
     source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
-                                                     max_n_images=50,
+                                                     max_n_images=10000,
                                                      save=True)
 
     source_labels = np.zeros(shape=source_images.shape[0])

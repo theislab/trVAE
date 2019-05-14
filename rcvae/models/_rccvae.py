@@ -477,13 +477,13 @@ class RCCVAE:
         """
         if initial_run:
             log.info("----Training----")
-        train_labels, _ = train_data.obs['condition']
+        train_labels = train_data.obs['condition']
         pseudo_labels = np.ones(shape=train_labels.shape)
 
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
         if use_validation:
-            valid_labels, _ = valid_data.obs["condition"]
+            valid_labels = valid_data.obs["condition"]
 
         callbacks = [
             History(),
