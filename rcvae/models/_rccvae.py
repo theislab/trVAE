@@ -142,7 +142,7 @@ class RCCVAE:
             h = LeakyReLU()(h)
             h = Conv2DTranspose(64, kernel_size=(4, 4), padding='same')(h)
             h = LeakyReLU()(h)
-            h = Conv2DTranspose(1, kernel_size=(4, 4), padding='same', activation="sigmoid")(h)
+            h = Conv2DTranspose(3, kernel_size=(4, 4), padding='same', activation="sigmoid")(h)
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
             model.summary()
             return h, h_mmd, model
@@ -295,7 +295,7 @@ class RCCVAE:
                 y_true = K.reshape(y_true, (-1, *self.x_dim))
 
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-                recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
+                recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
                 return recon_loss + self.alpha * kl_loss
 
             def mmd_loss(real_labels, y_pred):
