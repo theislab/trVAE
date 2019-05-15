@@ -492,13 +492,13 @@ class RCCVAE:
         ]
 
         if self.train_with_fake_labels:
-            train_data.X = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
-            x = [train_data.X, train_labels, pseudo_labels]
-            y = [train_data.X, np.ones(shape=train_labels.shape)]
+            x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
+            x = [x_train, train_labels, pseudo_labels]
+            y = [x_train, np.ones(shape=train_labels.shape)]
         else:
-            train_data.X = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
-            x = [train_data.X, train_labels, train_labels]
-            y = [train_data.X, train_labels]
+            x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
+            x = [x_train, train_labels, train_labels]
+            y = [x_train, train_labels]
 
         if use_validation:
             histories = self.cvae_model.fit(
