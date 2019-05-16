@@ -145,9 +145,3 @@ def load_celeba(file_path, attr_path,
         np.save(arr=target_images, file=os.path.join(data_path, f"target_images.npy"), allow_pickle=True)
     return source_images, target_images
 
-
-load_celeba(file_path="../data/celebA/img_align_celeba.zip",
-            attr_path="../data/celebA/list_attr_celeba.txt",
-            max_n_images=2000,
-            restore=False,
-            save=False)
