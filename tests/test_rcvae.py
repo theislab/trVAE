@@ -21,7 +21,7 @@ def train_celeba(z_dim=100,
                  ):
     source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
-                                                     max_n_images=30000,
+                                                     max_n_images=80000,
                                                      restore=True,
                                                      save=False)
 
@@ -44,22 +44,22 @@ def train_celeba(z_dim=100,
                            model_path="../models/",
                            dropout_rate=dropout_rate)
 
-    # network.train(train_data,
-    #               n_epochs=n_epochs,
-    #               batch_size=batch_size,
-    #               verbose=1,
-    #               shuffle=True,
-    #               save=True)
+    network.train(train_data,
+                  n_epochs=n_epochs,
+                  batch_size=batch_size,
+                  verbose=1,
+                  early_stop_limit=100,
+                  shuffle=True,
+                  save=True)
 
-    network.restore_model()
-
-    print("Model has been trained/restored!")
+    print("Model has been trained")
 
 
 def evaluate_network(data_name="celeba"):
     source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
-                                                     max_n_images=30000,
+                                                     gender='Male', source_attr='Eyeglasses', target_attr='Eyeglasses',
+                                                     max_n_images=5000,
                                                      restore=True,
                                                      save=False)
     if data_name == "celeba":
@@ -127,4 +127,11 @@ def evaluate_network(data_name="celeba"):
 
 
 if __name__ == '__main__':
+    train_celeba(z_dim=100,
+                 alpha=0.001,
+                 beta=100,
+                 kernel='multi-scale-rbf',
+                 n_epochs=500,
+                 batch_size=512,
+                 dropout_rate=0.25)
     evaluate_network("celeba")
