@@ -128,11 +128,13 @@ def load_celeba(file_path, attr_path,
 
     source_images = images_df[attr_df[source_attr] == 1]
     target_images = images_df[attr_df[target_attr] == 1]
+
+    source_images = np.reshape(source_images.values, (-1, img_resize, img_resize, 3))
+    target_images = np.reshape(target_images.values, (-1, img_resize, img_resize, 3))
+
     if verbose:
         print(source_images.shape, target_images.shape)
     if save:
-        source_images = np.reshape(source_images.values, (-1, img_resize, img_resize, 3))
-        target_images = np.reshape(target_images.values, (-1, img_resize, img_resize, 3))
         np.save(arr=source_images, file=os.path.join(data_path, f"source_images.npy"), allow_pickle=True)
         np.save(arr=target_images, file=os.path.join(data_path, f"target_images.npy"), allow_pickle=True)
     return source_images, target_images

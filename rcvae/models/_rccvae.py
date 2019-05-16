@@ -11,8 +11,6 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.models import Model, load_model
 from scipy import sparse
 
-from rcvae.models.utils import label_encoder
-
 log = logging.getLogger(__file__)
 
 
@@ -480,10 +478,11 @@ class RCCVAE:
         train_labels = train_data.obs['condition']
         pseudo_labels = np.ones(shape=train_labels.shape)
 
+        if sparse.issparse(train_data.X):
+            train_data.X = train_data.X.A
+
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
-        if use_validation:
-            valid_labels = valid_data.obs["condition"]
 
         callbacks = [
             History(),
@@ -494,7 +493,7 @@ class RCCVAE:
         if self.train_with_fake_labels:
             x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
             x = [x_train, train_labels, pseudo_labels]
-            y = [x_train, np.ones(shape=train_labels.shape)]
+            y = [x_train, pseudo_labels]
         else:
             x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
             x = [x_train, train_labels, train_labels]

@@ -15,19 +15,19 @@ if not os.getcwd().endswith("tests"):
 # os.makedirs(current_time, exist_ok=True)
 # os.chdir("./" + current_time)
 
-def train_celeba(z_dim=50,
+def train_celeba(z_dim=100,
                  alpha=0.001,
                  beta=100,
                  kernel='multi-scale-rbf',
                  n_epochs=500,
-                 batch_size=1024,
+                 batch_size=512,
                  dropout_rate=0.2,
                  ):
     source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
                                                      max_n_images=30000,
-                                                     restore=False,
-                                                     save=True)
+                                                     restore=True,
+                                                     save=False)
 
     source_labels = np.zeros(shape=source_images.shape[0])
     target_labels = np.ones(shape=target_images.shape[0])
