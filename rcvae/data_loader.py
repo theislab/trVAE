@@ -65,7 +65,8 @@ def load_celeba(file_path, attr_path,
                 source_attr="Black_Hair", target_attr="Blond_Hair",
                 max_n_images=None,
                 save=True, restore=True,
-                img_resize=64):
+                img_resize=64,
+                verbose=True):
     data_path = os.path.dirname(file_path)
 
     if restore and os.path.exists(os.path.join(data_path, "source_images.npy")):
@@ -89,7 +90,7 @@ def load_celeba(file_path, attr_path,
         attr_df = pd.DataFrame(attributes)
         attr_df.index = indices
         attr_df.columns = columns
-        attr_df = attr_df[attr_df['Male'] == 1]
+        attr_df = attr_df[(attr_df[source_attr] == 1 | attr_df[target_attr] == 1) & attr_df['Male'] == 1]
         return attr_df, indices
 
     images = []
@@ -106,12 +107,14 @@ def load_celeba(file_path, attr_path,
             # images = np.concatenate([images, image], axis=0)
             images.append(image)
             counter += 1
-            if counter % 1000 == 0:
+            if verbose and counter % 1000 == 0:
                 print(counter)
         else:
             if counter < max_n_images - 2:
                 images.append(image)
                 counter += 1
+                if verbose and counter % 1000:
+                    print(counter)
             else:
                 break
     images = np.array(images)
