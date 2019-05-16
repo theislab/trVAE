@@ -82,9 +82,7 @@ def load_celeba(file_path, attr_path,
             lines = f.read().splitlines()
             columns = lines[1].split(" ")
             columns.remove('')
-            if max_n_images is None:
-                max_n_images = len(lines)
-            for i in range(2, max_n_images):
+            for i in range(2, len(lines)):
                 elements = lines[i].split()
                 indices.append(elements[0])
                 attributes.append(list(map(int, elements[1:])))
