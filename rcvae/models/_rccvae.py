@@ -5,7 +5,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from keras.callbacks import CSVLogger, History
+from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, LeakyReLU, Lambda, Conv2D, \
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.models import Model, load_model
@@ -486,7 +486,7 @@ class RCCVAE:
 
         callbacks = [
             History(),
-            # EarlyStopping(patience=early_stop_limit, monitor='loss', min_delta=threshold),
+            EarlyStopping(patience=early_stop_limit, monitor='mmd_loss', min_delta=threshold),
             CSVLogger(filename="./csv_logger.log")
         ]
 
