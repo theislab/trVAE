@@ -62,7 +62,7 @@ def load_file(filename, backup_url=None,
 
 
 def load_celeba(file_path, attr_path,
-                source_attr="Black_Hair", target_attr="Blond_Hair",
+                gender='Male', source_attr="Black_Hair", target_attr="Blond_Hair",
                 max_n_images=None,
                 save=True, restore=True,
                 img_resize=64,
@@ -90,11 +90,13 @@ def load_celeba(file_path, attr_path,
         attr_df = pd.DataFrame(attributes)
         attr_df.index = indices
         attr_df.columns = columns
-        attr_df = attr_df[attr_df['Male'] == 1]
+        if gender is not None:
+            attr_df = attr_df[attr_df[gender] == 1]
         if verbose:
             print(attr_df.shape[0])
-        attr_df = attr_df.loc[((attr_df[source_attr] == 1) & (attr_df[target_attr] == -1) | (
-                                attr_df[source_attr] == -1) & (attr_df[target_attr] == 1))]
+        if source_attr != target_attr:
+            attr_df = attr_df.loc[((attr_df[source_attr] == 1) & (attr_df[target_attr] == -1) | (
+                    attr_df[source_attr] == -1) & (attr_df[target_attr] == 1))]
         return attr_df
 
     images = []
@@ -129,8 +131,12 @@ def load_celeba(file_path, attr_path,
     images_df = pd.DataFrame(images.reshape(-1, np.prod(images.shape[1:])))
     images_df.index = indices
 
-    source_images = images_df[attr_df[source_attr] == 1]
-    target_images = images_df[attr_df[target_attr] == 1]
+    if source_attr != target_attr:
+        source_images = images_df[attr_df[source_attr] == 1]
+        target_images = images_df[attr_df[target_attr] == 1]
+    else:
+        source_images = images_df[attr_df[source_attr] == -1]
+        target_images = images_df[attr_df[source_attr] == 1]
 
     source_images = np.reshape(source_images.values, (-1, img_resize, img_resize, 3))
     target_images = np.reshape(target_images.values, (-1, img_resize, img_resize, 3))
