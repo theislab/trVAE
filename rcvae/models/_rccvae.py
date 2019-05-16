@@ -396,19 +396,16 @@ class RCCVAE:
             ```
         """
         if sparse.issparse(data.X):
-            if data_space == 'latent':
-                stim_pred = self._reconstruct(data.X.A, encoder_labels, decoder_labels, use_data=True)
-            elif data_space == 'mmd':
-                stim_pred = self._reconstruct_from_mmd(data.X.A)
-            else:
-                stim_pred = self._reconstruct(data.X.A, encoder_labels, decoder_labels)
+            data.X = data.X.A
+
+        input_data = np.reshape(data.X, (-1, self.x_dim))
+
+        if data_space == 'latent':
+            stim_pred = self._reconstruct(input_data, encoder_labels, decoder_labels, use_data=True)
+        elif data_space == 'mmd':
+            stim_pred = self._reconstruct_from_mmd(input_data)
         else:
-            if data_space == 'latent':
-                stim_pred = self._reconstruct(data.X, encoder_labels, decoder_labels, use_data=True)
-            elif data_space == 'mmd':
-                stim_pred = self._reconstruct_from_mmd(data.X)
-            else:
-                stim_pred = self._reconstruct(data.X, encoder_labels, decoder_labels)
+            stim_pred = self._reconstruct(input_data, encoder_labels, decoder_labels)
         return stim_pred[0]
 
     def _reconstruct_from_mmd(self, data):

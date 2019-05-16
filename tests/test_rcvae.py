@@ -102,7 +102,6 @@ def evaluate_network(data_name="celeba"):
         source_sample_reshaped = np.reshape(source_sample, (-1, *image_shape))
 
         source_sample = anndata.AnnData(X=source_sample)
-        source_sample.X = np.reshape(source_sample.X, (-1, *image_shape))
         source_sample.obs['condition'] = np.ones(shape=(k, 1))
 
         target_sample = network.predict(data=source_sample,
@@ -110,7 +109,7 @@ def evaluate_network(data_name="celeba"):
                                         decoder_labels=np.ones((k, 1)))
         target_sample = np.reshape(target_sample, newshape=(-1, *image_shape))
 
-        print(source_sample.shape, source_sample_reshaped.shape)
+        print(source_sample.shape, source_sample_reshaped.shape, target_sample.shape)
 
         plt.close("all")
         fig, ax = plt.subplots(k, 2, figsize=(k * 1, 6))
