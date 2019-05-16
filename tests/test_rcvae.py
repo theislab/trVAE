@@ -63,9 +63,6 @@ def evaluate_network(data_name="celeba"):
                                                      restore=True,
                                                      save=False)
     if data_name == "celeba":
-        results_path = f"../results/{data_name}/On Hair/"
-        os.makedirs(results_path, exist_ok=True)
-        os.chdir(results_path)
         img_size = 64
         n_channels = 3
     else:
@@ -91,6 +88,11 @@ def evaluate_network(data_name="celeba"):
                            model_path="../models/")
 
     network.restore_model()
+
+    if data_name == "celeba":
+        results_path = f"../results/{data_name}/On Hair/"
+        os.makedirs(results_path, exist_ok=True)
+        os.chdir(results_path)
 
     for j in range(5):
         k = 5
