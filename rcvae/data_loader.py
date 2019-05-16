@@ -76,7 +76,7 @@ def load_celeba(file_path, attr_path,
     elif restore:
         raise Exception("npy files does not exist!")
 
-    def load_attr_list(file_path, max_n_images):
+    def load_attr_list(file_path):
         indices = []
         attributes = []
         with open(file_path) as f:
@@ -90,14 +90,17 @@ def load_celeba(file_path, attr_path,
         attr_df = pd.DataFrame(attributes)
         attr_df.index = indices
         attr_df.columns = columns
+        attr_df = attr_df[attr_df['Male'] == 1]
+        if verbose:
+            print(attr_df.shape[0])
         attr_df = attr_df.loc[((attr_df[source_attr] == 1) & (attr_df[target_attr] == -1) | (
-                attr_df[source_attr] == -1) & (attr_df[target_attr] == 1)) & attr_df['Male'] == 1]
+                                attr_df[source_attr] == -1) & (attr_df[target_attr] == 1))]
         return attr_df
 
     images = []
     zfile = zipfile.ZipFile(file_path)
     counter = 0
-    attr_df = load_attr_list(attr_path, max_n_images)
+    attr_df = load_attr_list(attr_path)
     print(len(attr_df.index.tolist()))
     indices = []
     for filename in attr_df.index.tolist():
