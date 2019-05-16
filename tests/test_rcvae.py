@@ -23,8 +23,8 @@ def train_celeba(z_dim=100,
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
                                                      max_n_images=50000,
                                                      gender='Male', source_attr='Eyeglasses', target_attr='Eyeglasses',
-                                                     restore=True,
-                                                     save=False)
+                                                     restore=False,
+                                                     save=True)
 
     source_labels = np.zeros(shape=source_images.shape[0])
     target_labels = np.ones(shape=target_images.shape[0])
