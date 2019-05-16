@@ -62,9 +62,23 @@ def evaluate_network(data_name="celeba"):
                                                      max_n_images=30000,
                                                      restore=True,
                                                      save=False)
+    if data_name == "celeba":
+        results_path = f"../results/{data_name}/On Hair/"
+        os.makedirs(results_path, exist_ok=True)
+        os.chdir(results_path)
+        img_size = 64
+        n_channels = 3
+    else:
+        img_size = 28
+        n_channels = 1
+
+    image_shape = (img_size, img_size, n_channels)
 
     source_labels = np.zeros(shape=source_images.shape[0])
     target_labels = np.ones(shape=target_images.shape[0])
+
+    source_images = np.reshape(source_images, (-1, np.prod(image_shape)))
+    target_images = np.reshape(target_images, (-1, np.prod(image_shape)))
 
     source_data = anndata.AnnData(X=source_images)
     source_data.obs["condition"] = source_labels
@@ -77,18 +91,6 @@ def evaluate_network(data_name="celeba"):
                            model_path="../models/")
 
     network.restore_model()
-
-    if data_name == "celeba":
-        results_path = f"../results/{data_name}/On Hair/"
-        os.makedirs(results_path, exist_ok=True)
-        os.chdir(results_path)
-        img_size = 64
-        n_channels = 3
-    else:
-        img_size = 28
-        n_channels = 1
-
-    image_shape = (img_size, img_size, n_channels)
 
     for j in range(5):
         k = 5
