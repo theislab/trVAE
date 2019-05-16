@@ -398,7 +398,7 @@ class RCCVAE:
         if sparse.issparse(data.X):
             data.X = data.X.A
 
-        input_data = np.reshape(data.X, (-1, self.x_dim))
+        input_data = np.reshape(data.X, (-1, *self.x_dim))
 
         if data_space == 'latent':
             stim_pred = self._reconstruct(input_data, encoder_labels, decoder_labels, use_data=True)
