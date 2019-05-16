@@ -90,41 +90,46 @@ def load_celeba(file_path, attr_path,
         attr_df = pd.DataFrame(attributes)
         attr_df.index = indices
         attr_df.columns = columns
-        attr_df = attr_df[(attr_df[source_attr] == 1 | attr_df[target_attr] == 1) & attr_df['Male'] == 1]
-        return attr_df, indices
+        attr_df = attr_df.loc[((attr_df[source_attr] == 1) & (attr_df[target_attr] == -1) | (
+                attr_df[source_attr] == -1) & (attr_df[target_attr] == 1)) & attr_df['Male'] == 1]
+        return attr_df
 
     images = []
     zfile = zipfile.ZipFile(file_path)
     counter = 0
-    attr_df, indices = load_attr_list(attr_path, max_n_images)
+    attr_df = load_attr_list(attr_path, max_n_images)
     print(len(attr_df.index.tolist()))
+    indices = []
     for filename in attr_df.index.tolist():
         ifile = zfile.open(os.path.join("img_align_celeba/", filename))
         image = Image.open(ifile)
         image = image.resize((img_resize, img_resize), Image.NEAREST)
         image = np.reshape(image, (img_resize, img_resize, 3))
         if max_n_images is None:
-            # images = np.concatenate([images, image], axis=0)
             images.append(image)
+            indices.append(filename)
             counter += 1
             if verbose and counter % 1000 == 0:
                 print(counter)
         else:
-            if counter < max_n_images - 2:
+            if counter < max_n_images:
                 images.append(image)
+                indices.append(filename)
                 counter += 1
-                if verbose and counter % 1000:
+                if verbose and counter % 1000 == 0:
                     print(counter)
             else:
                 break
     images = np.array(images)
-    print(images.shape)
+    if verbose:
+        print(images.shape)
     images_df = pd.DataFrame(images.reshape(-1, np.prod(images.shape[1:])))
-    images_df.index = attr_df.index
+    images_df.index = indices
 
     source_images = images_df[attr_df[source_attr] == 1]
     target_images = images_df[attr_df[target_attr] == 1]
-    print(source_images.shape, target_images.shape)
+    if verbose:
+        print(source_images.shape, target_images.shape)
     if save:
         source_images = np.reshape(source_images.values, (-1, img_resize, img_resize, 3))
         target_images = np.reshape(target_images.values, (-1, img_resize, img_resize, 3))
