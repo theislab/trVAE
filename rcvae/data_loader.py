@@ -61,13 +61,19 @@ def load_file(filename, backup_url=None,
                          .format(filename, numpy_ext | pandas_ext))
 
 
-def load_celeba(file_path, attr_path, source_attr="Black_Hair", target_attr="Blond_Hair", max_n_images=None, save=True):
+def load_celeba(file_path, attr_path,
+                source_attr="Black_Hair", target_attr="Blond_Hair",
+                max_n_images=None,
+                save=True, restore=True,
+                img_resize=64):
     data_path = os.path.dirname(file_path)
 
-    if os.path.exists(os.path.join(data_path, "source_images.npy")):
+    if restore and os.path.exists(os.path.join(data_path, "source_images.npy")):
         source_images = np.load(os.path.join(data_path, "source_images.npy"))
         target_images = np.load(os.path.join(data_path, "target_images.npy"))
         return source_images, target_images
+    elif restore:
+        raise Exception("npy files does not exist!")
 
     def load_attr_list(file_path, max_n_images):
         indices = []
@@ -85,35 +91,42 @@ def load_celeba(file_path, attr_path, source_attr="Black_Hair", target_attr="Blo
         attr_df = pd.DataFrame(attributes)
         attr_df.index = indices
         attr_df.columns = columns
-        return attr_df
+        attr_df = attr_df[attr_df['Male'] == 1]
+        return attr_df, indices
 
-    images = np.ndarray(shape=(0, 218, 178, 3))
+    images = []
     zfile = zipfile.ZipFile(file_path)
     counter = 0
-    for finfo in zfile.infolist():
-        if finfo.filename.endswith(".jpg") and not finfo.filename.__contains__("__MACOSX"):
-            ifile = zfile.open(finfo.filename)
-            image = Image.open(ifile)
-            image = np.reshape(image, (1, 218, 178, 3))
-            if max_n_images is None:
-                images = np.concatenate([images, image], axis=0)
+    attr_df, indices = load_attr_list(attr_path, max_n_images)
+    print(len(attr_df.index.tolist()))
+    for filename in attr_df.index.tolist():
+        ifile = zfile.open(os.path.join("img_align_celeba/", filename))
+        image = Image.open(ifile)
+        image = image.resize((img_resize, img_resize), Image.NEAREST)
+        image = np.reshape(image, (img_resize, img_resize, 3))
+        if max_n_images is None:
+            # images = np.concatenate([images, image], axis=0)
+            images.append(image)
+            counter += 1
+            if counter % 1000 == 0:
+                print(counter)
+        else:
+            if counter < max_n_images - 2:
+                images.append(image)
+                counter += 1
             else:
-                if counter < max_n_images - 2:
-                    images = np.concatenate([images, image], axis=0)
-                    counter += 1
-                else:
-                    break
-
-    attr_df = load_attr_list(attr_path, max_n_images)
-    images_df = pd.DataFrame(images.reshape(-1, 218 * 178 * 3))
+                break
+    images = np.array(images)
+    print(images.shape)
+    images_df = pd.DataFrame(images.reshape(-1, np.prod(images.shape[1:])))
     images_df.index = attr_df.index
 
     source_images = images_df[attr_df[source_attr] == 1]
     target_images = images_df[attr_df[target_attr] == 1]
     print(source_images.shape, target_images.shape)
     if save:
-        source_images = np.reshape(source_images.values, (-1, 218, 178, 3))
-        target_images = np.reshape(target_images.values, (-1, 218, 178, 3))
+        source_images = np.reshape(source_images.values, (-1, img_resize, img_resize, 3))
+        target_images = np.reshape(target_images.values, (-1, img_resize, img_resize, 3))
         np.save(arr=source_images, file=os.path.join(data_path, f"source_images.npy"), allow_pickle=True)
         np.save(arr=target_images, file=os.path.join(data_path, f"target_images.npy"), allow_pickle=True)
     return source_images, target_images
