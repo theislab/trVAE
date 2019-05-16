@@ -86,7 +86,7 @@ def evaluate_network(data_name="celeba"):
     target_data = anndata.AnnData(X=target_images)
     target_data.obs["condition"] = target_labels
 
-    network = rcvae.RCCVAE(x_dimension=source_images.shape[1:],
+    network = rcvae.RCCVAE(x_dimension=image_shape,
                            z_dimension=100,
                            model_path="../models/")
 
