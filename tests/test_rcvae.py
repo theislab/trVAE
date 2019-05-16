@@ -21,7 +21,8 @@ def train_celeba(z_dim=100,
                  ):
     source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
-                                                     max_n_images=80000,
+                                                     max_n_images=50000,
+                                                     gender='Male', source_attr='Eyeglasses', target_attr='Eyeglasses',
                                                      restore=True,
                                                      save=False)
 
@@ -119,8 +120,8 @@ def evaluate_network(data_name="celeba"):
             ax[i, 1].axis('off')
             if i == 0:
                 if data_name == "celeba":
-                    ax[i, 0].set_title("Male with black hair")
-                    ax[i, 1].set_title("Male with blond hair")
+                    ax[i, 0].set_title("Male without Eyeglasses")
+                    ax[i, 1].set_title("Male with Eyeglasses")
 
             ax[i, 1].imshow(target_sample[i])
         plt.savefig(f"./sample_images_{data_name}_{j}.pdf")
