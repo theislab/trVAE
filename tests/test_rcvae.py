@@ -50,7 +50,10 @@ def train_celeba(z_dim=100,
 
     network.train(train_data,
                   n_epochs=n_epochs,
-                  batch_size=batch_size)
+                  batch_size=batch_size,
+                  verbose=1,
+                  shuffle=True,
+                  save=True)
 
 
 if __name__ == '__main__':

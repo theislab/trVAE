@@ -132,6 +132,9 @@ def load_celeba(file_path, attr_path,
     source_images = np.reshape(source_images.values, (-1, img_resize, img_resize, 3))
     target_images = np.reshape(target_images.values, (-1, img_resize, img_resize, 3))
 
+    source_images /= 255.0
+    target_images /= 255.0
+
     if verbose:
         print(source_images.shape, target_images.shape)
     if save:
