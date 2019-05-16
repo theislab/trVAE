@@ -132,6 +132,9 @@ def load_celeba(file_path, attr_path,
     source_images = np.reshape(source_images.values, (-1, img_resize, img_resize, 3))
     target_images = np.reshape(target_images.values, (-1, img_resize, img_resize, 3))
 
+    source_images = np.array(source_images, dtype=np.float32)
+    target_images = np.array(target_images, dtype=np.float32)
+
     source_images /= 255.0
     target_images /= 255.0
 
@@ -141,3 +144,10 @@ def load_celeba(file_path, attr_path,
         np.save(arr=source_images, file=os.path.join(data_path, f"source_images.npy"), allow_pickle=True)
         np.save(arr=target_images, file=os.path.join(data_path, f"target_images.npy"), allow_pickle=True)
     return source_images, target_images
+
+
+load_celeba(file_path="../data/celebA/img_align_celeba.zip",
+            attr_path="../data/celebA/list_attr_celeba.txt",
+            max_n_images=2000,
+            restore=False,
+            save=False)
