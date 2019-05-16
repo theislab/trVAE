@@ -493,7 +493,7 @@ class RCCVAE:
         if self.train_with_fake_labels:
             x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
             x = [x_train, train_labels, pseudo_labels]
-            y = [x_train, pseudo_labels]
+            y = [x_train, train_labels]
         else:
             x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
             x = [x_train, train_labels, train_labels]
