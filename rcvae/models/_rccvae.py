@@ -6,9 +6,11 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, LeakyReLU, Lambda, Conv2D, \
-    Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D, ReLU
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Conv2D, \
+    Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.models import Model, load_model
+from keras.layers.advanced_activations import LeakyReLU
+from keras.layers import Activation
 from scipy import sparse
 
 log = logging.getLogger(__file__)
@@ -181,7 +183,7 @@ class RCCVAE:
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
             h = Dense(np.prod(self.x_dim), kernel_initializer=self.init_w, use_bias=True)(h)
-            h = ReLU(name="reconstruction_output")(h)
+            h = Activation('relu', name="reconstruction_output")(h)
             h = Reshape(target_shape=self.x_dim)(h)
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
             model.summary()
