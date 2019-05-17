@@ -66,7 +66,8 @@ def load_celeba(file_path, attr_path,
                 max_n_images=None,
                 save=True, restore=True,
                 img_resize=64,
-                verbose=True):
+                verbose=True,
+                balanced=True):
     data_path = os.path.dirname(file_path)
 
     if restore and os.path.exists(os.path.join(data_path, "source_images.npy")):
@@ -146,6 +147,15 @@ def load_celeba(file_path, attr_path,
 
     source_images /= 255.0
     target_images /= 255.0
+
+    if balanced:
+        min_size = min(source_images.shape[0], target_images.shape[0])
+
+        source_indices = np.random.choice(source_images.shape[0], min_size, replace=False)
+        source_images = source_images[source_indices]
+
+        target_indices = np.random.choice(target_images.shape[0], min_size, replace=False)
+        target_images = target_images[target_indices]
 
     if verbose:
         print(source_images.shape, target_images.shape)
