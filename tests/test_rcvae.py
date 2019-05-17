@@ -22,7 +22,8 @@ def train_celeba(z_dim=100,
     source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
                                                      max_n_images=50000,
-                                                     gender='Male', source_attr='Eyeglasses', target_attr='Eyeglasses',
+                                                     gender='Male', source_attr='Black_Hair', target_attr='Blond_Hair',
+                                                     img_resize=32,
                                                      restore=False,
                                                      save=True)
 
@@ -38,9 +39,11 @@ def train_celeba(z_dim=100,
 
     network = rcvae.RCCVAE(x_dimension=source_images.shape[1:],
                            z_dimension=z_dim,
+                           mmd_dimension=256,
                            alpha=alpha,
                            beta=beta,
                            kernel=kernel,
+                           arch_style=2,
                            train_with_fake_labels=True,
                            model_path="../models/",
                            dropout_rate=dropout_rate)
@@ -48,7 +51,7 @@ def train_celeba(z_dim=100,
     network.train(train_data,
                   n_epochs=n_epochs,
                   batch_size=batch_size,
-                  verbose=1,
+                  verbose=2,
                   early_stop_limit=100,
                   shuffle=True,
                   save=True)
@@ -59,7 +62,7 @@ def train_celeba(z_dim=100,
 def evaluate_network(data_name="celeba"):
     source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
-                                                     gender='Male', source_attr='Eyeglasses', target_attr='Eyeglasses',
+                                                     gender='Male', source_attr='Black_Hair', target_attr='Blond_Hair',
                                                      max_n_images=5000,
                                                      restore=True,
                                                      save=False)
@@ -132,7 +135,7 @@ if __name__ == '__main__':
                  alpha=0.001,
                  beta=100,
                  kernel='multi-scale-rbf',
-                 n_epochs=500,
+                 n_epochs=1000,
                  batch_size=512,
                  dropout_rate=0.25)
     evaluate_network("celeba")

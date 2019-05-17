@@ -7,7 +7,7 @@ import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, LeakyReLU, Lambda, Conv2D, \
-    Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
+    Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D, ReLU
 from keras.models import Model, load_model
 from scipy import sparse
 
@@ -39,9 +39,9 @@ class RCCVAE:
     def __init__(self, x_dimension, z_dimension=100, **kwargs):
         self.x_dim = x_dimension if isinstance(x_dimension, tuple) else (x_dimension,)
         self.z_dim = z_dimension
-        self.mmd_dim = 128
         self.image_shape = x_dimension
 
+        self.mmd_dim = kwargs.get("mmd_dimension", 128)
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
         self.beta = kwargs.get("beta", 100)
@@ -95,18 +95,43 @@ class RCCVAE:
             model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
             model.summary()
             return mean, log_var, model
+        elif self.arch_style == 2:  # FCN
+            x_reshaped = Reshape(target_shape=(np.prod(self.x_dim),))(x)
+            xy = concatenate([x_reshaped, y], axis=1)
+            h = Dense(1024, kernel_initializer=self.init_w, use_bias=False)(xy)
+            h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+            mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
+            log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
+            z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
+            model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
+            model.summary()
+            return mean, log_var, model
         else:  # VGG16 U-Net
-            self.conv1 = Conv2D(16, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
-            self.pool1 = MaxPooling2D(pool_size=(2, 2))(self.conv1)
-            self.conv2 = Conv2D(16, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.pool1)
-            self.pool2 = MaxPooling2D(pool_size=(2, 2))(self.conv2)
-            self.conv3 = Conv2D(16, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.pool2)
-            self.pool3 = MaxPooling2D(pool_size=(2, 2))(self.conv3)
-            self.conv4 = Conv2D(16, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.pool3)
-            self.drop4 = Dropout(self.dr_rate)(self.conv4)
-            self.pool4 = MaxPooling2D(pool_size=(2, 2))(self.drop4)
+            conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            conv1 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv1)
+            pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+            conv2 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
+            conv2 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv2)
+            pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+            conv3 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
+            conv3 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv3)
+            pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+            conv4 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
+            conv4 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
+            drop4 = Dropout(self.dr_rate)(conv4)
+            pool4 = MaxPooling2D(pool_size=(2, 2))(drop4)
 
-            flat = Flatten(name='flatten')(self.pool4)
+            conv5 = Conv2D(1024, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool4)
+            conv5 = Conv2D(1024, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv5)
+            drop5 = Dropout(0.5)(conv5)
+
+            flat = Flatten(name='flatten')(drop5)
             xy = concatenate([flat, y], axis=1)
             dense = Dense(512, activation='relu', name='fc1')(xy)
             dense = Dense(self.mmd_dim, activation='relu', name='fc2')(dense)
@@ -141,6 +166,21 @@ class RCCVAE:
             h = Conv2DTranspose(64, kernel_size=(4, 4), padding='same')(h)
             h = LeakyReLU()(h)
             h = Conv2DTranspose(3, kernel_size=(4, 4), padding='same', activation="sigmoid")(h)
+            model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
+            model.summary()
+            return h, h_mmd, model
+        elif self.arch_style == 2:  # FCN
+            zy = concatenate([z, y], axis=1)
+            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
+            h = BatchNormalization(axis=1)(h)
+            h_mmd = LeakyReLU(name="mmd")(h)
+            h = Dense(1024, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
+            h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+            h = Dense(np.prod(self.x_dim), kernel_initializer=self.init_w, use_bias=True)(h)
+            h = ReLU(name="reconstruction_output")(h)
+            h = Reshape(target_shape=self.x_dim)(h)
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
             model.summary()
             return h, h_mmd, model
