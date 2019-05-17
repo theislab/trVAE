@@ -6,8 +6,9 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, LeakyReLU, ReLU, Lambda
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.models import Model, load_model
+from keras.layers.advanced_activations import LeakyReLU
 from scipy import sparse
 from sklearn.neighbors import NearestNeighbors
 
@@ -108,7 +109,7 @@ class RCVAE:
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-        h = ReLU(name="reconstruction_output")(h)
+        h = Activation('relu', name="reconstruction_output")(h)
         model = Model(inputs=[x, y], outputs=[h, h_mmd], name=name)
         return h, h_mmd, model
 
