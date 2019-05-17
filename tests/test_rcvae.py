@@ -64,10 +64,11 @@ def evaluate_network(data_name="celeba"):
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
                                                      gender='Male', source_attr='Black_Hair', target_attr='Blond_Hair',
                                                      max_n_images=5000,
+                                                     img_resize=32,
                                                      restore=True,
                                                      save=False)
     if data_name == "celeba":
-        img_size = 64
+        img_size = 32
         n_channels = 3
     else:
         img_size = 28
@@ -133,7 +134,7 @@ def evaluate_network(data_name="celeba"):
 if __name__ == '__main__':
     train_celeba(z_dim=100,
                  alpha=0.001,
-                 beta=100,
+                 beta=1000,
                  kernel='multi-scale-rbf',
                  n_epochs=1000,
                  batch_size=512,
