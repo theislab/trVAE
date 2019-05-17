@@ -11,13 +11,27 @@ if not os.getcwd().endswith("tests"):
 
 from matplotlib import pyplot as plt
 
+FASHION_MNIST_CLASS_DICT = {
+    0: "T-shirt or top",
+    1: "Trouser",
+    2: "Pullover",
+    3: "Dress",
+    4: "Coat",
+    5: "Sandal",
+    6: "Shirt",
+    7: "Sneaker",
+    8: "Bag",
+    9: "Ankle boot"
+}
+
 DATASETS = {
     "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Black_Hair", "target_key": "Blond_Hair", "size": 32,
                "n_channels": 3},
     "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "size": 28, "n_channels": 1},
     "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "size": 28, "n_channels": 1},
     "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "size": 28, "n_channels": 1},
-    "FashionMNIST": {"name": "fashion_mnist", "source_key": None, "target_key": None, "size": 28, "n_channels": 1},
+    "FashionMNIST": {"name": "fashion_mnist", "source_key": FASHION_MNIST_CLASS_DICT[0],
+                     "target_key": FASHION_MNIST_CLASS_DICT[1], "size": 28, "n_channels": 1},
     "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3}
 }
 
