@@ -4,6 +4,7 @@ from pathlib import Path
 from urllib.request import urlretrieve
 
 import anndata
+import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -165,3 +166,9 @@ def load_celeba(file_path, attr_path,
     return source_images, target_images
 
 
+def resize_image(images, img_size):
+    images_list = []
+    for i in range(images.shape[0]):
+        image = cv2.resize(images[i], (img_size, img_size), cv2.INTER_NEAREST)
+        images_list.append(image)
+    return np.array(images_list)

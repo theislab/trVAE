@@ -1,7 +1,7 @@
 """RCVAE - Regularized Conditional Variational Autoencoders"""
 
 from .models import *
-from .data_loader import load_file, load_celeba
+from .data_loader import load_file, load_celeba, resize_image
 from . import plotting
 
 

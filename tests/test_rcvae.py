@@ -25,15 +25,17 @@ FASHION_MNIST_CLASS_DICT = {
 }
 
 DATASETS = {
-    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Wearing_Hat", "target_key": "Wearing_Hat", "size": 64,
+    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Wearing_Hat", "target_key": "Wearing_Hat", "resize": 64,
                "n_channels": 3},
     "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "size": 28, "n_channels": 1},
     "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "size": 28, "n_channels": 1},
     "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "size": 28, "n_channels": 1},
     "FashionMNIST": {"name": "fashion_mnist", "source_key": FASHION_MNIST_CLASS_DICT[0],
                      "target_key": FASHION_MNIST_CLASS_DICT[1], "size": 28, "n_channels": 1},
-    "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3},
-    "Apple2Orange": {"name": "a2o", "source_key": "apple", "target_key": "orange", "size": 256, "n_channels": 3}
+    "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3,
+                    "resize": 64},
+    "Apple2Orange": {"name": "a2o", "source_key": "apple", "target_key": "orange", "size": 256, "n_channels": 3,
+                     "resize": 64}
 }
 
 
@@ -51,7 +53,7 @@ def train_network(data_dict=None,
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
     target_key = data_dict.get('target_key', None)
-    img_size = data_dict.get("size", None)
+    img_size = data_dict.get("resize", None)
     n_channels = data_dict.get("n_channels", None)
 
     if data_name == "celeba":
@@ -74,6 +76,9 @@ def train_network(data_dict=None,
 
         source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
         target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
+
+        source_images = rcvae.resize_image(source_images, img_size)
+        target_images = rcvae.resize_image(target_images, img_size)
 
         source_images /= 255.0
         target_images /= 255.0
@@ -114,7 +119,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
     target_key = data_dict.get('target_key', None)
-    img_size = data_dict.get("size", None)
+    img_size = data_dict.get("resize", None)
     n_channels = data_dict.get('n_channels', None)
 
     if data_name == "celeba":
@@ -138,6 +143,9 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
         source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
         target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
 
+        source_images = rcvae.resize_image(source_images, img_size)
+        target_images = rcvae.resize_image(target_images, img_size)
+
         source_images /= 255.0
         target_images /= 255.0
 
@@ -157,7 +165,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
 
     network = rcvae.RCCVAE(x_dimension=image_shape,
                            z_dimension=100,
-                           model_path=f"../models/{data_name}/{arch_style}/",)
+                           model_path=f"../models/{data_name}/{arch_style}/", )
 
     network.restore_model()
 
@@ -197,7 +205,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
 
 
 if __name__ == '__main__':
-    data_dict = DATASETS["CelebA"]
+    data_dict = DATASETS["Apple2Orange"]
     train_network(data_dict=data_dict,
                   z_dim=100,
                   mmd_dimension=128,
