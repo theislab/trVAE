@@ -567,5 +567,3 @@ class RCCVAE:
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
 
-
-RCCVAE(x_dimension=(32, 32, 3), arch_style=3, mmd_dimension=256)
