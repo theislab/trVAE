@@ -95,7 +95,7 @@ def train_network(data_dict=None,
                            kernel=kernel,
                            arch_style=arch_style,
                            train_with_fake_labels=True,
-                           model_path=f"../models/{data_name}/",
+                           model_path=f"../models/{data_name}/{arch_style}/",
                            dropout_rate=dropout_rate)
 
     network.train(train_data,
@@ -160,7 +160,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5):
 
     network.restore_model()
 
-    results_path = f"../results/{data_name}/{source_key} to {target_key}/"
+    results_path = f"../results/{data_name}/{network.arch_style}/{source_key} to {target_key}/"
     os.makedirs(results_path, exist_ok=True)
     os.chdir(results_path)
 
@@ -207,4 +207,5 @@ if __name__ == '__main__':
                   batch_size=512,
                   arch_style=1,
                   dropout_rate=0.25)
-    evaluate_network(data_dict)
+    evaluate_network(data_dict, n_files=10,
+                     k=10)
