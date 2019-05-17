@@ -25,8 +25,8 @@ FASHION_MNIST_CLASS_DICT = {
 }
 
 DATASETS = {
-    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Wearing_Hat", "target_key": "Wearing_Hat", "resize": 64,
-               "n_channels": 3},
+    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Wearing_Hat", "target_key": "Wearing_Hat",
+               "resize": 64, "n_channels": 3},
     "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "size": 28, "n_channels": 1},
     "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "size": 28, "n_channels": 1},
     "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "size": 28, "n_channels": 1},
@@ -205,7 +205,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
 
 
 if __name__ == '__main__':
-    data_dict = DATASETS["Apple2Orange"]
+    data_dict = DATASETS["CelebA"]
     train_network(data_dict=data_dict,
                   z_dim=100,
                   mmd_dimension=128,
@@ -214,8 +214,8 @@ if __name__ == '__main__':
                   kernel='multi-scale-rbf',
                   n_epochs=2000,
                   batch_size=512,
-                  arch_style=1,
+                  arch_style=3,
                   dropout_rate=0.25)
     evaluate_network(data_dict, n_files=10,
-                     arch_style=1,
+                     arch_style=3,
                      k=10)
