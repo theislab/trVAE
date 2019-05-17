@@ -154,3 +154,11 @@ def load_celeba(file_path, attr_path,
         np.save(arr=target_images, file=os.path.join(data_path, f"target_images.npy"), allow_pickle=True)
     return source_images, target_images
 
+
+source_images, target_images = load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                           attr_path="../data/celeba/list_attr_celeba.txt",
+                                           max_n_images=80000,
+                                           gender='Male', source_attr='Wearing_Hat', target_attr='Wearing_Hat',
+                                           img_resize=64,
+                                           restore=False,
+                                           save=True)

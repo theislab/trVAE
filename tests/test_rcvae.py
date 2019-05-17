@@ -25,7 +25,7 @@ FASHION_MNIST_CLASS_DICT = {
 }
 
 DATASETS = {
-    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Black_Hair", "target_key": "Blond_Hair", "size": 32,
+    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Wearing_Hat", "target_key": "Wearing_Hat", "size": 64,
                "n_channels": 3},
     "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "size": 28, "n_channels": 1},
     "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "size": 28, "n_channels": 1},
@@ -54,7 +54,7 @@ def train_network(data_dict=None,
     n_channels = data_dict.get("n_channels", None)
 
     if data_name == "celeba":
-        gender = data_name.get('gender', None)
+        gender = data_dict.get('gender', None)
         source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
                                                          attr_path="../data/celeba/list_attr_celeba.txt",
                                                          max_n_images=50000,
@@ -117,7 +117,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5):
     n_channels = data_dict.get('n_channels', None)
 
     if data_name == "celeba":
-        gender = data_name.get('gender', None)
+        gender = data_dict.get('gender', None)
         source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
                                                          attr_path="../data/celeba/list_attr_celeba.txt",
                                                          gender=gender, source_attr=source_key, target_attr=target_key,
@@ -196,7 +196,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5):
 
 
 if __name__ == '__main__':
-    data_dict = DATASETS["ThinMNIST"]
+    data_dict = DATASETS["CelebA"]
     train_network(data_dict=data_dict,
                   z_dim=100,
                   mmd_dimension=128,
