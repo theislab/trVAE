@@ -32,7 +32,8 @@ DATASETS = {
     "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "size": 28, "n_channels": 1},
     "FashionMNIST": {"name": "fashion_mnist", "source_key": FASHION_MNIST_CLASS_DICT[0],
                      "target_key": FASHION_MNIST_CLASS_DICT[1], "size": 28, "n_channels": 1},
-    "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3}
+    "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3},
+    "Apple2Orange": {"name": "a2o", "source_key": "apple", "target_key": "orange", "size": 256, "n_channels": 3}
 }
 
 
@@ -109,7 +110,7 @@ def train_network(data_dict=None,
     print("Model has been trained")
 
 
-def evaluate_network(data_dict=None, n_files=5, k=5):
+def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
     target_key = data_dict.get('target_key', None)
@@ -156,11 +157,11 @@ def evaluate_network(data_dict=None, n_files=5, k=5):
 
     network = rcvae.RCCVAE(x_dimension=image_shape,
                            z_dimension=100,
-                           model_path="../models/")
+                           model_path=f"../models/{data_name}/{arch_style}/",)
 
     network.restore_model()
 
-    results_path = f"../results/{data_name}/{network.arch_style}/{source_key} to {target_key}/"
+    results_path = f"../results/{data_name}/{arch_style}/{source_key} to {target_key}/"
     os.makedirs(results_path, exist_ok=True)
     os.chdir(results_path)
 
@@ -208,4 +209,5 @@ if __name__ == '__main__':
                   arch_style=1,
                   dropout_rate=0.25)
     evaluate_network(data_dict, n_files=10,
+                     arch_style=1,
                      k=10)
