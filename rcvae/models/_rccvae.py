@@ -76,7 +76,10 @@ class RCCVAE:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         if self.arch_style == 1:  # Baseline CNN
-            h = Conv2D(64, kernel_size=(4, 4), strides=2, padding='same')(x)
+            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(y)
+            h = Reshape((32, 32, 1))(h)
+            h = concatenate([x, h])
+            h = Conv2D(64, kernel_size=(4, 4), strides=2, padding='same')(h)
             h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Conv2D(128, kernel_size=(4, 4), strides=2, padding='same')(h)
@@ -562,3 +565,6 @@ class RCCVAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
+
+
+RCCVAE(x_dimension=(32, 32, 3))
