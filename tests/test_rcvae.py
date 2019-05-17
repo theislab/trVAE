@@ -74,6 +74,9 @@ def train_network(data_dict=None,
         source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
         target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
 
+        source_images /= 255.0
+        target_images /= 255.0
+
     source_labels = np.zeros(shape=source_images.shape[0])
     target_labels = np.ones(shape=target_images.shape[0])
     train_labels = np.concatenate([source_labels, target_labels], axis=0)
