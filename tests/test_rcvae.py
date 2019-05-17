@@ -12,12 +12,14 @@ from matplotlib import pyplot as plt
 
 
 def train_celeba(z_dim=100,
+                 mmd_dimension=256,
                  alpha=0.001,
                  beta=100,
                  kernel='multi-scale-rbf',
                  n_epochs=500,
                  batch_size=512,
                  dropout_rate=0.2,
+                 arch_style=1,
                  ):
     source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
                                                      attr_path="../data/celebA/list_attr_celeba.txt",
@@ -39,11 +41,11 @@ def train_celeba(z_dim=100,
 
     network = rcvae.RCCVAE(x_dimension=source_images.shape[1:],
                            z_dimension=z_dim,
-                           mmd_dimension=256,
+                           mmd_dimension=mmd_dimension,
                            alpha=alpha,
                            beta=beta,
                            kernel=kernel,
-                           arch_style=1,
+                           arch_style=arch_style,
                            train_with_fake_labels=True,
                            model_path="../models/",
                            dropout_rate=dropout_rate)
@@ -133,10 +135,12 @@ def evaluate_network(data_name="celeba"):
 
 if __name__ == '__main__':
     train_celeba(z_dim=100,
+                 mmd_dimension=256,
                  alpha=0.001,
                  beta=1000,
                  kernel='multi-scale-rbf',
                  n_epochs=1000,
                  batch_size=512,
+                 arch_style=3,
                  dropout_rate=0.25)
     evaluate_network("celeba")
