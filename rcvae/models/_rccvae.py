@@ -192,7 +192,10 @@ class RCCVAE:
             zy = concatenate([z, y], axis=1)
             h_mmd = Dense(self.mmd_dim, activation="relu", kernel_initializer='he_normal')(zy)
             h = Dense(1024, activation="relu", kernel_initializer='he_normal')(h_mmd)
-            h = Reshape(target_shape=(2, 2, 256))(h)
+            width = self.x_dim[0] // 16
+            height = self.x_dim[1] // 16
+            n_channels = 1024 // (width * height)
+            h = Reshape(target_shape=(width, height, n_channels))(h)
 
             up6 = Conv2D(512, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(UpSampling2D(size=(2, 2))(h))
             # merge6 = concatenate([self.drop4, up6], axis=3)
