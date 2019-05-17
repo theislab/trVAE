@@ -6,11 +6,11 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
+from keras.layers import Activation
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Conv2D, \
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
-from keras.models import Model, load_model
 from keras.layers.advanced_activations import LeakyReLU
-from keras.layers import Activation
+from keras.models import Model, load_model
 from scipy import sparse
 
 log = logging.getLogger(__file__)
@@ -197,22 +197,26 @@ class RCCVAE:
             n_channels = 1024 // (width * height)
             h = Reshape(target_shape=(width, height, n_channels))(h)
 
-            up6 = Conv2D(512, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(UpSampling2D(size=(2, 2))(h))
+            up6 = Conv2D(512, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(
+                UpSampling2D(size=(2, 2))(h))
             # merge6 = concatenate([self.drop4, up6], axis=3)
             conv6 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(up6)
             conv6 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(conv6)
 
-            up7 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(UpSampling2D(size=(2, 2))(conv6))
+            up7 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(
+                UpSampling2D(size=(2, 2))(conv6))
             # merge7 = concatenate([self.conv3, up7], axis=3)
             conv7 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(up7)
             conv7 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(conv7)
 
-            up8 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(UpSampling2D(size=(2, 2))(conv7))
+            up8 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(
+                UpSampling2D(size=(2, 2))(conv7))
             # merge8 = concatenate([self.conv2, up8], axis=3)
             conv8 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(up8)
             conv8 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(conv8)
 
-            up9 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(UpSampling2D(size=(2, 2))(conv8))
+            up9 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(
+                UpSampling2D(size=(2, 2))(conv8))
             # merge9 = concatenate([self.conv1, up9], axis=3)
             conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(up9)
             conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(conv9)
@@ -571,4 +575,3 @@ class RCCVAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
-
