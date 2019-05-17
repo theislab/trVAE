@@ -2,6 +2,7 @@ import os
 
 import anndata
 import numpy as np
+import scanpy as sc
 
 import rcvae
 
@@ -10,24 +11,54 @@ if not os.getcwd().endswith("tests"):
 
 from matplotlib import pyplot as plt
 
+DATASETS = {
+    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Black_Hair", "target_key": "Blond_Hair", "size": 32,
+               "n_channels": 3},
+    "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "size": 28, "n_channels": 1},
+    "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "size": 28, "n_channels": 1},
+    "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "size": 28, "n_channels": 1},
+    "FashionMNIST": {"name": "fashion_mnist", "source_key": None, "target_key": None, "size": 28, "n_channels": 1},
+    "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3}
+}
 
-def train_celeba(z_dim=100,
-                 mmd_dimension=256,
-                 alpha=0.001,
-                 beta=100,
-                 kernel='multi-scale-rbf',
-                 n_epochs=500,
-                 batch_size=512,
-                 dropout_rate=0.2,
-                 arch_style=1,
-                 ):
-    source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
-                                                     attr_path="../data/celebA/list_attr_celeba.txt",
-                                                     max_n_images=50000,
-                                                     gender='Male', source_attr='Black_Hair', target_attr='Blond_Hair',
-                                                     img_resize=32,
-                                                     restore=False,
-                                                     save=True)
+
+def train_network(data_dict=None,
+                  z_dim=100,
+                  mmd_dimension=256,
+                  alpha=0.001,
+                  beta=100,
+                  kernel='multi-scale-rbf',
+                  n_epochs=500,
+                  batch_size=512,
+                  dropout_rate=0.2,
+                  arch_style=1,
+                  ):
+    data_name = data_dict['name']
+    source_key = data_dict.get('source_key', None)
+    target_key = data_dict.get('target_key', None)
+    img_size = data_dict.get("size", None)
+    n_channels = data_dict.get("n_channels", None)
+
+    if data_name == "celeba":
+        gender = data_name.get('gender', None)
+        source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                                         attr_path="../data/celeba/list_attr_celeba.txt",
+                                                         max_n_images=50000,
+                                                         gender=gender, source_attr=source_key, target_attr=target_key,
+                                                         img_resize=img_size,
+                                                         restore=False,
+                                                         save=True)
+    else:
+        train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        if isinstance(source_key, list):
+            source_images = train_data[train_data.obs["condition"].isin(source_key)].X
+            target_images = train_data[train_data.obs["condition"].isin(target_key)].X
+        else:
+            source_images = train_data[train_data.obs["condition"] == source_key].X
+            target_images = train_data[train_data.obs["condition"] == target_key].X
+
+        source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
+        target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
 
     source_labels = np.zeros(shape=source_images.shape[0])
     target_labels = np.ones(shape=target_images.shape[0])
@@ -61,20 +92,36 @@ def train_celeba(z_dim=100,
     print("Model has been trained")
 
 
-def evaluate_network(data_name="celeba"):
-    source_images, target_images = rcvae.load_celeba(file_path="../data/celebA/img_align_celeba.zip",
-                                                     attr_path="../data/celebA/list_attr_celeba.txt",
-                                                     gender='Male', source_attr='Black_Hair', target_attr='Blond_Hair',
-                                                     max_n_images=5000,
-                                                     img_resize=32,
-                                                     restore=True,
-                                                     save=False)
+def evaluate_network(data_dict=None, n_files=5, k=5):
+    data_name = data_dict['name']
+    source_key = data_dict.get('source_key', None)
+    target_key = data_dict.get('target_key', None)
+    img_size = data_dict.get("size", None)
+    n_channels = data_dict.get('n_channels', None)
+
     if data_name == "celeba":
-        img_size = 32
-        n_channels = 3
+        gender = data_name.get('gender', None)
+        source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                                         attr_path="../data/celeba/list_attr_celeba.txt",
+                                                         gender=gender, source_attr=source_key, target_attr=target_key,
+                                                         max_n_images=5000,
+                                                         img_resize=img_size,
+                                                         restore=True,
+                                                         save=False)
     else:
-        img_size = 28
-        n_channels = 1
+        train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        if isinstance(source_key, list):
+            source_images = train_data[train_data.obs["condition"].isin(source_key)].X
+            target_images = train_data[train_data.obs["condition"].isin(target_key)].X
+        else:
+            source_images = train_data[train_data.obs["condition"] == source_key].X
+            target_images = train_data[train_data.obs["condition"] == target_key].X
+
+        source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
+        target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
+
+        source_images /= 255.0
+        target_images /= 255.0
 
     image_shape = (img_size, img_size, n_channels)
 
@@ -96,13 +143,11 @@ def evaluate_network(data_name="celeba"):
 
     network.restore_model()
 
-    if data_name == "celeba":
-        results_path = f"../results/{data_name}/On Hair/"
-        os.makedirs(results_path, exist_ok=True)
-        os.chdir(results_path)
+    results_path = f"../results/{data_name}/{source_key} to {target_key}/"
+    os.makedirs(results_path, exist_ok=True)
+    os.chdir(results_path)
 
-    for j in range(5):
-        k = 5
+    for j in range(n_files):
         random_samples = np.random.choice(source_images.shape[0], k, replace=False)
 
         source_sample = source_data.X[random_samples]
@@ -134,13 +179,15 @@ def evaluate_network(data_name="celeba"):
 
 
 if __name__ == '__main__':
-    train_celeba(z_dim=100,
-                 mmd_dimension=256,
-                 alpha=0.001,
-                 beta=1000,
-                 kernel='multi-scale-rbf',
-                 n_epochs=1000,
-                 batch_size=512,
-                 arch_style=3,
-                 dropout_rate=0.25)
-    evaluate_network("celeba")
+    data_dict = DATASETS["ThinMNIST"]
+    train_network(data_dict=data_dict,
+                  z_dim=100,
+                  mmd_dimension=256,
+                  alpha=0.001,
+                  beta=1000,
+                  kernel='multi-scale-rbf',
+                  n_epochs=1000,
+                  batch_size=512,
+                  arch_style=3,
+                  dropout_rate=0.25)
+    evaluate_network(data_dict)
