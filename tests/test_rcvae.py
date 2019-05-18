@@ -251,3 +251,4 @@ if __name__ == '__main__':
                      n_files=30,
                      arch_style=args['arch_style'],
                      k=5)
+    print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
