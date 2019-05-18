@@ -192,19 +192,24 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
         fig, ax = plt.subplots(k, 2, figsize=(k * 1, 6))
         for i in range(k):
             ax[i, 0].axis('off')
-            ax[i, 0].imshow(source_sample_reshaped[i])
+            if source_sample_reshaped.shape[-1] > 1:
+                ax[i, 0].imshow(source_sample_reshaped[i])
+            else:
+                ax[i, 0].imshow(source_sample_reshaped[i, :, :, 0])
             ax[i, 1].axis('off')
             if i == 0:
                 if data_name == "celeba":
                     ax[i, 0].set_title("Male without Eyeglasses")
                     ax[i, 1].set_title("Male with Eyeglasses")
-
-            ax[i, 1].imshow(target_sample[i])
+            if target_sample.shape[-1] > 1:
+                ax[i, 1].imshow(target_sample[i])
+            else:
+                ax[i, 1].imshow(target_sample[i, :, :, 0])
         plt.savefig(f"./sample_images_{data_name}_{j}.pdf")
 
 
 if __name__ == '__main__':
-    data_dict = DATASETS["ThinMNIST"]
+    data_dict = DATASETS["CelebA"]
     # train_network(data_dict=data_dict,
     #               z_dim=100,
     #               mmd_dimension=128,
@@ -215,6 +220,7 @@ if __name__ == '__main__':
     #               batch_size=512,
     #               arch_style=3,
     #               dropout_rate=0.25)
-    evaluate_network(data_dict, n_files=10,
+    evaluate_network(data_dict,
+                     n_files=30,
                      arch_style=3,
-                     k=10)
+                     k=5)
