@@ -536,7 +536,7 @@ class RCCVAE:
 
         callbacks = [
             History(),
-            EarlyStopping(patience=early_stop_limit, monitor='mmd_loss', min_delta=threshold),
+            EarlyStopping(patience=early_stop_limit, monitor='loss', min_delta=threshold),
             CSVLogger(filename="./csv_logger.log")
         ]
 
