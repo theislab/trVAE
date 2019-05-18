@@ -195,7 +195,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
             if source_sample_reshaped.shape[-1] > 1:
                 ax[i, 0].imshow(source_sample_reshaped[i])
             else:
-                ax[i, 0].imshow(source_sample_reshaped[i, :, :, 0])
+                ax[i, 0].imshow(source_sample_reshaped[i, :, :, 0], cmap='Greys')
             ax[i, 1].axis('off')
             if i == 0:
                 if data_name == "celeba":
@@ -204,7 +204,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
             if target_sample.shape[-1] > 1:
                 ax[i, 1].imshow(target_sample[i])
             else:
-                ax[i, 1].imshow(target_sample[i, :, :, 0])
+                ax[i, 1].imshow(target_sample[i, :, :, 0], cmap='Greys')
         plt.savefig(f"./sample_images_{data_name}_{j}.pdf")
 
 
