@@ -150,8 +150,8 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
         source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
         target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
 
-        source_images = rcvae.resize_image(source_images, img_size)
-        target_images = rcvae.resize_image(target_images, img_size)
+        source_images = rcvae.resize_image(source_images, img_resize)
+        target_images = rcvae.resize_image(target_images, img_resize)
 
         source_images = np.reshape(source_images, (-1, img_resize, img_resize, n_channels))
         target_images = np.reshape(target_images, (-1, img_resize, img_resize, n_channels))
