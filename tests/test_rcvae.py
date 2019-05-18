@@ -27,11 +27,11 @@ FASHION_MNIST_CLASS_DICT = {
 DATASETS = {
     "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Wearing_Hat", "target_key": "Wearing_Hat",
                "resize": 64, "n_channels": 3},
-    "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "size": 28, "n_channels": 1},
-    "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "size": 28, "n_channels": 1},
-    "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "size": 28, "n_channels": 1},
+    "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "resize": 28, "n_channels": 1},
+    "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "resize": 28, "n_channels": 1},
+    "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "resize": 28, "n_channels": 1},
     "FashionMNIST": {"name": "fashion_mnist", "source_key": FASHION_MNIST_CLASS_DICT[0],
-                     "target_key": FASHION_MNIST_CLASS_DICT[1], "size": 28, "n_channels": 1},
+                     "target_key": FASHION_MNIST_CLASS_DICT[1], "resize": 28, "n_channels": 1},
     "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3,
                     "resize": 64},
     "Apple2Orange": {"name": "a2o", "source_key": "apple", "target_key": "orange", "size": 256, "n_channels": 3,
@@ -55,7 +55,6 @@ def train_network(data_dict=None,
     target_key = data_dict.get('target_key', None)
     img_size = data_dict.get("resize", None)
     n_channels = data_dict.get("n_channels", None)
-
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
         source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
@@ -205,17 +204,17 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
 
 
 if __name__ == '__main__':
-    data_dict = DATASETS["CelebA"]
-    train_network(data_dict=data_dict,
-                  z_dim=100,
-                  mmd_dimension=128,
-                  alpha=0.001,
-                  beta=1000,
-                  kernel='multi-scale-rbf',
-                  n_epochs=2000,
-                  batch_size=512,
-                  arch_style=3,
-                  dropout_rate=0.25)
+    data_dict = DATASETS["ThinMNIST"]
+    # train_network(data_dict=data_dict,
+    #               z_dim=100,
+    #               mmd_dimension=128,
+    #               alpha=0.001,
+    #               beta=1000,
+    #               kernel='multi-scale-rbf',
+    #               n_epochs=2000,
+    #               batch_size=512,
+    #               arch_style=3,
+    #               dropout_rate=0.25)
     evaluate_network(data_dict, n_files=10,
                      arch_style=3,
                      k=10)
