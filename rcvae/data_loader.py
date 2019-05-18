@@ -149,6 +149,8 @@ def load_celeba(file_path, attr_path,
     source_images /= 255.0
     target_images /= 255.0
 
+    if verbose:
+        print("Without Balancing: ", source_images.shape, target_images.shape)
     if balanced:
         min_size = min(source_images.shape[0], target_images.shape[0])
 
