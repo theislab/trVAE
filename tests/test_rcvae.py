@@ -1,5 +1,5 @@
+import argparse
 import os
-import sys
 
 import anndata
 import numpy as np
@@ -125,7 +125,8 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
     target_key = data_dict.get('target_key', None)
-    img_size = data_dict.get("resize", None)
+    img_resize = data_dict.get("resize", None)
+    img_size = data_dict.get("size", None)
     n_channels = data_dict.get('n_channels', None)
 
     if data_name == "celeba":
@@ -134,7 +135,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
                                                          attr_path="../data/celeba/list_attr_celeba.txt",
                                                          gender=gender, source_attr=source_key, target_attr=target_key,
                                                          max_n_images=5000,
-                                                         img_resize=img_size,
+                                                         img_resize=img_resize,
                                                          restore=True,
                                                          save=False)
     else:
@@ -152,10 +153,13 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
         source_images = rcvae.resize_image(source_images, img_size)
         target_images = rcvae.resize_image(target_images, img_size)
 
+        source_images = np.reshape(source_images, (-1, img_resize, img_resize, n_channels))
+        target_images = np.reshape(target_images, (-1, img_resize, img_resize, n_channels))
+
         source_images /= 255.0
         target_images /= 255.0
 
-    image_shape = (img_size, img_size, n_channels)
+    image_shape = (img_resize, img_resize, n_channels)
 
     source_labels = np.zeros(shape=source_images.shape[0])
     target_labels = np.ones(shape=target_images.shape[0])
@@ -216,18 +220,34 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
 
 
 if __name__ == '__main__':
-    data_dict = DATASETS[sys.argv[1]]
-    train_network(data_dict=data_dict,
-                  z_dim=100,
-                  mmd_dimension=128,
-                  alpha=0.001,
-                  beta=1000,
-                  kernel='multi-scale-rbf',
-                  n_epochs=2000,
-                  batch_size=512,
-                  arch_style=3,
-                  dropout_rate=0.25)
+    parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')
+    arguments_group = parser.add_argument_group("Parameters")
+    arguments_group.add_argument('-d', '--data', type=str, required=True,
+                                 help='name of dataset you want to train')
+    arguments_group.add_argument('-z', '--z_dim', type=int, default=100, required=False,
+                                 help='latent space dimension')
+    arguments_group.add_argument('-m', '--mmd_dimension', type=int, default=128, required=False,
+                                 help='MMD Layer dimension')
+    arguments_group.add_argument('-a', '--alpha', type=float, default=0.001, required=False,
+                                 help='Alpha coeff in loss term')
+    arguments_group.add_argument('-b', '--beta', type=float, default=100, required=False,
+                                 help='Beta coeff in loss term')
+    arguments_group.add_argument('-k', '--kernel', type=str, default='multi-scale-rbf', required=False,
+                                 help='Kernel type')
+    arguments_group.add_argument('-n', '--n_epochs', type=int, default=5000, required=False,
+                                 help='Maximum Number of epochs for training')
+    arguments_group.add_argument('-c', '--batch_size', type=int, default=512, required=False,
+                                 help='Batch Size')
+    arguments_group.add_argument('-s', '--arch_style', type=int, default=1, required=False,
+                                 help='Model Architecture Style')
+    arguments_group.add_argument('-r', '--dropout_rate', type=float, default=0.2, required=False,
+                                 help='Dropout ratio')
+    args = vars(parser.parse_args())
+
+    data_dict = DATASETS[args['data']]
+    del args['data']
+    train_network(data_dict=data_dict, **args)
     evaluate_network(data_dict,
                      n_files=30,
-                     arch_style=3,
+                     arch_style=args['arch_style'],
                      k=5)
