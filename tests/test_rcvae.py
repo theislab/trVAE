@@ -209,17 +209,17 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
 
 
 if __name__ == '__main__':
-    data_dict = DATASETS["CelebA"]
-    # train_network(data_dict=data_dict,
-    #               z_dim=100,
-    #               mmd_dimension=128,
-    #               alpha=0.001,
-    #               beta=1000,
-    #               kernel='multi-scale-rbf',
-    #               n_epochs=2000,
-    #               batch_size=512,
-    #               arch_style=3,
-    #               dropout_rate=0.25)
+    data_dict = DATASETS["Apple2Orange"]
+    train_network(data_dict=data_dict,
+                  z_dim=100,
+                  mmd_dimension=128,
+                  alpha=0.001,
+                  beta=1000,
+                  kernel='multi-scale-rbf',
+                  n_epochs=2000,
+                  batch_size=512,
+                  arch_style=3,
+                  dropout_rate=0.25)
     evaluate_network(data_dict,
                      n_files=30,
                      arch_style=3,
