@@ -28,11 +28,13 @@ FASHION_MNIST_CLASS_DICT = {
 DATASETS = {
     "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Wearing_Hat", "target_key": "Wearing_Hat",
                "resize": 64, "n_channels": 3},
-    "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "resize": 28, "n_channels": 1},
-    "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "resize": 28, "n_channels": 1},
-    "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "resize": 28, "n_channels": 1},
+    "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "resize": 28, 'size': 28, "n_channels": 1},
+    "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", "resize": 28, 'size': 28,
+                  "n_channels": 1},
+    "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", "resize": 28, 'size': 28,
+                   "n_channels": 1},
     "FashionMNIST": {"name": "fashion_mnist", "source_key": FASHION_MNIST_CLASS_DICT[0],
-                     "target_key": FASHION_MNIST_CLASS_DICT[1], "resize": 28, "n_channels": 1},
+                     "target_key": FASHION_MNIST_CLASS_DICT[1], "resize": 28, 'size': 28, "n_channels": 1},
     "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3,
                     "resize": 64},
     "Apple2Orange": {"name": "a2o", "source_key": "apple", "target_key": "orange", "size": 256, "n_channels": 3,
@@ -54,7 +56,7 @@ def train_network(data_dict=None,
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
     target_key = data_dict.get('target_key', None)
-    img_size = data_dict.get("resize", None)
+    img_resize = data_dict.get("resize", None)
     n_channels = data_dict.get("n_channels", None)
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
@@ -62,11 +64,12 @@ def train_network(data_dict=None,
                                                          attr_path="../data/celeba/list_attr_celeba.txt",
                                                          max_n_images=50000,
                                                          gender=gender, source_attr=source_key, target_attr=target_key,
-                                                         img_resize=img_size,
+                                                         img_resize=img_resize,
                                                          restore=False,
                                                          save=True)
     else:
         train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        img_size = data_dict.get("size", None)
         if isinstance(source_key, list):
             source_images = train_data[train_data.obs["condition"].isin(source_key)].X
             target_images = train_data[train_data.obs["condition"].isin(target_key)].X
@@ -74,11 +77,14 @@ def train_network(data_dict=None,
             source_images = train_data[train_data.obs["condition"] == source_key].X
             target_images = train_data[train_data.obs["condition"] == target_key].X
 
-        source_images = rcvae.resize_image(source_images, img_size)
-        target_images = rcvae.resize_image(target_images, img_size)
-
         source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
         target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
+
+        source_images = rcvae.resize_image(source_images, img_resize)
+        target_images = rcvae.resize_image(target_images, img_resize)
+
+        source_images = np.reshape(source_images, (-1, img_resize, img_resize, n_channels))
+        target_images = np.reshape(target_images, (-1, img_resize, img_resize, n_channels))
 
         source_images /= 255.0
         target_images /= 255.0
