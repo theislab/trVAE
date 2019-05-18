@@ -74,11 +74,11 @@ def train_network(data_dict=None,
             source_images = train_data[train_data.obs["condition"] == source_key].X
             target_images = train_data[train_data.obs["condition"] == target_key].X
 
-        source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
-        target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
-
         source_images = rcvae.resize_image(source_images, img_size)
         target_images = rcvae.resize_image(target_images, img_size)
+
+        source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
+        target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
 
         source_images /= 255.0
         target_images /= 255.0
