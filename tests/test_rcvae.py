@@ -1,4 +1,5 @@
 import os
+import sys
 
 import anndata
 import numpy as np
@@ -209,7 +210,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
 
 
 if __name__ == '__main__':
-    data_dict = DATASETS["Apple2Orange"]
+    data_dict = DATASETS[sys.argv[1]]
     train_network(data_dict=data_dict,
                   z_dim=100,
                   mmd_dimension=128,
