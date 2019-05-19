@@ -78,7 +78,8 @@ class RCCVAE:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         if self.arch_style == 1:  # Baseline CNN
-            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(y)
+            h = Dense(128, activation='relu')(y)
+            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(h)
             h = Reshape((*self.x_dim[:-1], 1))(h)
             h = concatenate([x, h])
             h = Conv2D(64, kernel_size=(4, 4), strides=2, padding='same')(h)
@@ -102,7 +103,11 @@ class RCCVAE:
         elif self.arch_style == 2:  # FCN
             x_reshaped = Reshape(target_shape=(np.prod(self.x_dim),))(x)
             xy = concatenate([x_reshaped, y], axis=1)
-            h = Dense(1024, kernel_initializer=self.init_w, use_bias=False)(xy)
+            h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(xy)
+            h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+            h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(h)
             h = BatchNormalization(axis=1)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
@@ -180,7 +185,12 @@ class RCCVAE:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization(axis=1)(h)
             h_mmd = LeakyReLU(name="mmd")(h)
-            h = Dense(1024, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
+            h = Dropout(self.dr_rate)(h)
+            h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+            h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(h)
             h = BatchNormalization(axis=1)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
