@@ -134,7 +134,7 @@ def train_network(data_dict=None,
     print("Model has been trained")
 
 
-def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1, preprocess=True):
+def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, preprocess=True):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
     target_key = data_dict.get('target_key', None)
@@ -194,7 +194,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1, preprocess=Tr
     target_data.obs["condition"] = target_labels
 
     network = rcvae.RCCVAE(x_dimension=image_shape,
-                           z_dimension=100,
+                           z_dimension=z_dim,
                            model_path=f"../models/{data_name}/{arch_style}/", )
 
     network.restore_model()
@@ -238,7 +238,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1, preprocess=Tr
         plt.savefig(os.path.join(results_path, f"./sample_images_{data_name}_{j}.pdf"))
 
 
-def visualize_trained_network_results(data_dict, arch_style=1, preprocess=True):
+def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, preprocess=True):
     plt.close("all")
     data_name = data_dict.get('name', None)
     source_key = data_dict.get('source_key', None)
@@ -293,7 +293,8 @@ def visualize_trained_network_results(data_dict, arch_style=1, preprocess=True):
     train_data_adata.obs["condition"] = train_labels
 
     network = rcvae.RCCVAE(x_dimension=(img_resize, img_resize, n_channels),
-                           z_dimension=100,
+                           z_dimension=z_dim,
+                           arch_style=arch_style,
                            model_path=f"../models/{data_name}/{arch_style}/", )
 
     network.restore_model()
@@ -382,10 +383,12 @@ if __name__ == '__main__':
     del args['resize']
     train_network(data_dict=data_dict, **args)
     evaluate_network(data_dict,
+                     z_dim=args['z_dim'],
                      n_files=30,
                      arch_style=args['arch_style'],
                      k=5)
     visualize_trained_network_results(data_dict,
+                                      z_dim=args['z_dim'],
                                       arch_style=args['arch_style'],
                                       preprocess=args['preprocess'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
