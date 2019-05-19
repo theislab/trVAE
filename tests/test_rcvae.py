@@ -52,6 +52,7 @@ def train_network(data_dict=None,
                   batch_size=512,
                   dropout_rate=0.2,
                   arch_style=1,
+                  preprocess=True,
                   ):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
@@ -85,9 +86,9 @@ def train_network(data_dict=None,
 
             source_images = np.reshape(source_images, (-1, img_resize, img_resize, n_channels))
             target_images = np.reshape(target_images, (-1, img_resize, img_resize, n_channels))
-
-        source_images /= 255.0
-        target_images /= 255.0
+        if preprocess:
+            source_images /= 255.0
+            target_images /= 255.0
 
     source_labels = np.zeros(shape=source_images.shape[0])
     target_labels = np.ones(shape=target_images.shape[0])
@@ -121,7 +122,7 @@ def train_network(data_dict=None,
     print("Model has been trained")
 
 
-def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
+def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1, preprocess=True):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
     target_key = data_dict.get('target_key', None)
@@ -155,9 +156,9 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1):
 
             source_images = np.reshape(source_images, (-1, img_resize, img_resize, n_channels))
             target_images = np.reshape(target_images, (-1, img_resize, img_resize, n_channels))
-
-        source_images /= 255.0
-        target_images /= 255.0
+        if preprocess:
+            source_images /= 255.0
+            target_images /= 255.0
 
     image_shape = (img_resize, img_resize, n_channels)
 
@@ -242,10 +243,16 @@ if __name__ == '__main__':
                                  help='Model Architecture Style')
     arguments_group.add_argument('-r', '--dropout_rate', type=float, default=0.2, required=False,
                                  help='Dropout ratio')
+    arguments_group.add_argument('-e', '--resize', type=int, default=64, required=False,
+                                 help='Image size to be resize')
+    arguments_group.add_argument('-p', '--preprocess', type=bool, default=True, required=False,
+                                 help='do preprocess images')
     args = vars(parser.parse_args())
 
     data_dict = DATASETS[args['data']]
+    data_dict['resize'] = args['resize']
     del args['data']
+    del args['resize']
     train_network(data_dict=data_dict, **args)
     evaluate_network(data_dict,
                      n_files=30,
