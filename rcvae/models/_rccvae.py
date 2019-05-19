@@ -88,8 +88,7 @@ class RCCVAE:
             h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Flatten()(h)
-            hy = concatenate([h, y], axis=1)
-            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(hy)
+            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(h)
             h = BatchNormalization(axis=1)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
@@ -163,11 +162,14 @@ class RCCVAE:
             h = BatchNormalization(axis=1)(h)
             h_mmd = LeakyReLU(name="mmd")(h)
             h = Dense(np.prod(self.x_dim), kernel_initializer=self.init_w, use_bias=False)(h_mmd)
+            h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Reshape(target_shape=self.x_dim)(h)
             h = Conv2DTranspose(128, kernel_size=(4, 4), padding='same')(h)
+            h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Conv2DTranspose(64, kernel_size=(4, 4), padding='same')(h)
+            h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Conv2DTranspose(self.x_dim[-1], kernel_size=(4, 4), padding='same', activation="relu")(h)
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
@@ -400,7 +402,7 @@ class RCCVAE:
             decoder_labels = np.ones(shape=encoder_labels.shape)
         else:
             decoder_labels = encoder_labels
-        mmd_latent = model.predict([data, encoder_labels, decoder_labels])[1]
+        mmd_latent = model.cvae_model.predict([data, encoder_labels, decoder_labels])[1]
         return mmd_latent
 
     def _reconstruct(self, data, encoder_labels, decoder_labels, use_data=False):
