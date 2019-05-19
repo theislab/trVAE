@@ -201,7 +201,6 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1, preprocess=Tr
 
     results_path = f"../results/{data_name}/{arch_style}/{source_key} to {target_key}/"
     os.makedirs(results_path, exist_ok=True)
-    os.chdir(results_path)
 
     for j in range(n_files):
         random_samples = np.random.choice(source_images.shape[0], k, replace=False)
@@ -236,7 +235,7 @@ def evaluate_network(data_dict=None, n_files=5, k=5, arch_style=1, preprocess=Tr
                 ax[i, 1].imshow(target_sample[i])
             else:
                 ax[i, 1].imshow(target_sample[i, :, :, 0], cmap='Greys')
-        plt.savefig(f"./sample_images_{data_name}_{j}.pdf")
+        plt.savefig(os.path.join(results_path, f"./sample_images_{data_name}_{j}.pdf"))
 
 
 def visualize_trained_network_results(data_dict, arch_style=1, preprocess=True):
