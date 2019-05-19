@@ -169,7 +169,7 @@ class RCCVAE:
             h = LeakyReLU()(h)
             h = Conv2DTranspose(64, kernel_size=(4, 4), padding='same')(h)
             h = LeakyReLU()(h)
-            h = Conv2DTranspose(self.x_dim[-1], kernel_size=(4, 4), padding='same', activation="sigmoid")(h)
+            h = Conv2DTranspose(self.x_dim[-1], kernel_size=(4, 4), padding='same', activation="relu")(h)
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
             model.summary()
             return h, h_mmd, model
