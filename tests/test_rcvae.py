@@ -286,12 +286,6 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     train_labels = np.concatenate([source_labels, target_labels], axis=0)
     fake_labels = np.ones(train_labels.shape)
 
-    train_images = np.reshape(train_images, (-1, np.prod(train_images.shape[1:])))
-
-    train_data_adata = anndata.AnnData(X=train_images)
-    train_data_adata.obs['conditions'] = train_data.obs['condition'].values
-    train_data_adata.obs["condition"] = train_labels
-
     network = rcvae.RCCVAE(x_dimension=(img_resize, img_resize, n_channels),
                            z_dimension=z_dim,
                            arch_style=arch_style,
@@ -299,10 +293,10 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
     network.restore_model()
 
-    if sparse.issparse(train_data_adata.X):
-        train_data_feed = np.reshape(train_data_adata.X.A, (-1, img_resize, img_resize, n_channels))
+    if sparse.issparse(train_data.X):
+        train_data_feed = np.reshape(train_data.X.A, (-1, img_resize, img_resize, n_channels))
     else:
-        train_data_feed = np.reshape(train_data_adata.X, (-1, img_resize, img_resize, n_channels))
+        train_data_feed = np.reshape(train_data.X, (-1, img_resize, img_resize, n_channels))
 
     latent_with_true_labels = network.to_latent(train_data_feed, train_labels)
     latent_with_fake_labels = network.to_latent(train_data_feed, fake_labels)
@@ -310,38 +304,54 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     mmd_latent_with_fake_labels = network.to_mmd_layer(network, train_data_feed, train_labels, feed_fake=True)
 
     latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
-    latent_with_true_labels.obs['condition'] = train_data_adata.obs['conditions']
+    latent_with_true_labels.obs['condition'] = train_data.obs['condition'].values
 
     latent_with_fake_labels = sc.AnnData(X=latent_with_fake_labels)
-    latent_with_fake_labels.obs['condition'] = train_data_adata.obs['conditions']
+    latent_with_fake_labels.obs['condition'] = train_data.obs['condition'].values
 
     mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
-    mmd_latent_with_true_labels.obs['condition'] = train_data_adata.obs['conditions']
+    mmd_latent_with_true_labels.obs['condition'] = train_data.obs['condition'].values
 
     mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
-    mmd_latent_with_fake_labels.obs['condition'] = train_data_adata.obs['conditions']
+    mmd_latent_with_fake_labels.obs['condition'] = train_data.obs['condition'].values
+
+    if data_name.__contains__("mnist"):
+        latent_with_true_labels.obs['labels'] = train_data.obs['labels']
+        latent_with_fake_labels.obs['labels'] = train_data.obs['labels']
+        mmd_latent_with_true_labels.obs['labels'] = train_data.obs['labels']
+        mmd_latent_with_fake_labels.obs['labels'] = train_data.obs['labels']
+
+        color = ['condition', 'labels']
+    else:
+        color = ['condition']
+
+    sc.pp.neighbors(train_data)
+    sc.tl.umap(train_data)
+    sc.pl.umap(train_data, color=color,
+               save=f'_{data_name}_train_data',
+               show=False)
 
     sc.pp.neighbors(latent_with_true_labels)
     sc.tl.umap(latent_with_true_labels)
-    sc.pl.umap(latent_with_true_labels, color=['condition'],
+    sc.pl.umap(latent_with_true_labels, color=color,
                save=f"_{data_name}_latent_with_true_labels",
                show=False)
 
     sc.pp.neighbors(latent_with_fake_labels)
     sc.tl.umap(latent_with_fake_labels)
-    sc.pl.umap(latent_with_fake_labels, color=['condition'],
+    sc.pl.umap(latent_with_fake_labels, color=color,
                save=f"_{data_name}_latent_with_fake_labels",
                show=False)
 
     sc.pp.neighbors(mmd_latent_with_true_labels)
     sc.tl.umap(mmd_latent_with_true_labels)
-    sc.pl.umap(mmd_latent_with_true_labels, color=['condition'],
+    sc.pl.umap(mmd_latent_with_true_labels, color=color,
                save=f"_{data_name}_mmd_latent_with_true_labels",
                show=False)
 
     sc.pp.neighbors(mmd_latent_with_fake_labels)
     sc.tl.umap(mmd_latent_with_fake_labels)
-    sc.pl.umap(mmd_latent_with_fake_labels, color=['condition'],
+    sc.pl.umap(mmd_latent_with_fake_labels, color=color,
                save=f"_{data_name}_mmd_latent_with_fake_labels",
                show=False)
 
