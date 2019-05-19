@@ -121,6 +121,8 @@ def train_network(data_dict=None,
                            model_path=f"../models/{data_name}/{arch_style}/",
                            dropout_rate=dropout_rate)
 
+    print(source_images.shape, target_images.shape)
+
     network.train(train_data,
                   n_epochs=n_epochs,
                   batch_size=batch_size,
@@ -279,7 +281,6 @@ def visualize_trained_network_results(data_dict, arch_style=1, preprocess=True):
 
     source_size = train_data[train_data.obs['condition'] == source_key].shape[0]
     target_size = train_data[train_data.obs['condition'] == target_key].shape[0]
-
 
     source_labels = np.zeros(shape=source_size)
     target_labels = np.ones(shape=target_size)
