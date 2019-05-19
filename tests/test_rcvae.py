@@ -367,7 +367,7 @@ if __name__ == '__main__':
                                  help='latent space dimension')
     arguments_group.add_argument('-m', '--mmd_dimension', type=int, default=128, required=False,
                                  help='MMD Layer dimension')
-    arguments_group.add_argument('-a', '--alpha', type=float, default=0.001, required=False,
+    arguments_group.add_argument('-a', '--alpha', type=float, default=0.005, required=False,
                                  help='Alpha coeff in loss term')
     arguments_group.add_argument('-b', '--beta', type=float, default=100, required=False,
                                  help='Beta coeff in loss term')
