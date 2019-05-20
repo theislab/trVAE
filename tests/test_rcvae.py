@@ -27,7 +27,7 @@ FASHION_MNIST_CLASS_DICT = {
 }
 
 DATASETS = {
-    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Wearing_Hat", "target_key": "Wearing_Hat",
+    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Smiling", "target_key": "Smiling",
                "resize": 64, "n_channels": 3},
     "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "resize": 28, 'size': 28, "n_channels": 1},
     "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", 'digit': 3, "resize": 28,
@@ -199,7 +199,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
 
     network.restore_model()
 
-    results_path = f"../results/{data_name}/{arch_style}/{source_key} to {target_key}/"
+    results_path = f"../results/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/{source_key} to {target_key}/"
     os.makedirs(results_path, exist_ok=True)
 
     for j in range(n_files):
@@ -248,7 +248,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     n_channels = data_dict.get('n_channels', None)
     digit = data_dict.get('digit', None)
 
-    path_to_save = f"../results/{data_name}/{arch_style}/{source_key} to {target_key}/UMAPs/"
+    path_to_save = f"../results/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/{source_key} to {target_key}/UMAPs/"
     os.makedirs(path_to_save, exist_ok=True)
     sc.settings.figdir = os.path.abspath(path_to_save)
 
