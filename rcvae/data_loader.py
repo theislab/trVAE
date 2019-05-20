@@ -68,7 +68,8 @@ def load_celeba(file_path, attr_path,
                 save=True, restore=True,
                 img_resize=64,
                 verbose=True,
-                balanced=True):
+                balanced=True,
+                preprocess=True):
     data_path = os.path.dirname(file_path)
 
     if restore and os.path.exists(os.path.join(data_path, "source_images.npy")):
@@ -145,9 +146,9 @@ def load_celeba(file_path, attr_path,
 
     source_images = np.array(source_images, dtype=np.float32)
     target_images = np.array(target_images, dtype=np.float32)
-
-    source_images /= 255.0
-    target_images /= 255.0
+    if preprocess:
+        source_images /= 255.0
+        target_images /= 255.0
 
     if verbose:
         print("Without Balancing: ", source_images.shape, target_images.shape)

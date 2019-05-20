@@ -71,7 +71,8 @@ def train_network(data_dict=None,
                                                          gender=gender, source_attr=source_key, target_attr=target_key,
                                                          img_resize=img_resize,
                                                          restore=False,
-                                                         save=True)
+                                                         save=True,
+                                                         preprocess=preprocess)
     else:
         train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         img_size = data_dict.get("size", None)
@@ -151,7 +152,8 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
                                                          max_n_images=5000,
                                                          img_resize=img_resize,
                                                          restore=True,
-                                                         save=False)
+                                                         save=False,
+                                                         preprocess=preprocess)
     else:
         train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if digit is not None:
@@ -260,7 +262,8 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
                                                          max_n_images=5000,
                                                          img_resize=img_resize,
                                                          restore=True,
-                                                         save=False)
+                                                         save=False,
+                                                         preprocess=preprocess)
 
         train_images = np.concatenate([source_images, target_images], axis=0)
         train_data = np.reshape(train_images, (-1, np.prod(train_images.shape[1:])))
