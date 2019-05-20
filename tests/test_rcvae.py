@@ -24,7 +24,7 @@ DATASETS = {
     "Hpoly": {"name": 'hpoly', "source_key": "Control", "target_key": 'Hpoly.Day10',
               "cell_type": "cell_label"},
 
-    "Salmonella": {"name": 'salmonella', "Control": "control", "target_key": 'Salmonella',
+    "Salmonella": {"name": 'salmonella', "source_key": "Control", "target_key": 'Salmonella',
                    "cell_type": "cell_label"},
 }
 
