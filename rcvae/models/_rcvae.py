@@ -281,7 +281,7 @@ class RCVAE:
             decoder_labels = np.ones(shape=encoder_labels.shape)
         else:
             decoder_labels = encoder_labels
-        mmd_latent = model.predict([data, encoder_labels, decoder_labels])[1]
+        mmd_latent = model.cvae_model.predict([data, encoder_labels, decoder_labels])[1]
         return mmd_latent
 
     def _reconstruct(self, data, encoder_labels, decoder_labels, use_data=False):
@@ -466,8 +466,9 @@ class RCVAE:
                 callbacks=callbacks,
                 verbose=verbose)
         if save:
-            self.cvae_model.save(os.path.join("mmd_cvae.h5"), overwrite=True)
-            self.encoder_model.save(os.path.join("encoder.h5"), overwrite=True)
-            self.decoder_model.save(os.path.join("decoder.h5"), overwrite=True)
+            os.makedirs(self.model_to_use, exist_ok=True)
+            self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
+            self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
+            self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
