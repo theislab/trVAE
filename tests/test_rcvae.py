@@ -261,6 +261,16 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
                                                          img_resize=img_resize,
                                                          restore=True,
                                                          save=False)
+
+        train_images = np.concatenate([source_images, target_images], axis=0)
+        train_data = np.reshape(train_images, (-1, np.prod(train_images.shape[1:])))
+
+        source_labels = np.zeros(shape=source_images.shape[0])
+        target_labels = np.ones(shape=target_images.shape[0])
+        train_labels = np.concatenate([source_labels, target_labels], axis=0)
+
+        train_data = anndata.AnnData(X=train_data)
+        train_data.obs['condition'] = train_labels
     else:
         train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if digit is not None:
