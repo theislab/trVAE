@@ -78,11 +78,11 @@ class RCCVAE:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         if self.arch_style == 1:  # Baseline CNN
-            h = Dense(128, activation='relu')(y)
-            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(h)
-            h = Reshape((*self.x_dim[:-1], 1))(h)
-            h = concatenate([x, h])
-            h = Conv2D(64, kernel_size=(4, 4), strides=2, padding='same')(h)
+            # h = Dense(128, activation='relu')(y)
+            # h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(h)
+            # h = Reshape((*self.x_dim[:-1], 1))(h)
+            # h = concatenate([x, h])
+            h = Conv2D(64, kernel_size=(4, 4), strides=2, padding='same')(x)
             h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Conv2D(128, kernel_size=(4, 4), strides=2, padding='same')(h)
@@ -121,27 +121,40 @@ class RCCVAE:
             model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
             model.summary()
             return mean, log_var, model
-        else:  # VGG16 U-Net
-            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(y)
-            h = Reshape((*self.x_dim[:-1], 1))(h)
-            h = concatenate([x, h])
-            self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(h)
-            self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv1)
-            pool1 = MaxPooling2D(pool_size=(2, 2))(self.conv1)
-            self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
-            self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv2)
-            pool2 = MaxPooling2D(pool_size=(2, 2))(self.conv2)
-            self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
-            self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv3)
-            pool3 = MaxPooling2D(pool_size=(2, 2))(self.conv3)
+        else:
+            # h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(y)
+            # h = Reshape((*self.x_dim[:-1], 1))(h)
+            # h = concatenate([x, h])
+
+            conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv1)
+            pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+
+            conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
+            conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv2)
+            pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+
+            conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
+            conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv3)
+            pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+
             conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
             conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
-            self.drop4 = Dropout(self.dr_rate)(conv4)
-            pool4 = MaxPooling2D(pool_size=(2, 2))(self.drop4)
+            pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 
             flat = Flatten(name='flatten')(pool4)
-            dense = Dense(1024, activation='relu', name='fc1')(flat)
-            dense = Dense(self.mmd_dim, activation='relu', name='fc2')(dense)
+
+            dense = Dense(1024, activation='linear', name='fc1')(flat)
+            dense = Activation('relu')(dense)
+
+            dense = Dense(1024, activation='linear', name='fc2')(dense)
+            dense = Activation('relu')(dense)
+            dense = Dropout(self.dr_rate)(dense)
+
+            encode_y = Dense(128, activation='relu', use_bias=False, kernel_initializer='he_normal')(y)
+
+            dense = concatenate([dense, encode_y], axis=1)
+
             mean = Dense(self.z_dim, kernel_initializer=self.init_w)(dense)
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(dense)
 
@@ -201,38 +214,39 @@ class RCCVAE:
             model.summary()
             return h, h_mmd, model
         else:
-            zy = concatenate([z, y], axis=1)
-            h_mmd = Dense(self.mmd_dim, activation="relu", kernel_initializer='he_normal')(zy)
-            h = Dense(1024, activation="relu", kernel_initializer='he_normal')(h_mmd)
+            encode_y = Dense(128, activation='linear', kernel_initializer='he_normal')(y)
+            zy = concatenate([z, encode_y], axis=1)
+            zy = Activation('relu')(zy)
+
+            h_mmd = Dense(self.mmd_dim, activation="linear", kernel_initializer='he_normal')(zy)
+            h_mmd = Activation('relu')(h_mmd)
+
+            h = Dense(1024, kernel_initializer='he_normal')(h_mmd)
+            h = Activation('relu')(h)
+
+            h = Dense(256 * 4 * 4, kernel_initializer='he_normal')(h)
+            h = Activation('relu')(h)
+
             width = self.x_dim[0] // 16
             height = self.x_dim[1] // 16
-            n_channels = 1024 // (width * height)
+            n_channels = 4096 // (width * height)
             h = Reshape(target_shape=(width, height, n_channels))(h)
 
-            up6 = Conv2D(512, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(
+            up6 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(h))
-            # merge6 = concatenate([self.drop4, up6], axis=3)
-            conv6 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(up6)
-            conv6 = Conv2D(512, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(conv6)
+            conv6 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up6)
 
-            up7 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(
+            up7 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv6))
-            # merge7 = concatenate([self.conv3, up7], axis=3)
-            conv7 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(up7)
-            conv7 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(conv7)
+            conv7 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up7)
 
-            up8 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(
+            up8 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv7))
-            # merge8 = concatenate([self.conv2, up8], axis=3)
-            conv8 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(up8)
-            conv8 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(conv8)
+            conv8 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up8)
 
-            up9 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer=self.init_w)(
+            up9 = Conv2D(32, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv8))
-            # merge9 = concatenate([self.conv1, up9], axis=3)
-            conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(up9)
-            conv9 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer=self.init_w)(conv9)
-            conv9 = Conv2D(2, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv9)
+            conv9 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up9)
 
             conv10 = Conv2D(self.x_dim[-1], 1, activation='relu')(conv9)
 
