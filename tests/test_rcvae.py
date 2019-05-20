@@ -118,7 +118,7 @@ def train_network(data_dict=None,
                            kernel=kernel,
                            arch_style=arch_style,
                            train_with_fake_labels=True,
-                           model_path=f"../models/{data_name}/{arch_style}/",
+                           model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/",
                            dropout_rate=dropout_rate)
 
     print(source_images.shape, target_images.shape)
@@ -195,7 +195,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
 
     network = rcvae.RCCVAE(x_dimension=image_shape,
                            z_dimension=z_dim,
-                           model_path=f"../models/{data_name}/{arch_style}/", )
+                           model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/", )
 
     network.restore_model()
 
@@ -299,7 +299,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     network = rcvae.RCCVAE(x_dimension=(img_resize, img_resize, n_channels),
                            z_dimension=z_dim,
                            arch_style=arch_style,
-                           model_path=f"../models/{data_name}/{arch_style}/", )
+                           model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/", )
 
     network.restore_model()
 
