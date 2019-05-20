@@ -293,10 +293,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
     network.restore_model()
 
-    if sparse.issparse(train_data.X):
-        train_data_feed = np.reshape(train_data.X.A, (-1, img_resize, img_resize, n_channels))
-    else:
-        train_data_feed = np.reshape(train_data.X, (-1, img_resize, img_resize, n_channels))
+    train_data_feed = np.reshape(train_images, (-1, img_resize, img_resize, n_channels))
 
     latent_with_true_labels = network.to_latent(train_data_feed, train_labels)
     latent_with_fake_labels = network.to_latent(train_data_feed, fake_labels)
