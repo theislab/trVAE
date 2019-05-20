@@ -390,7 +390,7 @@ if __name__ == '__main__':
                                  help='Dropout ratio')
     arguments_group.add_argument('-e', '--resize', type=int, default=64, required=False,
                                  help='Image size to be resize')
-    arguments_group.add_argument('-p', '--preprocess', type=bool, default=True, required=False,
+    arguments_group.add_argument('-p', '--preprocess', type=int, default=True, required=False,
                                  help='do preprocess images')
     args = vars(parser.parse_args())
 
@@ -398,6 +398,10 @@ if __name__ == '__main__':
     data_dict['resize'] = args['resize']
     del args['data']
     del args['resize']
+    if args['preprocess'] == 0:
+        args['preprocess'] = False
+    else:
+        args['preprocess'] = True
     train_network(data_dict=data_dict, **args)
     evaluate_network(data_dict,
                      z_dim=args['z_dim'],
