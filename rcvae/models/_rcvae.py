@@ -7,8 +7,8 @@ import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
-from keras.models import Model, load_model
 from keras.layers.advanced_activations import LeakyReLU
+from keras.models import Model, load_model
 from scipy import sparse
 from sklearn.neighbors import NearestNeighbors
 
@@ -60,6 +60,10 @@ class RCVAE:
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
         self._loss_function()
+
+        # self.encoder_model.summary()
+        # self.decoder_model.summary()
+        # self.cvae_model.summary()
 
     def _encoder(self, x, y, name="encoder"):
         """

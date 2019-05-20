@@ -118,7 +118,7 @@ def train_network(data_dict=None,
                            beta=beta,
                            kernel=kernel,
                            arch_style=arch_style,
-                           train_with_fake_labels=True,
+                           train_with_fake_labels=False,
                            model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/",
                            dropout_rate=dropout_rate)
 
