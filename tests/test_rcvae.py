@@ -20,7 +20,7 @@ DATASETS = {
                  'cell_type': 'celltype'},
 
     "PBMC": {"name": 'pbmc', "source_key": "control", "target_key": 'stimulated',
-             "cell_type": "cell_type"},
+             "cell_type": "cell_type", 'spec_cell_type': "CD4T"},
 
     "Hpoly": {"name": 'hpoly', "source_key": "Control", "target_key": 'Hpoly.Day10',
               "cell_type": "cell_label"},
@@ -45,24 +45,29 @@ def train_network(data_dict=None,
     target_key = data_dict.get('target_key', None)
     cell_type_key = data_dict.get("cell_type", None)
 
-    if data_name == "pancreas":
-        train_celltypes = data_dict.get("train_celltypes", None)
-        test_celltypes = data_dict.get("test_celltypes", None)
 
-        train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
-        train_data = train_data[train_data.obs['sample'].isin([source_key, target_key])]
-        train_data.obs['condition'] = train_data.obs['sample']
-        train_data = train_data[train_data.obs['celltype'].isin(train_celltypes)]
-        train_data = train_data[
-            ~((train_data.obs["condition"] == target_key) & (train_data.obs['celltype'].isin(test_celltypes)))]
+    # if data_name == "pancreas":
+    #     train_celltypes = data_dict.get("train_celltypes", None)
+    #     test_celltypes = data_dict.get("test_celltypes", None)
+    #
+    #     train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+    #     train_data = train_data[train_data.obs['sample'].isin([source_key, target_key])]
+    #     train_data.obs['condition'] = train_data.obs['sample']
+    #     train_data = train_data[train_data.obs['celltype'].isin(train_celltypes)]
+    #     train_data = train_data[
+    #         ~((train_data.obs["condition"] == target_key) & (train_data.obs['celltype'].isin(test_celltypes)))]
+    #
+    #     source_data = train_data.copy()[train_data.obs["condition"] == source_key].X
+    #     target_data = train_data.copy()[train_data.obs["condition"] == target_key].X
+    #     cell_types = []
+    # else:
+    train_data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+    valid_data = sc.read(f"../data/{data_name}/valid_{data_name}.h5ad")
+    cell_types = train_data.obs[cell_type_key].unique().tolist()
 
-        source_data = train_data.copy()[train_data.obs["condition"] == source_key].X
-        target_data = train_data.copy()[train_data.obs["condition"] == target_key].X
-        cell_types = []
-    else:
-        train_data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
-        valid_data = sc.read(f"../data/{data_name}/valid_{data_name}.h5ad")
-        cell_types = train_data.obs[cell_type_key].unique().tolist()
+    spec_cell_type = data_dict.get("spec_cell_type", None)
+    if spec_cell_type is not None:
+        cell_types = [spec_cell_type]
 
     for cell_type in cell_types:
         net_train_data = train_data.copy()[
@@ -135,6 +140,10 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
     source_labels = np.zeros(shape=source_data.shape[0])
     target_labels = np.ones(shape=target_data.shape[0])
+
+    spec_cell_type = data_dict.get("spec_cell_type", None)
+    if spec_cell_type is not None:
+        cell_types = [spec_cell_type]
 
     for cell_type in cell_types:
         path_to_save = f"../results/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
