@@ -96,7 +96,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         cell_types = [spec_cell_type]
 
     for cell_type in cell_types:
-        path_to_save = f"../results/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
+        path_to_save = f"../results/RCVAE/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
         os.makedirs(path_to_save, exist_ok=True)
         sc.settings.figdir = os.path.abspath(path_to_save)
 
