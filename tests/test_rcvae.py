@@ -75,16 +75,7 @@ def train_network(data_dict=None,
         net_valid_data = valid_data.copy()[
             ~((valid_data.obs[cell_type_key] == cell_type) & (valid_data.obs['condition'] == target_key))]
 
-        source_data = net_train_data[net_train_data.obs['condition'] == source_key]
-        target_data = net_train_data[net_train_data.obs['condition'] == target_key]
-
-        source_labels = np.zeros(shape=source_data.shape[0])
-        target_labels = np.ones(shape=target_data.shape[0])
-
-        train_labels = np.concatenate([source_labels, target_labels], axis=0)
-        net_train_data.obs["condition"] = train_labels
-
-        network = rcvae.RCVAE(x_dimension=source_data.shape[1],
+        network = rcvae.RCVAE(x_dimension=net_train_data.shape[1],
                               z_dimension=z_dim,
                               mmd_dimension=mmd_dimension,
                               alpha=alpha,
@@ -93,8 +84,6 @@ def train_network(data_dict=None,
                               train_with_fake_labels=False,
                               model_path=f"../models/{data_name}/{z_dim}/",
                               dropout_rate=dropout_rate)
-
-        print(source_data.shape, target_data.shape)
 
         network.train(net_train_data,
                       use_validation=True,
@@ -116,30 +105,8 @@ def visualize_trained_network_results(data_dict, z_dim=100):
     target_key = data_dict.get('target_key', None)
     cell_type_key = data_dict.get("cell_type", None)
 
-    # if data_name == 'pancreas':
-    #     train_celltypes = data_dict.get("train_celltypes", None)
-    #     test_celltypes = data_dict.get("test_celltypes", None)
-    #
-    #     data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
-    #     data = data[data.obs['sample'].isin([source_key, target_key])]
-    #     data.obs['condition'] = data.obs['sample']
-    #     data = data[data.obs['celltype'].isin(train_celltypes)]
-    #     test_cell_types_data = data[(data.obs['celltype'].isin(test_celltypes))]
-    #     data = data[
-    #         ~((data.obs["condition"] == target_key) & (data.obs['celltype'].isin(test_celltypes)))]
-    #
-    #     source_data = data.copy()[data.obs["condition"] == source_key].X
-    #     target_data = data.copy()[data.obs["condition"] == target_key].X
-    #     cell_types = []
-    # else:
     data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
     cell_types = data.obs[cell_type_key].unique().tolist()
-
-    source_data = data.copy()[data.obs['condition'] == source_key]
-    target_data = data.copy()[data.obs['condition'] == target_key]
-
-    source_labels = np.zeros(shape=source_data.shape[0])
-    target_labels = np.ones(shape=target_data.shape[0])
 
     spec_cell_type = data_dict.get("spec_cell_type", None)
     if spec_cell_type is not None:
@@ -153,7 +120,6 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         train_data = data.copy()[~((data.obs['condition'] == target_key) & (data.obs[cell_type_key] == cell_type))]
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
-        print(cell_type, cell_type_adata.shape)
 
         network = rcvae.RCVAE(x_dimension=data.shape[1],
                               z_dimension=z_dim,
@@ -166,7 +132,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         feed_data = data.X
 
-        train_labels = np.concatenate([source_labels, target_labels], axis=0)
+        train_labels, _ = rcvae.label_encoder(data)
         fake_labels = np.ones(train_labels.shape)
 
         latent_with_true_labels = network.to_latent(feed_data, train_labels)
@@ -175,6 +141,8 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         mmd_latent_with_fake_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=True)
 
         cell_type_ctrl = cell_type_adata.copy()[cell_type_adata.obs['condition'] == source_key]
+        print(cell_type_ctrl.shape, cell_type_adata.shape)
+
         pred_celltypes = network.predict(cell_type_ctrl,
                                          encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
                                          decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
