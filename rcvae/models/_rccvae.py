@@ -13,6 +13,8 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from scipy import sparse
 
+from .utils import label_encoder
+
 log = logging.getLogger(__file__)
 
 
@@ -550,7 +552,7 @@ class RCCVAE:
         """
         if initial_run:
             log.info("----Training----")
-        train_labels = train_data.obs['condition']
+        train_labels, _ = label_encoder(train_data)
         pseudo_labels = np.ones(shape=train_labels.shape)
 
         if sparse.issparse(train_data.X):
