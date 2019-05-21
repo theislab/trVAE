@@ -176,17 +176,19 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         if data_name == "pbmc":
             sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=100, method="wilcoxon")
             top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_key].tolist()
+            gene_list = top_100_genes[:10]
         else:
             sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=100, method="wilcoxon")
             top_50_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_key].tolist()
             top_50_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_key].tolist()
             top_100_genes = top_50_up_genes + top_50_down_genes
+            gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
 
         cell_type_adata = cell_type_adata.concatenate(pred_adata)
 
         rcvae.plotting.reg_mean_plot(cell_type_adata,
                                      top_100_genes=top_100_genes,
-                                     gene_list=top_100_genes[:5],
+                                     gene_list=gene_list,
                                      condition_key='condition',
                                      axis_keys={"x": 'predicted', 'y': target_key},
                                      labels={'x': 'pred stim', 'y': 'real stim'},
