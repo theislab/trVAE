@@ -414,16 +414,11 @@ class RCVAE:
         if initial_run:
             log.info("----Training----")
 
-        train_labels = train_data.obs['condition']
+        train_labels, _ = label_encoder(train_data)
         pseudo_labels = np.ones(shape=train_labels.shape)
-
-        if shuffle:
-            train_data, train_labels = shuffle_data(train_data, train_labels)
 
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
-        if use_validation:
-            valid_labels, _ = label_encoder(valid_data)
 
         callbacks = [
             History(),
@@ -441,6 +436,7 @@ class RCVAE:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
 
+            valid_labels, _ = label_encoder(valid_data)
             x_valid = [valid_data.X, valid_labels, valid_labels]
             y_valid = [valid_data.X, valid_labels]
             histories = self.cvae_model.fit(
