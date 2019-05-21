@@ -63,13 +63,16 @@ def load_file(filename, backup_url=None,
                          .format(filename, numpy_ext | pandas_ext))
 
 
-def prepare_celeba(file_path, attr_path,
-                   gender='Male', attribute='Smiling',
-                   max_n_images=None,
-                   save=True,
-                   img_resize=64,
-                   verbose=True):
+def prepare_and_load_celeba(file_path, attr_path,
+                            gender='Male', attribute='Smiling',
+                            max_n_images=None,
+                            restore=True,
+                            save=True,
+                            img_resize=64,
+                            verbose=True):
     data_path = os.path.dirname(file_path)
+    if restore and os.path.exists(os.path.join(data_path, f"celeba_{attribute}.h5ad")):
+        return sc.read(os.path.join(data_path, f"celeba_{attribute}.h5ad"))
 
     def load_attr_list(file_path):
         indices = []
@@ -126,6 +129,7 @@ def prepare_celeba(file_path, attr_path,
         data.obs['labels'] = attr_df[gender].values
         data.obs['condition'] = attr_df[attribute].values
         sc.write(filename=os.path.join(data_path, f"celeba_{attribute}.h5ad"), adata=data)
+    return data
 
 
 def resize_image(images, img_size):

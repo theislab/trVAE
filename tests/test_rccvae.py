@@ -69,7 +69,15 @@ def train_network(data_dict=None,
     attribute = data_dict.get('attribute', None)
 
     if data_name == "celeba":
-        data = sc.read(f"../data/{data_name}_{attribute}.h5ad")
+        gender = data_dict.get('gender', None)
+        data = rcvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                             attr_path="../data/celeba/list_attr_celeba.txt",
+                                             gender=gender,
+                                             attribute=attribute,
+                                             max_n_images=50000,
+                                             img_resize=img_resize,
+                                             restore=True,
+                                             save=True)
 
         if sparse.issparse(data.X):
             data.X = data.X.A
@@ -79,6 +87,10 @@ def train_network(data_dict=None,
 
         source_images = np.reshape(source_images, (-1, img_resize, img_resize, n_channels))
         target_images = np.reshape(target_images, (-1, img_resize, img_resize, n_channels))
+
+        if preprocess:
+            source_images /= 255.0
+            target_images /= 255.0
     else:
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         img_size = data_dict.get("size", None)
@@ -166,16 +178,32 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
     n_channels = data_dict.get('n_channels', None)
     train_digits = data_dict.get('train_digits', None)
     test_digits = data_dict.get('test_digits', None)
+    attribute = data_dict.get('attribute', None)
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        source_images, target_images = rcvae.prepare_celeba(file_path="../data/celeba/img_align_celeba.zip",
-                                                            attr_path="../data/celeba/list_attr_celeba.txt",
-                                                            gender=gender, source_attr=source_key, target_attr=target_key,
-                                                            max_n_images=5000,
-                                                            img_resize=img_resize,
-                                                            restore=True,
-                                                            save=False)
+        data = rcvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                             attr_path="../data/celeba/list_attr_celeba.txt",
+                                             gender=gender,
+                                             attribute=attribute,
+                                             max_n_images=5000,
+                                             img_resize=img_resize,
+                                             restore=True,
+                                             save=False)
+
+        valid_data = data.copy()[data.obs['labels'] == -1]  # get females (Male = -1)
+        if sparse.issparse(valid_data.X):
+            valid_data.X = valid_data.X.A
+
+        source_images = valid_data[valid_data.obs["condition"] == source_key].X
+        target_images = valid_data[valid_data.obs["condition"] == target_key].X
+
+        source_images = np.reshape(source_images, (-1, img_resize, img_resize, n_channels))
+        target_images = np.reshape(target_images, (-1, img_resize, img_resize, n_channels))
+
+        if preprocess:
+            source_images /= 255.0
+            target_images /= 255.0
     else:
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if train_digits is not None:
@@ -264,7 +292,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     img_size = data_dict.get('size', None)
     img_resize = data_dict.get('resize', None)
     n_channels = data_dict.get('n_channels', None)
-    digit = data_dict.get('digit', None)
+    attribute = data_dict.get('attribute', None)
 
     path_to_save = f"../results/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/{source_key} to {target_key}/UMAPs/"
     os.makedirs(path_to_save, exist_ok=True)
@@ -272,13 +300,20 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        source_images, target_images = rcvae.prepare_celeba(file_path="../data/celeba/img_align_celeba.zip",
-                                                            attr_path="../data/celeba/list_attr_celeba.txt",
-                                                            gender=gender, source_attr=source_key, target_attr=target_key,
-                                                            max_n_images=5000,
-                                                            img_resize=img_resize,
-                                                            restore=True,
-                                                            save=False)
+        data = rcvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                             attr_path="../data/celeba/list_attr_celeba.txt",
+                                             gender=gender,
+                                             attribute=attribute,
+                                             max_n_images=5000,
+                                             img_resize=img_resize,
+                                             restore=True,
+                                             save=False)
+
+        if sparse.issparse(data.X):
+            data.X = data.X.A
+
+        source_images = data.copy()[data.obs['condition'] == source_key].X
+        target_images = data.copy()[data.obs['condition'] == target_key].X
 
         train_images = np.concatenate([source_images, target_images], axis=0)
         train_data = np.reshape(train_images, (-1, np.prod(train_images.shape[1:])))
@@ -289,14 +324,12 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
         train_data = anndata.AnnData(X=train_data)
         train_data.obs['condition'] = train_labels
+        train_data.obs['labels'] = data.obs['labels'].values
+
+        if preprocess:
+            train_images /= 255.0
     else:
         train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
-        if digit is not None:
-            if isinstance(digit, list):
-                train_data = train_data[train_data.obs['labels'].isin(digit)]
-            else:
-                train_data = train_data[train_data.obs['labels'] == digit]
-
         train_images = np.reshape(train_data.X, (-1, img_size, img_size, n_channels))
 
         if img_resize != img_size:
@@ -340,7 +373,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
     mmd_latent_with_fake_labels.obs['condition'] = train_data.obs['condition'].values
 
-    if data_name.__contains__("mnist"):
+    if data_name.__contains__("mnist") or data_name == "celeba":
         latent_with_true_labels.obs['labels'] = train_data.obs['labels']
         latent_with_fake_labels.obs['labels'] = train_data.obs['labels']
         mmd_latent_with_true_labels.obs['labels'] = train_data.obs['labels']
