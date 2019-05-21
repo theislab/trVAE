@@ -176,7 +176,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=100, method="wilcoxon")
         top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_key].tolist()
 
-        cell_type_adata = cell_type_adata.concatenate(cell_type_adata, pred_adata)
+        cell_type_adata = cell_type_adata.concatenate(pred_adata)
 
         rcvae.plotting.reg_mean_plot(cell_type_adata,
                                      top_100_genes=top_100_genes,
@@ -228,32 +228,36 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.pp.neighbors(train_data)
         sc.tl.umap(train_data)
         sc.pl.umap(train_data, color=color,
-                   save=f'_{data_name}_train_data',
+                   save=f'_{data_name}_{cell_type}_train_data',
                    show=False)
 
         sc.pp.neighbors(latent_with_true_labels)
         sc.tl.umap(latent_with_true_labels)
         sc.pl.umap(latent_with_true_labels, color=color,
-                   save=f"_{data_name}_latent_with_true_labels",
+                   save=f"_{data_name}_{cell_type}_latent_with_true_labels",
                    show=False)
 
         sc.pp.neighbors(latent_with_fake_labels)
         sc.tl.umap(latent_with_fake_labels)
         sc.pl.umap(latent_with_fake_labels, color=color,
-                   save=f"_{data_name}_latent_with_fake_labels",
+                   save=f"_{data_name}_{cell_type}_latent_with_fake_labels",
                    show=False)
 
         sc.pp.neighbors(mmd_latent_with_true_labels)
         sc.tl.umap(mmd_latent_with_true_labels)
         sc.pl.umap(mmd_latent_with_true_labels, color=color,
-                   save=f"_{data_name}_mmd_latent_with_true_labels",
+                   save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
                    show=False)
 
         sc.pp.neighbors(mmd_latent_with_fake_labels)
         sc.tl.umap(mmd_latent_with_fake_labels)
         sc.pl.umap(mmd_latent_with_fake_labels, color=color,
-                   save=f"_{data_name}_mmd_latent_with_fake_labels",
+                   save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels",
                    show=False)
+
+        sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby='condition',
+                     save=f"_{data_name}_{cell_type}_{top_100_genes[0]}",
+                     show=False)
 
         plt.close("all")
 
