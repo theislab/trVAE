@@ -78,11 +78,11 @@ class RCCVAE:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         if self.arch_style == 1:  # Baseline CNN
-            # h = Dense(128, activation='relu')(y)
-            # h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(h)
-            # h = Reshape((*self.x_dim[:-1], 1))(h)
-            # h = concatenate([x, h])
-            h = Conv2D(64, kernel_size=(4, 4), strides=2, padding='same')(x)
+            h = Dense(128, activation='relu')(y)
+            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(h)
+            h = Reshape((*self.x_dim[:-1], 1))(h)
+            h = concatenate([x, h])
+            h = Conv2D(64, kernel_size=(4, 4), strides=2, padding='same')(h)
             h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Conv2D(128, kernel_size=(4, 4), strides=2, padding='same')(h)
@@ -96,7 +96,6 @@ class RCCVAE:
             mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
             z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
-            # source and dest data are not connected to encoder's 1st dense but will used for mmd batch computation
             model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
             model.summary()
             return mean, log_var, model
