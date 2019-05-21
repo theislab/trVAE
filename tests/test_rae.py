@@ -32,7 +32,6 @@ DATASETS = {
 
 def train_network(data_dict=None,
                   z_dim=100,
-                  mmd_dimension=256,
                   alpha=0.001,
                   n_epochs=500,
                   batch_size=512,
@@ -56,12 +55,11 @@ def train_network(data_dict=None,
         net_valid_data = valid_data.copy()[
             ~((valid_data.obs[cell_type_key] == cell_type) & (valid_data.obs['condition'] == target_key))]
 
-        network = rcvae.CVAE(x_dimension=net_train_data.shape[1],
-                             z_dimension=z_dim,
-                             mmd_dimension=mmd_dimension,
-                             alpha=alpha,
-                             model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/cvae",
-                             dropout_rate=dropout_rate)
+        network = rcvae.RAE(x_dimension=net_train_data.shape[1],
+                            z_dimension=z_dim,
+                            alpha=alpha,
+                            model_path=f"../models/RAE/{data_name}/{cell_type}/{z_dim}/",
+                            dropout_rate=dropout_rate)
 
         network.train(net_train_data,
                       use_validation=True,
@@ -89,7 +87,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         cell_types = [spec_cell_type]
 
     for cell_type in cell_types:
-        path_to_save = f"../results/CVAE/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
+        path_to_save = f"../results/RAE/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
         os.makedirs(path_to_save, exist_ok=True)
         sc.settings.figdir = os.path.abspath(path_to_save)
 
@@ -99,7 +97,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         network = rcvae.CVAE(x_dimension=data.shape[1],
                              z_dimension=z_dim,
-                             model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/cvae")
+                             model_path=f"../models/RAE/{data_name}/{cell_type}/{z_dim}/")
 
         network.restore_model()
 
@@ -228,8 +226,6 @@ if __name__ == '__main__':
                                  help='name of dataset you want to train')
     arguments_group.add_argument('-z', '--z_dim', type=int, default=20, required=False,
                                  help='latent space dimension')
-    arguments_group.add_argument('-m', '--mmd_dimension', type=int, default=128, required=False,
-                                 help='MMD Layer dimension')
     arguments_group.add_argument('-a', '--alpha', type=float, default=0.005, required=False,
                                  help='Alpha coeff in loss term')
     arguments_group.add_argument('-n', '--n_epochs', type=int, default=5000, required=False,

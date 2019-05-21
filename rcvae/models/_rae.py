@@ -16,7 +16,7 @@ from rcvae.models.utils import label_encoder, shuffle_data
 log = logging.getLogger(__file__)
 
 
-class RCVAE:
+class RAE:
     """
         Regularized C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.
@@ -41,7 +41,6 @@ class RCVAE:
     def __init__(self, x_dimension, z_dimension=100, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
-        self.mmd_dim = kwargs.get('mmd_dimension', 128)
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.beta = kwargs.get("beta", 100)
