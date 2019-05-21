@@ -103,8 +103,11 @@ def train_network(data_dict=None,
     train_images = np.concatenate([source_images, target_images], axis=0)
     train_images = np.reshape(train_images, (-1, np.prod(source_images.shape[1:])))
 
-    data = anndata.AnnData(X=train_images)
-    data.obs["condition"] = train_labels
+    preprocessed_data = anndata.AnnData(X=train_images)
+    preprocessed_data.obs["condition"] = train_labels
+    preprocessed_data.obs['labels'] = data.obs['labels'].values
+
+    data = preprocessed_data.copy()
 
     train_size = int(data.shape[0] * 0.85)
     indices = np.arange(data.shape[0])
@@ -114,6 +117,7 @@ def train_network(data_dict=None,
 
     data_train = data[train_idx, :]
     data_valid = data[test_idx, :]
+    print(data_train.shape, data_valid.shape)
 
     if train_digits is not None:
         train_data = data_train.copy()[
