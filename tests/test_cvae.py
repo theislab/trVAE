@@ -62,7 +62,7 @@ def train_network(data_dict=None,
                              z_dimension=z_dim,
                              mmd_dimension=mmd_dimension,
                              alpha=alpha,
-                             model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/",
+                             model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/cvae",
                              dropout_rate=dropout_rate)
 
         network.train(net_train_data,
@@ -101,7 +101,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         network = rcvae.CVAE(x_dimension=data.shape[1],
                              z_dimension=z_dim,
-                             model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/", )
+                             model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/cvae")
 
         network.restore_model()
 
