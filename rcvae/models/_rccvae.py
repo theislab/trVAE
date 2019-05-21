@@ -578,7 +578,7 @@ class RCCVAE:
 
         if use_validation:
             x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
-            valid_labels = valid_data.obs['condition']
+            valid_labels, _ = label_encoder(valid_data)
             x_test = [x_valid, valid_labels, valid_labels]
             y_test = [x_valid, valid_labels]
             histories = self.cvae_model.fit(

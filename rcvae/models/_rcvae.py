@@ -62,9 +62,9 @@ class RCVAE:
         self._create_network()
         self._loss_function()
 
-        # self.encoder_model.summary()
-        # self.decoder_model.summary()
-        # self.cvae_model.summary()
+        self.encoder_model.summary()
+        self.decoder_model.summary()
+        self.cvae_model.summary()
 
     def _encoder(self, x, y, name="encoder"):
         """
@@ -94,7 +94,7 @@ class RCVAE:
         model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
         return mean, log_var, model
 
-    def _mmd_decoder(self, x, y, name="decoder"):
+    def _mmd_decoder(self, z, y, name="decoder"):
         """
             Constructs the decoder sub-network of C-VAE. This function implements the
             decoder part of Variational Auto-encoder. It will transform constructed
@@ -105,8 +105,8 @@ class RCVAE:
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
-        xy = concatenate([x, y], axis=1)
-        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(xy)
+        zy = concatenate([z, y], axis=1)
+        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
         h = BatchNormalization()(h)
         h_mmd = LeakyReLU(name="mmd")(h)
         h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
@@ -118,7 +118,7 @@ class RCVAE:
         h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
         h = Activation('relu', name="reconstruction_output")(h)
-        model = Model(inputs=[x, y], outputs=[h, h_mmd], name=name)
+        model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
         return h, h_mmd, model
 
     @staticmethod
