@@ -375,6 +375,7 @@ class CVAE:
                 else:
                     patience_cnt += 1
                 if patience_cnt > patience:
+                    os.makedirs(self.model_to_use, exist_ok=True)
                     save_path = self.saver.save(self.sess, self.model_to_use)
                     break
         else:
