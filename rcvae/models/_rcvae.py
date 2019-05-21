@@ -426,9 +426,12 @@ class RCVAE:
             CSVLogger(filename="./csv_logger.log")
         ]
 
+        if sparse.issparse(train_data.X):
+            train_data.X = train_data.X.A
+
         if self.train_with_fake_labels:
             x = [train_data.X, train_labels, pseudo_labels]
-            y = [train_data.X, np.ones(shape=train_labels.shape)]
+            y = [train_data.X, train_labels]
         else:
             x = [train_data.X, train_labels, train_labels]
             y = [train_data.X, train_labels]
