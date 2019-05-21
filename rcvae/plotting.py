@@ -82,7 +82,7 @@ def reg_mean_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_m
     m, b, r_value, p_value, std_err = stats.linregress(x, y)
     print(r_value ** 2)
     df = pd.DataFrame({axis_keys["x"]: x, axis_keys["y"]: y})
-    ax = sns.regplot(x=axis_keys["x"], y=axis_keys["y"], data=df)
+    ax = sns.regplot(x=axis_keys["x"], y=axis_keys["y"], data=df, scatter_kws={'rasterized': True})
     ax.tick_params(labelsize=fontsize)
     if "range" in kwargs:
         start, stop, step = kwargs.get("range")
@@ -192,7 +192,7 @@ def reg_var_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_va
     y = numpy.var(stim.X, axis=0)
     m, b, r_value, p_value, std_err = stats.linregress(x, y)
     df = pd.DataFrame({axis_keys["x"]: x, axis_keys["y"]: y})
-    ax = sns.regplot(x=axis_keys["x"], y=axis_keys["y"], data=df)
+    ax = sns.regplot(x=axis_keys["x"], y=axis_keys["y"], data=df, scatter_kws={'rasterized': True})
     ax.tick_params(labelsize=fontsize)
     if "range" in kwargs:
         start, stop, step = kwargs.get("range")

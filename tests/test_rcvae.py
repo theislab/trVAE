@@ -60,11 +60,14 @@ def train_network(data_dict=None,
         cell_types = []
     else:
         train_data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+        valid_data = sc.read(f"../data/{data_name}/valid_{data_name}.h5ad")
         cell_types = train_data.obs[cell_type_key].unique().tolist()
 
     for cell_type in cell_types:
         net_train_data = train_data.copy()[
             ~((train_data.obs[cell_type_key] == cell_type) & (train_data.obs['condition'] == target_key))]
+        net_valid_data = valid_data.copy()[
+            ~((valid_data.obs[cell_type_key] == cell_type) & (valid_data.obs['condition'] == target_key))]
 
         source_data = net_train_data[net_train_data.obs['condition'] == source_key]
         target_data = net_train_data[net_train_data.obs['condition'] == target_key]
@@ -88,6 +91,8 @@ def train_network(data_dict=None,
         print(source_data.shape, target_data.shape)
 
         network.train(net_train_data,
+                      use_validation=True,
+                      valid_data=net_valid_data,
                       n_epochs=n_epochs,
                       batch_size=batch_size,
                       verbose=2,
@@ -134,6 +139,8 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         path_to_save = f"../results/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
         os.makedirs(path_to_save, exist_ok=True)
         sc.settings.figdir = os.path.abspath(path_to_save)
+
+        train_data = data.copy()[~((data.obs['condition'] == target_key) & (data.obs[cell_type_key] == cell_type))]
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
         print(cell_type, cell_type_adata.shape)
@@ -212,9 +219,9 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         color = ['condition', cell_type_key]
 
-        sc.pp.neighbors(data)
-        sc.tl.umap(data)
-        sc.pl.umap(data, color=color,
+        sc.pp.neighbors(train_data)
+        sc.tl.umap(train_data)
+        sc.pl.umap(train_data, color=color,
                    save=f'_{data_name}_train_data',
                    show=False)
 

@@ -5,7 +5,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from keras.callbacks import CSVLogger, History
+from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -377,7 +377,7 @@ class RCVAE:
 
     def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
               threshold=0.0025, initial_run=True,
-              shuffle=True, verbose=2, save=True):  # TODO: Write minibatches for each source and destination
+              shuffle=True, verbose=2, save=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -439,7 +439,7 @@ class RCVAE:
 
         callbacks = [
             History(),
-            # EarlyStopping(patience=early_stop_limit, monitor='loss', min_delta=threshold),
+            EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
             CSVLogger(filename="./csv_logger.log")
         ]
 
@@ -449,14 +449,18 @@ class RCVAE:
         else:
             x = [train_data.X, train_labels, train_labels]
             y = [train_data.X, train_labels]
-
         if use_validation:
+            if sparse.issparse(valid_data.X):
+                valid_data.X = valid_data.X.A
+
+            x_valid = [valid_data.X, valid_labels, valid_labels]
+            y_valid = [valid_data.X, valid_labels]
             histories = self.cvae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
                 batch_size=batch_size,
-                validation_data=(valid_data.X, valid_data.X),
+                validation_data=(x_valid, y_valid),
                 shuffle=shuffle,
                 callbacks=callbacks,
                 verbose=verbose)
