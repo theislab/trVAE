@@ -143,7 +143,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         train_data = data.copy()[~((data.obs['condition'] == target_key) & (data.obs[cell_type_key] == cell_type))]
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
-        print(cell_type, cell_type_adata.shape)
+        print(cell_type, cell_type_adata.shape )
 
         network = rcvae.RCVAE(x_dimension=data.shape[1],
                               z_dimension=z_dim,
