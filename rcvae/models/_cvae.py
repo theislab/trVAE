@@ -34,10 +34,11 @@ class CVAE:
         tensorflow.reset_default_graph()
         self.x_dim = x_dimension
         self.z_dim = z_dimension
+
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.01)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
-        self.model_to_use = kwargs.get("model_path", "./models/scgen")
+        self.model_to_use = kwargs.get("model_path", "../models/cvae")
 
         self.is_training = tensorflow.placeholder(tensorflow.bool, name='training_flag')
         self.global_step = tensorflow.Variable(0, name='global_step', trainable=False, dtype=tensorflow.int32)
@@ -80,7 +81,7 @@ class CVAE:
             log_var = tensorflow.layers.dense(inputs=h, units=self.z_dim, kernel_initializer=self.init_w)
             return mean, log_var
 
-    def _mmd_decoder(self):
+    def _decoder(self):
         """
             Constructs the decoder sub-network of C-VAE. This function implements the
             decoder part of Variational Auto-encoder. It will transform constructed
@@ -131,7 +132,7 @@ class CVAE:
         """
         self.mu, self.log_var = self._encoder()
         self.z_mean = self._sample_z()
-        self.x_hat, self.mmd_hl = self._mmd_decoder()
+        self.x_hat, self.mmd_hl = self._decoder()
 
     @staticmethod
     def compute_kernel(x, y):
@@ -155,24 +156,6 @@ class CVAE:
         return tensorflow.exp(
             -tensorflow.reduce_mean(tensorflow.square(tiled_x - tiled_y), axis=2) / tensorflow.cast(dim,
                                                                                                     tensorflow.float32))
-
-    @staticmethod
-    def compute_mmd(x, y):  # [batch_size, z_dim] [batch_size, z_dim]
-        """
-            Computes Maximum Mean Discrepancy(MMD) between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed MMD between x and y
-        """
-        x_kernel = CVAE.compute_kernel(x, x)
-        y_kernel = CVAE.compute_kernel(y, y)
-        xy_kernel = CVAE.compute_kernel(x, y)
-        return tensorflow.reduce_mean(x_kernel) + tensorflow.reduce_mean(y_kernel) - 2 * tensorflow.reduce_mean(
-            xy_kernel)
 
     def _loss_function(self):
         """

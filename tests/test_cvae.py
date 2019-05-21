@@ -58,25 +58,20 @@ def train_network(data_dict=None,
         net_valid_data = valid_data.copy()[
             ~((valid_data.obs[cell_type_key] == cell_type) & (valid_data.obs['condition'] == target_key))]
 
-        network = rcvae.RCVAE(x_dimension=net_train_data.shape[1],
-                              z_dimension=z_dim,
-                              mmd_dimension=mmd_dimension,
-                              alpha=alpha,
-                              beta=beta,
-                              kernel=kernel,
-                              train_with_fake_labels=False,
-                              model_path=f"../models/RCVAE/{data_name}/{cell_type}/{z_dim}/",
-                              dropout_rate=dropout_rate)
+        network = rcvae.CVAE(x_dimension=net_train_data.shape[1],
+                             z_dimension=z_dim,
+                             mmd_dimension=mmd_dimension,
+                             alpha=alpha,
+                             model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/",
+                             dropout_rate=dropout_rate)
 
         network.train(net_train_data,
                       use_validation=True,
                       valid_data=net_valid_data,
                       n_epochs=n_epochs,
                       batch_size=batch_size,
-                      verbose=2,
                       early_stop_limit=100,
-                      shuffle=True,
-                      save=True)
+                      shuffle=True)
 
         print(f"Model for {cell_type} has been trained")
 
@@ -96,7 +91,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         cell_types = [spec_cell_type]
 
     for cell_type in cell_types:
-        path_to_save = f"../results/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
+        path_to_save = f"../results/CVAE/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
         os.makedirs(path_to_save, exist_ok=True)
         sc.settings.figdir = os.path.abspath(path_to_save)
 
@@ -104,9 +99,9 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
 
-        network = rcvae.RCVAE(x_dimension=data.shape[1],
-                              z_dimension=z_dim,
-                              model_path=f"../models/RCVAE/{data_name}/{cell_type}/{z_dim}/", )
+        network = rcvae.CVAE(x_dimension=data.shape[1],
+                             z_dimension=z_dim,
+                             model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/", )
 
         network.restore_model()
 
@@ -120,15 +115,13 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         latent_with_true_labels = network.to_latent(feed_data, train_labels)
         latent_with_fake_labels = network.to_latent(feed_data, fake_labels)
-        mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=False)
-        mmd_latent_with_fake_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=True)
+        mmd_latent_with_true_labels = network.to_mmd_layer(feed_data, train_labels)
+        mmd_latent_with_fake_labels = network.to_mmd_layer(feed_data, fake_labels)
 
         cell_type_ctrl = cell_type_adata.copy()[cell_type_adata.obs['condition'] == source_key]
         print(cell_type_ctrl.shape, cell_type_adata.shape)
 
-        pred_celltypes = network.predict(cell_type_ctrl,
-                                         encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
-                                         decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
+        pred_celltypes = network.predict(cell_type_ctrl, labels=np.ones((cell_type_ctrl.shape[0], 1)))
         pred_adata = anndata.AnnData(X=pred_celltypes)
         pred_adata.obs['condition'] = ['predicted'] * pred_adata.shape[0]
         pred_adata.var = cell_type_adata.var
