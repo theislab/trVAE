@@ -121,9 +121,9 @@ def train_network(data_dict=None,
 
     if train_digits is not None:
         train_data = data_train.copy()[
-            ~((data_train.obs['labels'].isin(test_digits)) & (data_train.obs['condition'] == target_key))]
+            ~((data_train.obs['labels'].isin(test_digits)) & (data_train.obs['condition'] == 1))]
         valid_data = data_valid.copy()[
-            ~((data_valid.obs['labels'].isin(test_digits)) & (data_valid.obs['condition'] == target_key))]
+            ~((data_valid.obs['labels'].isin(test_digits)) & (data_valid.obs['condition'] == 1))]
     else:
         train_data = data_train
         valid_data = data_valid
@@ -139,7 +139,7 @@ def train_network(data_dict=None,
                            model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/",
                            dropout_rate=dropout_rate)
 
-    print(source_images.shape, target_images.shape)
+    print(train.shape, data_valid.shape)
 
     network.train(train_data,
                   use_validation=True,
