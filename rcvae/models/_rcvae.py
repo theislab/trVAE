@@ -247,8 +247,13 @@ class RCVAE:
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
+            # self.cvae_model.compile(optimizer=self.cvae_optimizer,
+            #                         loss=[kl_recon_loss, mmd_loss],
+            #                         metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
+            #                                  self.cvae_model.outputs[1].name: mmd_loss})
+
             self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                    loss=[kl_recon_loss, mmd_loss],
+                                    loss=kl_recon_loss,
                                     metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
                                              self.cvae_model.outputs[1].name: mmd_loss})
 
