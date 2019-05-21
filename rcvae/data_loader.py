@@ -81,7 +81,11 @@ def prepare_and_load_celeba(file_path, attr_path,
             lines = f.read().splitlines()
             columns = lines[1].split(" ")
             columns.remove('')
-            for i in range(2, len(lines)):
+            if max_n_images is not None:
+                max_n = max_n_images
+            else:
+                max_n = len(lines)
+            for i in range(2, max_n):
                 elements = lines[i].split()
                 indices.append(elements[0])
                 attributes.append(list(map(int, elements[1:])))
@@ -126,6 +130,7 @@ def prepare_and_load_celeba(file_path, attr_path,
 
     if save:
         data = anndata.AnnData(X=images_df.values)
+        print(data.shape, attr_df.shape)
         data.obs['labels'] = attr_df[gender].values
         data.obs['condition'] = attr_df[attribute].values
         sc.write(filename=os.path.join(data_path, f"celeba_{attribute}.h5ad"), adata=data)
