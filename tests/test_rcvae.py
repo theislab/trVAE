@@ -90,7 +90,7 @@ def train_network(data_dict=None,
                               alpha=alpha,
                               beta=beta,
                               kernel=kernel,
-                              train_with_fake_labels=False,
+                              train_with_fake_labels=True,
                               model_path=f"../models/{data_name}/{z_dim}/",
                               dropout_rate=dropout_rate)
 

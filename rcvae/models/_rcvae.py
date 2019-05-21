@@ -413,22 +413,10 @@ class RCVAE:
         """
         if initial_run:
             log.info("----Training----")
-        train_labels, le = label_encoder(train_data)
-        train_source = train_data[train_data.obs["condition"] == "control"]
-        train_dest = train_data[train_data.obs["condition"] == "stimulated"]
+
+        train_labels = train_data.obs['condition']
         pseudo_labels = np.ones(shape=train_labels.shape)
 
-        if self.kernel_method == "raphy":
-            med = np.zeros(20)
-            n_neighbors = 25
-            sample_size = 1000
-            for i in range(1, 20):
-                sample = train_dest[np.random.randint(train_dest.shape[0], size=sample_size), :]
-                nbrs = NearestNeighbors(n_neighbors=n_neighbors).fit(sample)
-                distances, dummy = nbrs.kneighbors(sample)
-                med[i] = np.median(distances[:, 1:n_neighbors])
-            med = np.median(med)
-            self.scales = [med / 2, med, med * 2]
         if shuffle:
             train_data, train_labels = shuffle_data(train_data, train_labels)
 
