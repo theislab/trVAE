@@ -1,5 +1,5 @@
+import os
 import logging
-
 import tensorflow
 from scipy import sparse
 
@@ -378,5 +378,6 @@ class CVAE:
                     save_path = self.saver.save(self.sess, self.model_to_use)
                     break
         else:
+            os.makedirs(self.model_to_use, exist_ok=True)
             save_path = self.saver.save(self.sess, self.model_to_use)
         log.info(f"Model saved in file: {save_path}. Training finished")
