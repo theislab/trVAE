@@ -7,6 +7,7 @@ import anndata
 import cv2
 import numpy as np
 import pandas as pd
+import scanpy as sc
 from PIL import Image
 
 
@@ -62,22 +63,13 @@ def load_file(filename, backup_url=None,
                          .format(filename, numpy_ext | pandas_ext))
 
 
-def load_celeba(file_path, attr_path,
-                gender='Male', source_attr="Black_Hair", target_attr="Blond_Hair",
-                max_n_images=None,
-                save=True, restore=True,
-                img_resize=64,
-                verbose=True,
-                balanced=True,
-                preprocess=True):
+def prepare_celeba(file_path, attr_path,
+                   gender='Male', attribute='Smiling',
+                   max_n_images=None,
+                   save=True,
+                   img_resize=64,
+                   verbose=True):
     data_path = os.path.dirname(file_path)
-
-    if restore and os.path.exists(os.path.join(data_path, "source_images.npy")):
-        source_images = np.load(os.path.join(data_path, "source_images.npy"))
-        target_images = np.load(os.path.join(data_path, "target_images.npy"))
-        return source_images, target_images
-    elif restore:
-        raise Exception("npy files does not exist!")
 
     def load_attr_list(file_path):
         indices = []
@@ -93,13 +85,8 @@ def load_celeba(file_path, attr_path,
         attr_df = pd.DataFrame(attributes)
         attr_df.index = indices
         attr_df.columns = columns
-        # if gender is not None:
-        #     attr_df = attr_df[attr_df[gender] == 1]
         if verbose:
             print(attr_df.shape[0])
-        if source_attr != target_attr:
-            attr_df = attr_df.loc[((attr_df[source_attr] == 1) & (attr_df[target_attr] == -1) | (
-                    attr_df[source_attr] == -1) & (attr_df[target_attr] == 1))]
         return attr_df
 
     images = []
@@ -134,18 +121,11 @@ def load_celeba(file_path, attr_path,
     images_df = pd.DataFrame(images.reshape(-1, np.prod(images.shape[1:])))
     images_df.index = indices
 
-    # if balanced:
-    #     min_size = min(source_images.shape[0], target_images.shape[0])
-    #
-    #     source_indices = np.random.choice(source_images.shape[0], min_size, replace=False)
-    #     source_images = source_images[source_indices]
-    #
-    #     target_indices = np.random.choice(target_images.shape[0], min_size, replace=False)
-    #     target_images = target_images[target_indices]
-
     if save:
-        np.save(arr=images_df.values, file=os.path.join(data_path, f"celebA_{source_attr}.npy"), allow_pickle=True)
-    return images_df, attr_df
+        data = anndata.AnnData(X=images_df.values)
+        data.obs['labels'] = attr_df[gender].values
+        data.obs['condition'] = attr_df[attribute].values
+        sc.write(filename=os.path.join(data_path, f"celeba_{attribute}.h5ad"), adata=data)
 
 
 def resize_image(images, img_size):

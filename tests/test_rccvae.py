@@ -27,7 +27,7 @@ FASHION_MNIST_CLASS_DICT = {
 }
 
 DATASETS = {
-    "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Smiling", "target_key": "Smiling",
+    "CelebA": {"name": 'celeba', "gender": "Male", 'attribute': "Smiling", 'source_key': -1, "target_key": 1,
                "resize": 64, "n_channels": 3},
     "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "resize": 28, 'size': 28, "n_channels": 1},
     "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin",
@@ -66,23 +66,10 @@ def train_network(data_dict=None,
     n_channels = data_dict.get("n_channels", None)
     train_digits = data_dict.get("train_digits", None)
     test_digits = data_dict.get("test_digits", None)
+    attribute = data_dict.get('attribute', None)
 
     if data_name == "celeba":
-        gender = data_dict.get('gender', None)
-        images, attrs = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
-                                          attr_path="../data/celeba/list_attr_celeba.txt",
-                                          max_n_images=50000,
-                                          gender=gender, source_attr=source_key, target_attr=target_key,
-                                          img_resize=img_resize,
-                                          restore=False,
-                                          save=True,
-                                          preprocess=preprocess)
-
-        data = anndata.AnnData(X=images.values)
-        data.obs['labels'] = attrs[gender].values
-        data.obs['condition'] = attrs[source_key].values  # source_key = target_key
-        data.obs.loc[data.obs['condition'] == 1, 'condition'] = source_key
-        data.obs.loc[data.obs['condition'] == -1, 'condition'] = target_key
+        data = sc.read(f"../data/{data_name}_{attribute}.h5ad")
 
         if sparse.issparse(data.X):
             data.X = data.X.A
@@ -182,14 +169,13 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
-                                                         attr_path="../data/celeba/list_attr_celeba.txt",
-                                                         gender=gender, source_attr=source_key, target_attr=target_key,
-                                                         max_n_images=5000,
-                                                         img_resize=img_resize,
-                                                         restore=True,
-                                                         save=False,
-                                                         preprocess=preprocess)
+        source_images, target_images = rcvae.prepare_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                                            attr_path="../data/celeba/list_attr_celeba.txt",
+                                                            gender=gender, source_attr=source_key, target_attr=target_key,
+                                                            max_n_images=5000,
+                                                            img_resize=img_resize,
+                                                            restore=True,
+                                                            save=False)
     else:
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if train_digits is not None:
@@ -286,14 +272,13 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
-                                                         attr_path="../data/celeba/list_attr_celeba.txt",
-                                                         gender=gender, source_attr=source_key, target_attr=target_key,
-                                                         max_n_images=5000,
-                                                         img_resize=img_resize,
-                                                         restore=True,
-                                                         save=False,
-                                                         preprocess=preprocess)
+        source_images, target_images = rcvae.prepare_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                                            attr_path="../data/celeba/list_attr_celeba.txt",
+                                                            gender=gender, source_attr=source_key, target_attr=target_key,
+                                                            max_n_images=5000,
+                                                            img_resize=img_resize,
+                                                            restore=True,
+                                                            save=False)
 
         train_images = np.concatenate([source_images, target_images], axis=0)
         train_data = np.reshape(train_images, (-1, np.prod(train_images.shape[1:])))
