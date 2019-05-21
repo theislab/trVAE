@@ -201,7 +201,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         rcvae.plotting.reg_var_plot(cell_type_adata,
                                     top_100_genes=top_100_genes,
-                                    gene_list=top_100_genes[:5],
+                                    gene_list=gene_list,
                                     condition_key='condition',
                                     axis_keys={"x": 'predicted', 'y': target_key},
                                     labels={'x': 'pred stim', 'y': 'real stim'},
