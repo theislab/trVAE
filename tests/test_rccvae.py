@@ -139,7 +139,7 @@ def train_network(data_dict=None,
                            model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/",
                            dropout_rate=dropout_rate)
 
-    print(train_data.shape, data_valid.shape)
+    print(train_data.shape, valid_data.shape)
 
     network.train(train_data,
                   use_validation=True,
