@@ -42,6 +42,7 @@ class RCVAE:
     def __init__(self, x_dimension, z_dimension=100, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
+        self.mmd_dim = kwargs.get('mmd_dimension', 128)
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
@@ -79,12 +80,12 @@ class RCVAE:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         xy = concatenate([x, y], axis=1)
-        h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(xy)
-        h = BatchNormalization(axis=1)(h)
+        h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(xy)
+        h = BatchNormalization()(h)
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
-        h = Dense(128, kernel_initializer=self.init_w, use_bias=False)(h)
-        h = BatchNormalization(axis=1)(h)
+        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
+        h = BatchNormalization()(h)
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
@@ -105,10 +106,13 @@ class RCVAE:
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
         xy = concatenate([x, y], axis=1)
-        h = Dense(128, kernel_initializer=self.init_w, use_bias=False)(xy)
-        h = BatchNormalization(axis=1)(h)
+        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(xy)
+        h = BatchNormalization()(h)
         h_mmd = LeakyReLU(name="mmd")(h)
-        h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
+        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
+        h = BatchNormalization()(h)
+        h = LeakyReLU()(h)
+        h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(h)
         h = BatchNormalization(axis=1)(h)
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
