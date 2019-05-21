@@ -93,8 +93,8 @@ def load_celeba(file_path, attr_path,
         attr_df = pd.DataFrame(attributes)
         attr_df.index = indices
         attr_df.columns = columns
-        if gender is not None:
-            attr_df = attr_df[attr_df[gender] == 1]
+        # if gender is not None:
+        #     attr_df = attr_df[attr_df[gender] == 1]
         if verbose:
             print(attr_df.shape[0])
         if source_attr != target_attr:
@@ -134,39 +134,18 @@ def load_celeba(file_path, attr_path,
     images_df = pd.DataFrame(images.reshape(-1, np.prod(images.shape[1:])))
     images_df.index = indices
 
-    if source_attr != target_attr:
-        source_images = images_df[attr_df[source_attr] == 1]
-        target_images = images_df[attr_df[target_attr] == 1]
-    else:
-        source_images = images_df[attr_df[source_attr] == -1]
-        target_images = images_df[attr_df[source_attr] == 1]
+    # if balanced:
+    #     min_size = min(source_images.shape[0], target_images.shape[0])
+    #
+    #     source_indices = np.random.choice(source_images.shape[0], min_size, replace=False)
+    #     source_images = source_images[source_indices]
+    #
+    #     target_indices = np.random.choice(target_images.shape[0], min_size, replace=False)
+    #     target_images = target_images[target_indices]
 
-    source_images = np.reshape(source_images.values, (-1, img_resize, img_resize, 3))
-    target_images = np.reshape(target_images.values, (-1, img_resize, img_resize, 3))
-
-    source_images = np.array(source_images, dtype=np.float32)
-    target_images = np.array(target_images, dtype=np.float32)
-    if preprocess:
-        source_images /= 255.0
-        target_images /= 255.0
-
-    if verbose:
-        print("Without Balancing: ", source_images.shape, target_images.shape)
-    if balanced:
-        min_size = min(source_images.shape[0], target_images.shape[0])
-
-        source_indices = np.random.choice(source_images.shape[0], min_size, replace=False)
-        source_images = source_images[source_indices]
-
-        target_indices = np.random.choice(target_images.shape[0], min_size, replace=False)
-        target_images = target_images[target_indices]
-
-    if verbose:
-        print(source_images.shape, target_images.shape)
     if save:
-        np.save(arr=source_images, file=os.path.join(data_path, f"source_images.npy"), allow_pickle=True)
-        np.save(arr=target_images, file=os.path.join(data_path, f"target_images.npy"), allow_pickle=True)
-    return source_images, target_images
+        np.save(arr=images_df.values, file=os.path.join(data_path, f"celebA_{source_attr}.npy"), allow_pickle=True)
+    return images_df, attr_df
 
 
 def resize_image(images, img_size):

@@ -4,7 +4,7 @@ import os
 import anndata
 import numpy as np
 import scanpy as sc
-from sklearn.model_selection import train_test_split
+from scipy import sparse
 
 import rcvae
 
@@ -69,14 +69,29 @@ def train_network(data_dict=None,
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
-                                                         attr_path="../data/celeba/list_attr_celeba.txt",
-                                                         max_n_images=50000,
-                                                         gender=gender, source_attr=source_key, target_attr=target_key,
-                                                         img_resize=img_resize,
-                                                         restore=False,
-                                                         save=True,
-                                                         preprocess=preprocess)
+        images, attrs = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+                                          attr_path="../data/celeba/list_attr_celeba.txt",
+                                          max_n_images=50000,
+                                          gender=gender, source_attr=source_key, target_attr=target_key,
+                                          img_resize=img_resize,
+                                          restore=False,
+                                          save=True,
+                                          preprocess=preprocess)
+
+        data = anndata.AnnData(X=images.values)
+        data.obs['labels'] = attrs[gender].values
+        data.obs['condition'] = attrs[source_key].values  # source_key = target_key
+        data.obs.loc[data.obs['condition'] == 1, 'condition'] = source_key
+        data.obs.loc[data.obs['condition'] == -1, 'condition'] = target_key
+
+        if sparse.issparse(data.X):
+            data.X = data.X.A
+
+        source_images = data.copy()[data.obs['condition'] == source_key].X
+        target_images = data.copy()[data.obs['condition'] == target_key].X
+
+        source_images = np.reshape(source_images, (-1, img_resize, img_resize, n_channels))
+        target_images = np.reshape(target_images, (-1, img_resize, img_resize, n_channels))
     else:
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         img_size = data_dict.get("size", None)
@@ -102,12 +117,11 @@ def train_network(data_dict=None,
 
     train_images = np.concatenate([source_images, target_images], axis=0)
     train_images = np.reshape(train_images, (-1, np.prod(source_images.shape[1:])))
-
-    preprocessed_data = anndata.AnnData(X=train_images)
-    preprocessed_data.obs["condition"] = train_labels
-    preprocessed_data.obs['labels'] = data.obs['labels'].values
-
-    data = preprocessed_data.copy()
+    if data_name.__contains__('mnist'):
+        preprocessed_data = anndata.AnnData(X=train_images)
+        preprocessed_data.obs["condition"] = train_labels
+        preprocessed_data.obs['labels'] = data.obs['labels'].values
+        data = preprocessed_data.copy()
 
     train_size = int(data.shape[0] * 0.85)
     indices = np.arange(data.shape[0])
@@ -125,8 +139,10 @@ def train_network(data_dict=None,
         valid_data = data_valid.copy()[
             ~((data_valid.obs['labels'].isin(test_digits)) & (data_valid.obs['condition'] == 1))]
     else:
-        train_data = data_train
-        valid_data = data_valid
+        train_data = data_train.copy()[
+            ~((data_train.obs['labels'] == -1) & (data_train.obs['condition'] == target_key))]
+        valid_data = data_valid.copy()[
+            ~((data_valid.obs['labels'] == -1) & (data_valid.obs['condition'] == target_key))]
 
     network = rcvae.RCCVAE(x_dimension=source_images.shape[1:],
                            z_dimension=z_dim,
