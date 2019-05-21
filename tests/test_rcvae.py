@@ -4,6 +4,7 @@ import os
 import anndata
 import numpy as np
 import scanpy as sc
+from scipy import sparse
 
 import rcvae
 
@@ -143,13 +144,16 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         train_data = data.copy()[~((data.obs['condition'] == target_key) & (data.obs[cell_type_key] == cell_type))]
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
-        print(cell_type, cell_type_adata.shape )
+        print(cell_type, cell_type_adata.shape)
 
         network = rcvae.RCVAE(x_dimension=data.shape[1],
                               z_dimension=z_dim,
                               model_path=f"../models/{data_name}/{z_dim}/", )
 
         network.restore_model()
+
+        if sparse.issparse(data.X):
+            data.X = data.X.A
 
         feed_data = data.X
 
@@ -184,7 +188,8 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                      fontsize=20,
                                      textsize=14,
                                      title=cell_type,
-                                     path_to_save=os.path.join(path_to_save, f'rcvae_reg_mean_{data_name}_{cell_type}.pdf'))
+                                     path_to_save=os.path.join(path_to_save,
+                                                               f'rcvae_reg_mean_{data_name}_{cell_type}.pdf'))
 
         rcvae.plotting.reg_var_plot(cell_type_adata,
                                     top_100_genes=top_100_genes,
@@ -196,7 +201,8 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                     fontsize=20,
                                     textsize=14,
                                     title=cell_type,
-                                    path_to_save=os.path.join(path_to_save, f'rcvae_reg_var_{data_name}_{cell_type}.pdf'))
+                                    path_to_save=os.path.join(path_to_save,
+                                                              f'rcvae_reg_var_{data_name}_{cell_type}.pdf'))
 
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)

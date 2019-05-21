@@ -161,7 +161,8 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
     img_resize = data_dict.get("resize", None)
     img_size = data_dict.get("size", None)
     n_channels = data_dict.get('n_channels', None)
-    digit = data_dict.get('digit', None)
+    train_digits = data_dict.get('train_digits', None)
+    test_digits = data_dict.get('test_digits', None)
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
@@ -174,12 +175,9 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
                                                          save=False,
                                                          preprocess=preprocess)
     else:
-        train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
-        if digit is not None:
-            if isinstance(digit, list):
-                train_data = train_data[train_data.obs['labels'].isin(digit)]
-            else:
-                train_data = train_data[train_data.obs['labels'] == digit]
+        data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        if train_digits is not None:
+            valid_data = data[data.obs['labels'].isin(digit)]
 
         if isinstance(source_key, list):
             source_images = train_data[train_data.obs["condition"].isin(source_key)].X
