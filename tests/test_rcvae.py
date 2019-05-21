@@ -111,24 +111,24 @@ def visualize_trained_network_results(data_dict, z_dim=100):
     target_key = data_dict.get('target_key', None)
     cell_type_key = data_dict.get("cell_type", None)
 
-    if data_name == 'pancreas':
-        train_celltypes = data_dict.get("train_celltypes", None)
-        test_celltypes = data_dict.get("test_celltypes", None)
-
-        data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
-        data = data[data.obs['sample'].isin([source_key, target_key])]
-        data.obs['condition'] = data.obs['sample']
-        data = data[data.obs['celltype'].isin(train_celltypes)]
-        test_cell_types_data = data[(data.obs['celltype'].isin(test_celltypes))]
-        data = data[
-            ~((data.obs["condition"] == target_key) & (data.obs['celltype'].isin(test_celltypes)))]
-
-        source_data = data.copy()[data.obs["condition"] == source_key].X
-        target_data = data.copy()[data.obs["condition"] == target_key].X
-        cell_types = []
-    else:
-        data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
-        cell_types = data.obs[cell_type_key].unique().tolist()
+    # if data_name == 'pancreas':
+    #     train_celltypes = data_dict.get("train_celltypes", None)
+    #     test_celltypes = data_dict.get("test_celltypes", None)
+    #
+    #     data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+    #     data = data[data.obs['sample'].isin([source_key, target_key])]
+    #     data.obs['condition'] = data.obs['sample']
+    #     data = data[data.obs['celltype'].isin(train_celltypes)]
+    #     test_cell_types_data = data[(data.obs['celltype'].isin(test_celltypes))]
+    #     data = data[
+    #         ~((data.obs["condition"] == target_key) & (data.obs['celltype'].isin(test_celltypes)))]
+    #
+    #     source_data = data.copy()[data.obs["condition"] == source_key].X
+    #     target_data = data.copy()[data.obs["condition"] == target_key].X
+    #     cell_types = []
+    # else:
+    data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+    cell_types = data.obs[cell_type_key].unique().tolist()
 
     source_data = data.copy()[data.obs['condition'] == source_key]
     target_data = data.copy()[data.obs['condition'] == target_key]
