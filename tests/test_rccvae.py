@@ -4,7 +4,7 @@ import os
 import anndata
 import numpy as np
 import scanpy as sc
-from scipy import sparse
+from sklearn.model_selection import train_test_split
 
 import rcvae
 
@@ -30,11 +30,13 @@ DATASETS = {
     "CelebA": {"name": 'celeba', "gender": "Male", "source_key": "Smiling", "target_key": "Smiling",
                "resize": 64, "n_channels": 3},
     "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "resize": 28, 'size': 28, "n_channels": 1},
-    "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin", 'digit': 3, "resize": 28,
-                  'size': 28,
+    "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin",
+                  'train_digits': [1, 3, 6, 7], 'test_digits': [0, 2, 4, 5, 8, 9],
+                  "resize": 28, 'size': 28,
                   "n_channels": 1},
-    "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick", 'digit': 3, "resize": 28,
-                   'size': 28,
+    "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick",
+                   'train_digits': [1, 3, 6, 7], 'test_digits': [0, 2, 4, 5, 8, 9],
+                   "resize": 28, 'size': 28,
                    "n_channels": 1},
     "FashionMNIST": {"name": "fashion_mnist", "source_key": FASHION_MNIST_CLASS_DICT[0],
                      "target_key": FASHION_MNIST_CLASS_DICT[1], "resize": 28, 'size': 28, "n_channels": 1},
@@ -62,7 +64,9 @@ def train_network(data_dict=None,
     target_key = data_dict.get('target_key', None)
     img_resize = data_dict.get("resize", None)
     n_channels = data_dict.get("n_channels", None)
-    digit = data_dict.get('digit', None)
+    train_digits = data_dict.get("train_digits", None)
+    test_digits = data_dict.get("test_digits", None)
+
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
         source_images, target_images = rcvae.load_celeba(file_path="../data/celeba/img_align_celeba.zip",
@@ -74,20 +78,11 @@ def train_network(data_dict=None,
                                                          save=True,
                                                          preprocess=preprocess)
     else:
-        train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         img_size = data_dict.get("size", None)
-        if digit is not None:
-            if isinstance(digit, list):
-                train_data = train_data[train_data.obs['labels'].isin(digit)]
-            else:
-                train_data = train_data[train_data.obs['labels'] == digit]
 
-        if isinstance(source_key, list):
-            source_images = train_data[train_data.obs["condition"].isin(source_key)].X
-            target_images = train_data[train_data.obs["condition"].isin(target_key)].X
-        else:
-            source_images = train_data[train_data.obs["condition"] == source_key].X
-            target_images = train_data[train_data.obs["condition"] == target_key].X
+        source_images = data.copy()[data.obs["condition"] == source_key].X
+        target_images = data.copy()[data.obs["condition"] == target_key].X
 
         source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
         target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
@@ -108,8 +103,26 @@ def train_network(data_dict=None,
     train_images = np.concatenate([source_images, target_images], axis=0)
     train_images = np.reshape(train_images, (-1, np.prod(source_images.shape[1:])))
 
-    train_data = anndata.AnnData(X=train_images)
-    train_data.obs["condition"] = train_labels
+    data = anndata.AnnData(X=train_images)
+    data.obs["condition"] = train_labels
+
+    train_size = int(data.shape[0] * 0.85)
+    indices = np.arange(data.shape[0])
+    np.random.shuffle(indices)
+    train_idx = indices[:train_size]
+    test_idx = indices[train_size:]
+
+    data_train = data[train_idx, :]
+    data_valid = data[test_idx, :]
+
+    if train_digits is not None:
+        train_data = data_train.copy()[
+            ~((data_train.obs['labels'].isin(test_digits)) & (data_train.obs['condition'] == target_key))]
+        valid_data = data_valid.copy()[
+            ~((data_valid.obs['labels'].isin(test_digits)) & (data_valid.obs['condition'] == target_key))]
+    else:
+        train_data = data_train
+        valid_data = data_valid
 
     network = rcvae.RCCVAE(x_dimension=source_images.shape[1:],
                            z_dimension=z_dim,
@@ -125,6 +138,8 @@ def train_network(data_dict=None,
     print(source_images.shape, target_images.shape)
 
     network.train(train_data,
+                  use_validation=True,
+                  valid_data=valid_data,
                   n_epochs=n_epochs,
                   batch_size=batch_size,
                   verbose=2,

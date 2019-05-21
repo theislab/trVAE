@@ -562,7 +562,7 @@ class RCCVAE:
 
         callbacks = [
             History(),
-            EarlyStopping(patience=early_stop_limit, monitor='loss', min_delta=threshold),
+            EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
             CSVLogger(filename="./csv_logger.log")
         ]
 
@@ -576,12 +576,16 @@ class RCCVAE:
             y = [x_train, train_labels]
 
         if use_validation:
+            x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
+            valid_labels = valid_data.obs['condition']
+            x_test = [x_valid, valid_labels, valid_labels]
+            y_test = [x_valid, valid_labels]
             histories = self.cvae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
                 batch_size=batch_size,
-                validation_data=(valid_data.X, valid_data.X),
+                validation_data=(x_test, y_test),
                 shuffle=shuffle,
                 callbacks=callbacks,
                 verbose=verbose)
