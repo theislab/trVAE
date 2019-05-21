@@ -177,14 +177,10 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
     else:
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if train_digits is not None:
-            valid_data = data[data.obs['labels'].isin(digit)]
+            valid_data = data[data.obs['labels'].isin(test_digits)]
 
-        if isinstance(source_key, list):
-            source_images = train_data[train_data.obs["condition"].isin(source_key)].X
-            target_images = train_data[train_data.obs["condition"].isin(target_key)].X
-        else:
-            source_images = train_data[train_data.obs["condition"] == source_key].X
-            target_images = train_data[train_data.obs["condition"] == target_key].X
+        source_images = valid_data[valid_data.obs["condition"] == source_key].X
+        target_images = valid_data[valid_data.obs["condition"] == target_key].X
 
         source_images = np.reshape(source_images, (-1, img_size, img_size, n_channels))
         target_images = np.reshape(target_images, (-1, img_size, img_size, n_channels))
@@ -214,6 +210,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
 
     network = rcvae.RCCVAE(x_dimension=image_shape,
                            z_dimension=z_dim,
+                           arch_style=arch_style,
                            model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/", )
 
     network.restore_model()
