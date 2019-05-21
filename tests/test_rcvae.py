@@ -82,7 +82,7 @@ def train_network(data_dict=None,
                               beta=beta,
                               kernel=kernel,
                               train_with_fake_labels=False,
-                              model_path=f"../models/{data_name}/{z_dim}/",
+                              model_path=f"../models/{data_name}/{cell_type}/{z_dim}/",
                               dropout_rate=dropout_rate)
 
         network.train(net_train_data,
@@ -123,7 +123,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         network = rcvae.RCVAE(x_dimension=data.shape[1],
                               z_dimension=z_dim,
-                              model_path=f"../models/{data_name}/{z_dim}/", )
+                              model_path=f"../models/{data_name}/{cell_type}/{z_dim}/", )
 
         network.restore_model()
 
