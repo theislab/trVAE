@@ -390,7 +390,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     train_data.obs.loc[(train_data.obs['condition'] == source_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'training'
     train_data.obs.loc[(train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
     train_data.obs.loc[(train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'heldout'
-
+    print(train_data.obs['labels'].value_counts())
     sc.pp.neighbors(train_data)
     sc.tl.umap(train_data)
     sc.pl.umap(train_data, color=color,
