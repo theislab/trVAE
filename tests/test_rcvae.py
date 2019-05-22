@@ -93,7 +93,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
     spec_cell_type = data_dict.get("spec_cell_type", None)
     if spec_cell_type is not None:
-        cell_types = [spec_cell_type]
+        cell_types = spec_cell_type
 
     for cell_type in cell_types:
         path_to_save = f"../results/RCVAE/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
