@@ -386,8 +386,10 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     else:
         color = ['condition']
 
+    train_data.obs.loc[(train_data.obs['condition'] == source_key) & (train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
+    train_data.obs.loc[(train_data.obs['condition'] == source_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'training'
     train_data.obs.loc[(train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
-    train_data.obs.loc[(train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'test'
+    train_data.obs.loc[(train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'heldout'
 
     sc.pp.neighbors(train_data)
     sc.tl.umap(train_data)
