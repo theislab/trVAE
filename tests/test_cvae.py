@@ -47,7 +47,7 @@ def train_network(data_dict=None,
     cell_types = train_data.obs[cell_type_key].unique().tolist()
 
     spec_cell_type = data_dict.get("spec_cell_type", None)
-    if spec_cell_type is not None:
+    if spec_cell_type is not []:
         cell_types = spec_cell_type
 
     for cell_type in cell_types:
@@ -85,7 +85,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
     cell_types = data.obs[cell_type_key].unique().tolist()
 
     spec_cell_type = data_dict.get("spec_cell_type", None)
-    if spec_cell_type is not None:
+    if spec_cell_type is not []:
         cell_types = spec_cell_type
 
     for cell_type in cell_types:
