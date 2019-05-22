@@ -47,7 +47,7 @@ def train_network(data_dict=None,
 
     spec_cell_type = data_dict.get("spec_cell_type", None)
     if spec_cell_type is not None:
-        cell_types = [spec_cell_type]
+        cell_types = spec_cell_type
 
     for cell_type in cell_types:
         net_train_data = train_data.copy()[
