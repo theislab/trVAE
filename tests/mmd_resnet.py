@@ -30,10 +30,10 @@ DATASETS = {
              "cell_type": "cell_type", 'spec_cell_types': ['CD4T', "CD14+Mono", "FCGR3A+Mono"]},
 
     "Hpoly": {"name": 'hpoly', "source_key": "Control", "target_key": 'Hpoly.Day10',
-              "cell_type": "cell_label", 'spec_cell_types': ['Tuft', "Endocrine"]},
+              "cell_type": "cell_label", 'spec_cell_type': ['Tuft', 'Endocrine']},
 
     "Salmonella": {"name": 'salmonella', "source_key": "Control", "target_key": 'Salmonella',
-                   "cell_type": "cell_label", 'spec_cell_types': ['Tuft', "Endocrine"]},
+                   "cell_type": "cell_label", 'spec_cell_type': ['Tuft', 'Endocrine']},
 }
 
 parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')

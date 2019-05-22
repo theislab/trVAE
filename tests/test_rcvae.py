@@ -20,13 +20,13 @@ DATASETS = {
                  'cell_type': 'celltype'},
 
     "PBMC": {"name": 'pbmc', "source_key": "control", "target_key": 'stimulated',
-             "cell_type": "cell_type", 'spec_cell_type': "CD4T"},
+             "cell_type": "cell_type", 'spec_cell_type': []},
 
     "Hpoly": {"name": 'hpoly', "source_key": "Control", "target_key": 'Hpoly.Day10',
-              "cell_type": "cell_label"},
+              "cell_type": "cell_label", 'spec_cell_type': []},
 
     "Salmonella": {"name": 'salmonella', "source_key": "Control", "target_key": 'Salmonella',
-                   "cell_type": "cell_label"},
+                   "cell_type": "cell_label", 'spec_cell_type': []},
 }
 
 
@@ -49,7 +49,7 @@ def train_network(data_dict=None,
     cell_types = train_data.obs[cell_type_key].unique().tolist()
 
     spec_cell_type = data_dict.get("spec_cell_type", None)
-    if spec_cell_type is not None:
+    if spec_cell_type is not []:
         cell_types = [spec_cell_type]
 
     for cell_type in cell_types:
