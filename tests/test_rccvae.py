@@ -404,28 +404,28 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     sc.pp.neighbors(latent_with_true_labels)
     sc.tl.umap(latent_with_true_labels)
     sc.pl.umap(latent_with_true_labels, color=color,
-               save=f"_{data_name}_latent_with_true_labels",
+               save=f"_{data_name}_latent_with_true_labels.png",
                wspace=0.1,
                show=False)
 
     sc.pp.neighbors(latent_with_fake_labels)
     sc.tl.umap(latent_with_fake_labels)
     sc.pl.umap(latent_with_fake_labels, color=color,
-               save=f"_{data_name}_latent_with_fake_labels",
+               save=f"_{data_name}_latent_with_fake_labels.png",
                wspace=0.1,
                show=False)
 
     sc.pp.neighbors(mmd_latent_with_true_labels)
     sc.tl.umap(mmd_latent_with_true_labels)
     sc.pl.umap(mmd_latent_with_true_labels, color=color,
-               save=f"_{data_name}_mmd_latent_with_true_labels",
+               save=f"_{data_name}_mmd_latent_with_true_labels.png",
                wspace=0.1,
                show=False)
 
     sc.pp.neighbors(mmd_latent_with_fake_labels)
     sc.tl.umap(mmd_latent_with_fake_labels)
     sc.pl.umap(mmd_latent_with_fake_labels, color=color,
-               save=f"_{data_name}_mmd_latent_with_fake_labels",
+               save=f"_{data_name}_mmd_latent_with_fake_labels.png",
                wspace=0.1,
                show=False)
 
