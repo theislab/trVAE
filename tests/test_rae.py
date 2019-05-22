@@ -95,9 +95,9 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
 
-        network = rcvae.CVAE(x_dimension=data.shape[1],
-                             z_dimension=z_dim,
-                             model_path=f"../models/RAE/{data_name}/{cell_type}/{z_dim}/")
+        network = rcvae.RAE(x_dimension=data.shape[1],
+                            z_dimension=z_dim,
+                            model_path=f"../models/RAE/{data_name}/{cell_type}/{z_dim}/")
 
         network.restore_model()
 
@@ -106,18 +106,13 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         feed_data = data.X
 
-        train_labels, _ = rcvae.label_encoder(data)
-        fake_labels = np.ones(train_labels.shape)
-
-        latent_with_true_labels = network.to_latent(feed_data, train_labels)
-        latent_with_fake_labels = network.to_latent(feed_data, fake_labels)
-        mmd_latent_with_true_labels = network.to_mmd_layer(feed_data, train_labels)
-        mmd_latent_with_fake_labels = network.to_mmd_layer(feed_data, fake_labels)
+        latent_with_true_labels = network.to_latent(feed_data)
+        latent_with_fake_labels = network.to_latent(feed_data)
 
         cell_type_ctrl = cell_type_adata.copy()[cell_type_adata.obs['condition'] == source_key]
         print(cell_type_ctrl.shape, cell_type_adata.shape)
 
-        pred_celltypes = network.predict(cell_type_ctrl, labels=np.ones((cell_type_ctrl.shape[0], 1)))
+        pred_celltypes = network.predict(cell_type_ctrl)
         pred_adata = anndata.AnnData(X=pred_celltypes)
         pred_adata.obs['condition'] = ['predicted'] * pred_adata.shape[0]
         pred_adata.var = cell_type_adata.var
@@ -172,14 +167,6 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         latent_with_fake_labels.obs['condition'] = data.obs['condition'].values
         latent_with_fake_labels.obs[cell_type_key] = data.obs[cell_type_key].values
 
-        mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
-        mmd_latent_with_true_labels.obs['condition'] = data.obs['condition'].values
-        mmd_latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
-
-        mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
-        mmd_latent_with_fake_labels.obs['condition'] = data.obs['condition'].values
-        mmd_latent_with_fake_labels.obs[cell_type_key] = data.obs[cell_type_key].values
-
         color = ['condition', cell_type_key]
 
         sc.pp.neighbors(train_data)
@@ -198,18 +185,6 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.tl.umap(latent_with_fake_labels)
         sc.pl.umap(latent_with_fake_labels, color=color,
                    save=f"_{data_name}_{cell_type}_latent_with_fake_labels",
-                   show=False)
-
-        sc.pp.neighbors(mmd_latent_with_true_labels)
-        sc.tl.umap(mmd_latent_with_true_labels)
-        sc.pl.umap(mmd_latent_with_true_labels, color=color,
-                   save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
-                   show=False)
-
-        sc.pp.neighbors(mmd_latent_with_fake_labels)
-        sc.tl.umap(mmd_latent_with_fake_labels)
-        sc.pl.umap(mmd_latent_with_fake_labels, color=color,
-                   save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels",
                    show=False)
 
         sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby='condition',
@@ -238,6 +213,6 @@ if __name__ == '__main__':
 
     data_dict = DATASETS[args['data']]
     del args['data']
-    train_network(data_dict=data_dict, **args)
+    # train_network(data_dict=data_dict, **args)
     visualize_trained_network_results(data_dict, z_dim=args['z_dim'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")

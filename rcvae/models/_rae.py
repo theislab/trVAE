@@ -96,10 +96,7 @@ class RAE:
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
-        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(z)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
+        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(z)
         h = BatchNormalization()(h)
         h = LeakyReLU()(h)
         h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(h)
@@ -130,8 +127,8 @@ class RAE:
         decoder_outputs = self.decoder_model(self.encoder_model(self.x))
         encoder_outputs = self.encoder_model(self.x)
 
-        reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
-        mmd_output = Lambda(lambda x: x, name="mmd")(encoder_outputs[0])
+        reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs)
+        mmd_output = Lambda(lambda x: x, name="mmd")(encoder_outputs)
         self.rae_model = Model(inputs=self.x,
                                outputs=[reconstruction_output, mmd_output],
                                name="rae")
@@ -158,7 +155,7 @@ class RAE:
             return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
         elif kernel == 'raphy':
             scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(RCVAE.squared_distance(x, y), 0)
+            squared_dist = K.expand_dims(RAE.squared_distance(x, y), 0)
             scales = K.expand_dims(K.expand_dims(scales, -1), -1)
             weights = K.eval(K.shape(scales)[0])
             weights = K.variable(value=np.asarray(weights))
@@ -168,7 +165,7 @@ class RAE:
             sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
 
             beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = RCVAE.squared_distance(x, y)
+            distances = RAE.squared_distance(x, y)
             s = K.dot(beta, K.reshape(distances, (1, -1)))
 
             return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
@@ -190,9 +187,9 @@ class RAE:
             # Returns
                 returns the computed MMD between x and y
         """
-        x_kernel = RCVAE.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = RCVAE.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = RCVAE.compute_kernel(x, y, kernel=kernel, **kwargs)
+        x_kernel = RAE.compute_kernel(x, x, kernel=kernel, **kwargs)
+        y_kernel = RAE.compute_kernel(y, y, kernel=kernel, **kwargs)
+        xy_kernel = RAE.compute_kernel(x, y, kernel=kernel, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
     def _loss_function(self):
@@ -318,7 +315,7 @@ class RAE:
             network.restore_model()
             ```
         """
-        self.rae_model = load_model(os.path.join(self.model_to_use, 'mmd_ae.h5'), compile=False)
+        self.rae_model = load_model(os.path.join(self.model_to_use, 'mmd_rae.h5'), compile=False)
         self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
         self._loss_function()
@@ -376,9 +373,9 @@ class RAE:
 
         if shuffle:
             train_data = shuffle_data(train_data)
-
+        train_labels, _ = label_encoder(train_data)
         x = train_data.X
-        y = train_data.X
+        y = [train_data.X, train_labels]
         if use_validation:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
@@ -386,8 +383,10 @@ class RAE:
             if shuffle:
                 valid_data = shuffle_data(valid_data)
 
+            valid_labels, _ = label_encoder(valid_data)
+
             x_valid = valid_data.X
-            y_valid = valid_data.X
+            y_valid = [valid_data.X, valid_labels]
             histories = self.rae_model.fit(
                 x=x,
                 y=y,
