@@ -123,11 +123,11 @@ class RCCVAE:
             model.summary()
             return mean, log_var, model
         else:
-            # h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(y)
-            # h = Reshape((*self.x_dim[:-1], 1))(h)
-            # h = concatenate([x, h])
+            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(y)
+            h = Reshape((*self.x_dim[:-1], 1))(h)
+            h = concatenate([x, h])
 
-            conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(x)
+            conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(h)
             conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv1)
             pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
@@ -152,9 +152,9 @@ class RCCVAE:
             dense = Activation('relu')(dense)
             dense = Dropout(self.dr_rate)(dense)
 
-            encode_y = Dense(128, activation='relu', use_bias=False, kernel_initializer='he_normal')(y)
+            # encode_y = Dense(128, activation='relu', use_bias=False, kernel_initializer='he_normal')(y)
 
-            dense = concatenate([dense, encode_y], axis=1)
+            # dense = concatenate([dense, encode_y], axis=1)
 
             mean = Dense(self.z_dim, kernel_initializer=self.init_w)(dense)
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(dense)
