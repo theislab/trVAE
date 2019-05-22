@@ -213,6 +213,6 @@ if __name__ == '__main__':
 
     data_dict = DATASETS[args['data']]
     del args['data']
-    # train_network(data_dict=data_dict, **args)
+    train_network(data_dict=data_dict, **args)
     visualize_trained_network_results(data_dict, z_dim=args['z_dim'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
