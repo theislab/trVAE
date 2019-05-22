@@ -32,7 +32,7 @@ DATASETS = {
 
 def train_network(data_dict=None,
                   z_dim=100,
-                  alpha=0.001,
+                  beta=0.001,
                   n_epochs=500,
                   batch_size=512,
                   dropout_rate=0.2,
@@ -57,7 +57,7 @@ def train_network(data_dict=None,
 
         network = rcvae.RAE(x_dimension=net_train_data.shape[1],
                             z_dimension=z_dim,
-                            alpha=alpha,
+                            beta=beta,
                             model_path=f"../models/RAE/{data_name}/{cell_type}/{z_dim}/",
                             dropout_rate=dropout_rate)
 
@@ -226,8 +226,8 @@ if __name__ == '__main__':
                                  help='name of dataset you want to train')
     arguments_group.add_argument('-z', '--z_dim', type=int, default=20, required=False,
                                  help='latent space dimension')
-    arguments_group.add_argument('-a', '--alpha', type=float, default=0.005, required=False,
-                                 help='Alpha coeff in loss term')
+    arguments_group.add_argument('-b', '--beta', type=float, default=0.005, required=False,
+                                 help='Beta coeff in loss term')
     arguments_group.add_argument('-n', '--n_epochs', type=int, default=5000, required=False,
                                  help='Maximum Number of epochs for training')
     arguments_group.add_argument('-c', '--batch_size', type=int, default=512, required=False,
