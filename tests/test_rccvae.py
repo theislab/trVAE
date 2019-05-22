@@ -433,7 +433,6 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
 
 if __name__ == '__main__':
-    warnings.simplefilter('error', UserWarning)
     parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
