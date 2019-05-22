@@ -23,10 +23,10 @@ DATASETS = {
              "cell_type": "cell_type", 'spec_cell_types': ['CD4T', "CD14+Mono", "FCGR3A+Mono"]},
 
     "Hpoly": {"name": 'hpoly', "source_key": "Control", "target_key": 'Hpoly.Day10',
-              "cell_type": "cell_label", 'spec_cell_type': ['Tuft', 'Endocrine']},
+              "cell_type": "cell_label", 'spec_cell_types': ['Tuft', 'Endocrine']},
 
     "Salmonella": {"name": 'salmonella', "source_key": "Control", "target_key": 'Salmonella',
-                   "cell_type": "cell_label", 'spec_cell_type': ['Tuft', 'Endocrine']},
+                   "cell_type": "cell_label", 'spec_cell_types': ['Tuft', 'Endocrine']},
 }
 
 
@@ -46,7 +46,7 @@ def train_network(data_dict=None,
     valid_data = sc.read(f"../data/{data_name}/valid_{data_name}.h5ad")
     cell_types = train_data.obs[cell_type_key].unique().tolist()
 
-    spec_cell_type = data_dict.get("spec_cell_type", None)
+    spec_cell_type = data_dict.get("spec_cell_types", None)
     if spec_cell_type is not []:
         cell_types = spec_cell_type
 
@@ -84,7 +84,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
     data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
     cell_types = data.obs[cell_type_key].unique().tolist()
 
-    spec_cell_type = data_dict.get("spec_cell_type", None)
+    spec_cell_type = data_dict.get("spec_cell_types", None)
     if spec_cell_type is not []:
         cell_types = spec_cell_type
 
