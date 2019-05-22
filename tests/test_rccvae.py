@@ -1,6 +1,5 @@
 import argparse
 import os
-import warnings
 
 import anndata
 import numpy as np
@@ -254,31 +253,39 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
     k = len(test_digits)
     for j in range(n_files):
         source_sample = []
+        target_sample = []
         for digit in test_digits:
             source_images_digit = valid_data[
                 (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == source_key)]
+            target_images_digit = valid_data[
+                (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == target_key)]
             if j == 0:
                 source_images_digit.X /= 255.0
             random_samples = np.random.choice(source_images_digit.shape[0], 1, replace=False)
 
             source_sample.append(source_images_digit.X[random_samples])
+            target_sample.append(target_images_digit.X[random_samples])
         # random_samples = np.random.choice(source_images.shape[0], k, replace=False)
         # source_sample = source_data.X[random_samples]
         source_sample = np.array(source_sample)
+        target_sample = np.array(target_sample)
+
         source_sample = np.reshape(source_sample, (-1, np.prod(image_shape)))
         source_sample_reshaped = np.reshape(source_sample, (-1, *image_shape))
+        target_sample_reshaped = np.reshape(target_sample, (-1, *image_shape))
+
         source_sample = anndata.AnnData(X=source_sample)
         source_sample.obs['condition'] = np.ones(shape=(k, 1))
 
-        target_sample = network.predict(data=source_sample,
-                                        encoder_labels=np.zeros((k, 1)),
-                                        decoder_labels=np.ones((k, 1)))
-        target_sample = np.reshape(target_sample, newshape=(-1, *image_shape))
+        pred_sample = network.predict(data=source_sample,
+                                      encoder_labels=np.zeros((k, 1)),
+                                      decoder_labels=np.ones((k, 1)))
+        pred_sample = np.reshape(pred_sample, newshape=(-1, *image_shape))
 
-        print(source_sample.shape, source_sample_reshaped.shape, target_sample.shape)
+        print(source_sample.shape, source_sample_reshaped.shape, target_sample_reshaped.shape, pred_sample.shape)
 
         plt.close("all")
-        fig, ax = plt.subplots(k, 2, figsize=(k * 1, 6))
+        fig, ax = plt.subplots(k, 3, figsize=(k * 1, 6))
         for i in range(k):
             ax[i, 0].axis('off')
             if source_sample_reshaped.shape[-1] > 1:
@@ -286,14 +293,17 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
             else:
                 ax[i, 0].imshow(source_sample_reshaped[i, :, :, 0], cmap='Greys')
             ax[i, 1].axis('off')
-            if i == 0:
-                if data_name == "celeba":
-                    ax[i, 0].set_title("Male without Eyeglasses")
-                    ax[i, 1].set_title("Male with Eyeglasses")
-            if target_sample.shape[-1] > 1:
-                ax[i, 1].imshow(target_sample[i])
+            ax[i, 2].axis('off')
+            # if i == 0:
+            #     if data_name == "celeba":
+            #         ax[i, 0].set_title("Male without Eyeglasses")
+            #         ax[i, 1].set_title("Male with Eyeglasses")
+            if pred_sample.shape[-1] > 1:
+                ax[i, 1].imshow(pred_sample[i])
             else:
-                ax[i, 1].imshow(target_sample[i, :, :, 0], cmap='Greys')
+                ax[i, 1].imshow(pred_sample[i, :, :, 0], cmap='Greys')
+
+            ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
         plt.savefig(os.path.join(results_path, f"./sample_images_{data_name}_{j}.pdf"))
 
 
@@ -386,10 +396,14 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     else:
         color = ['condition']
 
-    train_data.obs.loc[(train_data.obs['condition'] == source_key) & (train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
-    train_data.obs.loc[(train_data.obs['condition'] == source_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'training'
-    train_data.obs.loc[(train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
-    train_data.obs.loc[(train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'heldout'
+    train_data.obs.loc[(train_data.obs['condition'] == source_key) & (
+        train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
+    train_data.obs.loc[
+        (train_data.obs['condition'] == source_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'training'
+    train_data.obs.loc[(train_data.obs['condition'] == target_key) & (
+        train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
+    train_data.obs.loc[
+        (train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'heldout'
     print(train_data.obs['labels'].value_counts())
     sc.pp.neighbors(train_data)
     sc.tl.umap(train_data)
@@ -399,7 +413,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
                wspace=0.5)
 
     sc.tl.umap(train_data)
-    sc.pl.umap(train_data, color='type',
+    sc.pl.umap(train_data, color=['type'],
                save=f'_{data_name}_data_type.png',
                show=False)
 
@@ -472,13 +486,13 @@ if __name__ == '__main__':
     else:
         args['preprocess'] = True
     # train_network(data_dict=data_dict, **args)
-    # evaluate_network(data_dict,
-    #                  z_dim=args['z_dim'],
-    #                  n_files=30,
-    #                  arch_style=args['arch_style'],
-    #                  k=4)
-    visualize_trained_network_results(data_dict,
-                                      z_dim=args['z_dim'],
-                                      arch_style=args['arch_style'],
-                                      preprocess=args['preprocess'])
+    evaluate_network(data_dict,
+                     z_dim=args['z_dim'],
+                     n_files=30,
+                     arch_style=args['arch_style'],
+                     k=4)
+    # visualize_trained_network_results(data_dict,
+    #                                   z_dim=args['z_dim'],
+    #                                   arch_style=args['arch_style'],
+    #                                   preprocess=args['preprocess'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")

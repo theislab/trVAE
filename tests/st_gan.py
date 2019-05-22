@@ -353,7 +353,7 @@ for spec_cell_type in spec_cell_types:
     sc.pl.umap(dt, color=["condition"], show=False, frameon=False
                , save="_latent_condition.pdf", palette=["#96a1a3", "#A4E804"])
 
-    rcvae.plotting.reg_var_plot(all_Data,
+    rcvae.plotting.reg_mean_plot(all_Data,
                                 top_100_genes=top_100_genes,
                                 gene_list=gene_list,
                                 condition_key='condition',
@@ -364,7 +364,7 @@ for spec_cell_type in spec_cell_types:
                                 textsize=14,
                                 title=spec_cell_type,
                                 path_to_save=os.path.join(path_to_save,
-                                                          f'mmd_resnet_reg_var_{data_name}_{spec_cell_type}.pdf'))
+                                                          f'mmd_resnet_reg_mean_{data_name}_{spec_cell_type}.pdf'))
 
     rcvae.plotting.reg_var_plot(all_Data,
                                 top_100_genes=top_100_genes,
