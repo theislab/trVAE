@@ -312,17 +312,10 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
         if sparse.issparse(data.X):
             data.X = data.X.A
 
-        source_images = data.copy()[data.obs['condition'] == source_key].X
-        target_images = data.copy()[data.obs['condition'] == target_key].X
+        train_images = data.X
+        train_labels, _ = rcvae.label_encoder(data)
 
-        train_images = np.concatenate([source_images, target_images], axis=0)
-        train_data = np.reshape(train_images, (-1, np.prod(train_images.shape[1:])))
-
-        source_labels = np.zeros(shape=source_images.shape[0])
-        target_labels = np.ones(shape=target_images.shape[0])
-        train_labels = np.concatenate([source_labels, target_labels], axis=0)
-
-        train_data = anndata.AnnData(X=train_data)
+        train_data = anndata.AnnData(X=data)
         train_data.obs['condition'] = train_labels
         train_data.obs['labels'] = data.obs['labels'].values
 
@@ -339,12 +332,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
         if preprocess:
             train_images /= 255.0
 
-    source_size = train_data[train_data.obs['condition'] == source_key].shape[0]
-    target_size = train_data[train_data.obs['condition'] == target_key].shape[0]
-
-    source_labels = np.zeros(shape=source_size)
-    target_labels = np.ones(shape=target_size)
-    train_labels = np.concatenate([source_labels, target_labels], axis=0)
+    train_labels, _ = rcvae.label_encoder(train_data)
     fake_labels = np.ones(train_labels.shape)
 
     network = rcvae.RCCVAE(x_dimension=(img_resize, img_resize, n_channels),
