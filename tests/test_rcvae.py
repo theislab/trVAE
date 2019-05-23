@@ -133,7 +133,6 @@ def reconstruct_whole_data(data_dict={}, z_dim=100):
         else:
             all_data = all_data.concatenate(ctrl_adata, pred_adata, real_stim_adata)
 
-        os.chdir("../../../")
         print(f"Finish Reconstructing for {cell_type}")
     all_data.write_h5ad(f"../data/reconstructed/RCVAE/{data_name}.h5ad")
 
