@@ -317,8 +317,8 @@ if __name__ == '__main__':
     data_dict = DATASETS[args['data']]
     del args['data']
     if args['do_train'] == 1:
+        del args['do_train']
         train_network(data_dict=data_dict, **args)
         visualize_trained_network_results(data_dict, z_dim=args['z_dim'])
     reconstruct_whole_data(data_dict, args['z_dim'])
-    del args['do_train']
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
