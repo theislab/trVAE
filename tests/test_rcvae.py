@@ -307,7 +307,7 @@ if __name__ == '__main__':
                                  help='Batch Size')
     arguments_group.add_argument('-r', '--dropout_rate', type=float, default=0.4, required=False,
                                  help='Dropout ratio')
-    arguments_group.add_argument('-l', '--learning_rate', type=float, default=0.4, required=False,
+    arguments_group.add_argument('-l', '--learning_rate', type=float, default=0.001, required=False,
                                  help='Learning rate of optimizer')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='Learning rate of optimizer')
