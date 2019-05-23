@@ -83,6 +83,65 @@ def train_network(data_dict=None,
         print(f"Model for {cell_type} has been trained")
 
 
+def reconstruct_whole_data(data_dict={}, z_dim=100):
+    data_name = data_dict.get('name', None)
+    ctrl_key = data_dict.get("source_key", None)
+    stim_key = data_dict.get("target_key", None)
+    cell_type_key = data_dict.get("cell_type", None)
+    train = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+
+    if sparse.issparse(train.X):
+        train.X = train.X.A
+
+    all_data = anndata.AnnData()
+    spec_cell_type = data_dict.get("spec_cell_type", None)
+    cell_types = train.obs[cell_type_key].unique().tolist()
+    if spec_cell_type is not []:
+        cell_types = spec_cell_type
+
+    for idx, cell_type in enumerate(cell_types):
+        print(f"Reconstructing for {cell_type}")
+        os.chdir(f"./vae_results/{data_name}/{cell_type}")
+        network = rcvae.RCVAE(x_dimension=train.shape[1],
+                              z_dimension=z_dim,
+                              model_path=f"../models/RCVAE/{data_name}/{cell_type}/{z_dim}/",
+                              )
+        network.restore_model()
+
+        cell_type_data = train[train.obs[cell_type_key] == cell_type]
+        cell_type_ctrl_data = train[((train.obs[cell_type_key] == cell_type) & (train.obs["condition"] == ctrl_key))]
+        pred, delta = network.predict(cell_type_data,
+                                      encoder_labels=np.zeros(cell_type_ctrl_data.shape[0]),
+                                      decoder_labels=np.ones(cell_type_ctrl_data.shape[0]))
+
+        pred_adata = anndata.AnnData(pred,
+                                     obs={"condition": [f"{cell_type}_pred_stim"] * len(pred),
+                                          cell_type_key: [cell_type] * len(pred)},
+                                     var={"var_names": cell_type_data.var_names})
+
+        ctrl_adata = anndata.AnnData(cell_type_ctrl_data.X,
+                                     obs={"condition": [f"{cell_type}_ctrl"] * len(cell_type_ctrl_data),
+                                          cell_type_key: [cell_type] * len(cell_type_ctrl_data)},
+                                     var={"var_names": cell_type_ctrl_data.var_names})
+
+        if sparse.issparse(cell_type_data.X):
+            real_stim = cell_type_data[cell_type_data.obs["condition"] == stim_key].X.A
+        else:
+            real_stim = cell_type_data[cell_type_data.obs["condition"] == stim_key].X
+        real_stim_adata = anndata.AnnData(real_stim,
+                                          obs={"condition": [f"{cell_type}_real_stim"] * len(real_stim),
+                                               cell_type_key: [cell_type] * len(real_stim)},
+                                          var={"var_names": cell_type_data.var_names})
+        if idx == 0:
+            all_data = ctrl_adata.concatenate(pred_adata, real_stim_adata)
+        else:
+            all_data = all_data.concatenate(ctrl_adata, pred_adata, real_stim_adata)
+
+        os.chdir("../../../")
+        print(f"Finish Reconstructing for {cell_type}")
+    all_data.write_h5ad(f"../data/reconstructed/RCVAE/{data_name}.h5ad")
+
+
 def visualize_trained_network_results(data_dict, z_dim=100):
     plt.close("all")
     data_name = data_dict.get('name', None)
@@ -254,11 +313,17 @@ if __name__ == '__main__':
     arguments_group.add_argument('-r', '--dropout_rate', type=float, default=0.4, required=False,
                                  help='Dropout ratio')
     arguments_group.add_argument('-l', '--learning_rate', type=float, default=0.4, required=False,
-                                help='Learning rate of optimizer')
+                                 help='Learning rate of optimizer')
+    arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
+                                 help='Learning rate of optimizer')
+
     args = vars(parser.parse_args())
 
     data_dict = DATASETS[args['data']]
     del args['data']
-    train_network(data_dict=data_dict, **args)
-    visualize_trained_network_results(data_dict, z_dim=args['z_dim'])
+    if args['do_train'] == 1:
+        train_network(data_dict=data_dict, **args)
+        visualize_trained_network_results(data_dict, z_dim=args['z_dim'])
+    reconstruct_whole_data(data_dict, args['z_dim'])
+    del args['do_train']
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
