@@ -106,9 +106,9 @@ def reconstruct_whole_data(data_dict={}, z_dim=100):
 
         cell_type_data = train[train.obs[cell_type_key] == cell_type]
         cell_type_ctrl_data = train[((train.obs[cell_type_key] == cell_type) & (train.obs["condition"] == ctrl_key))]
-        pred, delta = network.predict(cell_type_data,
-                                      encoder_labels=np.zeros(cell_type_ctrl_data.shape[0]),
-                                      decoder_labels=np.ones(cell_type_ctrl_data.shape[0]))
+        pred = network.predict(cell_type_data,
+                               encoder_labels=np.zeros((cell_type_ctrl_data.shape[0], 1)),
+                               decoder_labels=np.ones((cell_type_ctrl_data.shape[0], 1)))
 
         pred_adata = anndata.AnnData(pred,
                                      obs={"condition": [f"{cell_type}_pred_stim"] * len(pred),
