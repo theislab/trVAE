@@ -39,6 +39,7 @@ def train_network(data_dict=None,
                   n_epochs=500,
                   batch_size=512,
                   dropout_rate=0.2,
+                  learning_rate=0.001,
                   ):
     data_name = data_dict['name']
     target_key = data_dict.get('target_key', None)
@@ -64,6 +65,7 @@ def train_network(data_dict=None,
                               alpha=alpha,
                               beta=beta,
                               kernel=kernel,
+                              learning_rate=learning_rate,
                               train_with_fake_labels=False,
                               model_path=f"../models/RCVAE/{data_name}/{cell_type}/{z_dim}/",
                               dropout_rate=dropout_rate)
@@ -74,7 +76,7 @@ def train_network(data_dict=None,
                       n_epochs=n_epochs,
                       batch_size=batch_size,
                       verbose=2,
-                      early_stop_limit=100,
+                      early_stop_limit=600,
                       shuffle=True,
                       save=True)
 
@@ -251,6 +253,8 @@ if __name__ == '__main__':
                                  help='Batch Size')
     arguments_group.add_argument('-r', '--dropout_rate', type=float, default=0.4, required=False,
                                  help='Dropout ratio')
+    arguments_group.add_argument('-l', '--learning_rate', type=float, default=0.4, required=False,
+                                help='Learning rate of optimizer')
     args = vars(parser.parse_args())
 
     data_dict = DATASETS[args['data']]
