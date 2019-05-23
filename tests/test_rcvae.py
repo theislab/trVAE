@@ -94,14 +94,10 @@ def reconstruct_whole_data(data_dict={}, z_dim=100):
         train.X = train.X.A
 
     all_data = anndata.AnnData()
-    spec_cell_type = data_dict.get("spec_cell_type", None)
     cell_types = train.obs[cell_type_key].unique().tolist()
-    if spec_cell_type is not []:
-        cell_types = spec_cell_type
 
     for idx, cell_type in enumerate(cell_types):
         print(f"Reconstructing for {cell_type}")
-        os.chdir(f"./vae_results/{data_name}/{cell_type}")
         network = rcvae.RCVAE(x_dimension=train.shape[1],
                               z_dimension=z_dim,
                               model_path=f"../models/RCVAE/{data_name}/{cell_type}/{z_dim}/",
