@@ -129,6 +129,12 @@ def train_network(data_dict=None,
         preprocessed_data.obs["condition"] = train_labels
         preprocessed_data.obs['labels'] = data.obs['labels'].values
         data = preprocessed_data.copy()
+    else:
+        preprocessed_data = anndata.AnnData(X=train_images)
+        preprocessed_data.obs['condition'] = train_labels
+        if data.obs.columns.__contains__('labels'):
+            preprocessed_data.obs['labels'] = data.obs['condition'].values
+        data = preprocessed_data.copy()
 
     train_size = int(data.shape[0] * 0.85)
     indices = np.arange(data.shape[0])
