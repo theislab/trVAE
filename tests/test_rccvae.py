@@ -29,17 +29,24 @@ FASHION_MNIST_CLASS_DICT = {
 DATASETS = {
     "CelebA": {"name": 'celeba', "gender": "Male", 'attribute': "Smiling", 'source_key': -1, "target_key": 1,
                "resize": 64, "n_channels": 3},
-    "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7, "resize": 28, 'size': 28, "n_channels": 1},
+
+    "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7,
+              "train_digits": [], "test_digits": [],
+              "resize": 28, 'size': 28, "n_channels": 1},
+
     "ThinMNIST": {"name": 'thin_mnist', "source_key": "normal", "target_key": "thin",
                   'train_digits': [1, 3, 6, 7], 'test_digits': [0, 2, 4, 5, 8, 9],
                   "resize": 28, 'size': 28,
                   "n_channels": 1},
+
     "ThickMNIST": {"name": 'thick_mnist', "source_key": "normal", "target_key": "thick",
                    'train_digits': [1, 3, 6, 7], 'test_digits': [0, 2, 4, 5, 8, 9],
                    "resize": 28, 'size': 28,
                    "n_channels": 1},
+
     "FashionMNIST": {"name": "fashion_mnist", "source_key": FASHION_MNIST_CLASS_DICT[0],
                      "target_key": FASHION_MNIST_CLASS_DICT[1], "resize": 28, 'size': 28, "n_channels": 1},
+
     "Horse2Zebra": {"name": "h2z", "source_key": "horse", "target_key": "zebra", "size": 256, "n_channels": 3,
                     "resize": 64},
     "Apple2Orange": {"name": "a2o", "source_key": "apple", "target_key": "orange", "size": 256, "n_channels": 3,
@@ -138,11 +145,14 @@ def train_network(data_dict=None,
             ~((data_train.obs['labels'].isin(test_digits)) & (data_train.obs['condition'] == 1))]
         valid_data = data_valid.copy()[
             ~((data_valid.obs['labels'].isin(test_digits)) & (data_valid.obs['condition'] == 1))]
-    else:
+    elif data_name == "celeba":
         train_data = data_train.copy()[
             ~((data_train.obs['labels'] == -1) & (data_train.obs['condition'] == target_key))]
         valid_data = data_valid.copy()[
             ~((data_valid.obs['labels'] == -1) & (data_valid.obs['condition'] == target_key))]
+    else:
+        train_data = data_train.copy()
+        valid_data = data_valid.copy()
 
     network = rcvae.RCCVAE(x_dimension=source_images.shape[1:],
                            z_dimension=z_dim,
