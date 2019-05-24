@@ -271,23 +271,26 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
 
     if sparse.issparse(valid_data.X):
         valid_data.X = valid_data.X.A
-    k = len(test_digits)
+    if test_digits is not None:
+        k = len(test_digits)
     for j in range(n_files):
         source_sample = []
         target_sample = []
-        for digit in test_digits:
-            source_images_digit = valid_data[
-                (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == source_key)]
-            target_images_digit = valid_data[
-                (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == target_key)]
-            if j == 0:
-                source_images_digit.X /= 255.0
-            random_samples = np.random.choice(source_images_digit.shape[0], 1, replace=False)
+        if test_digits is not None:
+            for digit in test_digits:
+                source_images_digit = valid_data[
+                    (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == source_key)]
+                target_images_digit = valid_data[
+                    (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == target_key)]
+                if j == 0:
+                    source_images_digit.X /= 255.0
+                random_samples = np.random.choice(source_images_digit.shape[0], 1, replace=False)
 
-            source_sample.append(source_images_digit.X[random_samples])
-            target_sample.append(target_images_digit.X[random_samples])
-        # random_samples = np.random.choice(source_images.shape[0], k, replace=False)
-        # source_sample = source_data.X[random_samples]
+                source_sample.append(source_images_digit.X[random_samples])
+                target_sample.append(target_images_digit.X[random_samples])
+        else:
+            random_samples = np.random.choice(source_images.shape[0], k, replace=False)
+            source_sample = source_data.X[random_samples]
         source_sample = np.array(source_sample)
         target_sample = np.array(target_sample)
 
@@ -306,7 +309,10 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         print(source_sample.shape, source_sample_reshaped.shape, target_sample_reshaped.shape, pred_sample.shape)
 
         plt.close("all")
-        fig, ax = plt.subplots(k, 3, figsize=(k * 1, 6))
+        if data_name.__contains__("mnist"):
+            fig, ax = plt.subplots(k, 3, figsize=(k * 1, 6))
+        else:
+            fig, ax = plt.subplots(k, 2, figsize=(k * 1, 6))
         for i in range(k):
             ax[i, 0].axis('off')
             if source_sample_reshaped.shape[-1] > 1:
@@ -315,16 +321,24 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
                 ax[i, 0].imshow(source_sample_reshaped[i, :, :, 0], cmap='Greys')
             ax[i, 1].axis('off')
             ax[i, 2].axis('off')
-            # if i == 0:
-            #     if data_name == "celeba":
-            #         ax[i, 0].set_title("Male without Eyeglasses")
-            #         ax[i, 1].set_title("Male with Eyeglasses")
+            if i == 0:
+                if data_name == "celeba":
+                    ax[i, 0].set_title(f"{data_dict['gender']} without {data_dict['attribute']}")
+                    ax[i, 1].set_title(f"{data_dict['gender']} with {data_dict['attribute']}")
+                elif data_name.__contains__("mnist"):
+                    ax[i, 0].set_title(f"Source")
+                    ax[i, 1].set_title(f"Target (Ground Truth)")
+                    ax[i, 2].set_title(f"Target (Predicted)")
+                else:
+                    ax[i, 0].set_title(f"{source_key}")
+                    ax[i, 1].set_title(f"{target_key}")
+
             if pred_sample.shape[-1] > 1:
                 ax[i, 1].imshow(pred_sample[i])
             else:
                 ax[i, 1].imshow(pred_sample[i, :, :, 0], cmap='Greys')
-
-            ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
+            if data_name.__contains__("mnist"):
+                ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
         plt.savefig(os.path.join(results_path, f"./sample_images_{data_name}_{j}.pdf"))
 
 
