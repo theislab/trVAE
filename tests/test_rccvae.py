@@ -182,7 +182,7 @@ def train_network(data_dict=None,
                       n_epochs=n_epochs,
                       batch_size=batch_size,
                       verbose=2,
-                      early_stop_limit=100,
+                      early_stop_limit=200,
                       shuffle=True,
                       save=True)
 
