@@ -274,9 +274,9 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
     if test_digits is not None:
         k = len(test_digits)
     for j in range(n_files):
-        source_sample = []
-        target_sample = []
         if test_digits is not None:
+            source_sample = []
+            target_sample = []
             for digit in test_digits:
                 source_images_digit = valid_data[
                     (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == source_key)]
@@ -291,12 +291,14 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         else:
             random_samples = np.random.choice(source_images.shape[0], k, replace=False)
             source_sample = source_data.X[random_samples]
+
         source_sample = np.array(source_sample)
-        target_sample = np.array(target_sample)
+        if data_name.__contains__("mnist"):
+            target_sample = np.array(target_sample)
+            target_sample_reshaped = np.reshape(target_sample, (-1, *image_shape))
 
         source_sample = np.reshape(source_sample, (-1, np.prod(image_shape)))
         source_sample_reshaped = np.reshape(source_sample, (-1, *image_shape))
-        target_sample_reshaped = np.reshape(target_sample, (-1, *image_shape))
 
         source_sample = anndata.AnnData(X=source_sample)
         source_sample.obs['condition'] = np.ones(shape=(k, 1))
@@ -306,7 +308,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
                                       decoder_labels=np.ones((k, 1)))
         pred_sample = np.reshape(pred_sample, newshape=(-1, *image_shape))
 
-        print(source_sample.shape, source_sample_reshaped.shape, target_sample_reshaped.shape, pred_sample.shape)
+        print(source_sample.shape, source_sample_reshaped.shape, pred_sample.shape)
 
         plt.close("all")
         if data_name.__contains__("mnist"):
