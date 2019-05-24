@@ -322,7 +322,8 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
             else:
                 ax[i, 0].imshow(source_sample_reshaped[i, :, :, 0], cmap='Greys')
             ax[i, 1].axis('off')
-            ax[i, 2].axis('off')
+            if data_name.__contains__("mnist"):
+                ax[i, 2].axis('off')
             if i == 0:
                 if data_name == "celeba":
                     ax[i, 0].set_title(f"{data_dict['gender']} without {data_dict['attribute']}")
