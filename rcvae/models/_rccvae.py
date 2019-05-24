@@ -371,7 +371,7 @@ class RCCVAE:
                 y_true = K.reshape(y_true, (-1, *self.x_dim))
 
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-                recon_loss = 0.5 * K.mean(K.square((y_true - y_pred)), axis=[1, 2, 3])
+                recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
                 return recon_loss + self.alpha * kl_loss
 
             def mmd_loss(real_labels, y_pred):
