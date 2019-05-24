@@ -58,6 +58,7 @@ def train_network(data_dict=None,
                   dropout_rate=0.2,
                   arch_style=1,
                   preprocess=True,
+                  learning_rate=0.001
                   ):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
@@ -151,6 +152,7 @@ def train_network(data_dict=None,
                            kernel=kernel,
                            arch_style=arch_style,
                            train_with_fake_labels=False,
+                           learning_rate=learning_rate,
                            model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/",
                            dropout_rate=dropout_rate)
 
@@ -475,6 +477,9 @@ if __name__ == '__main__':
                                  help='Image size to be resize')
     arguments_group.add_argument('-p', '--preprocess', type=int, default=True, required=False,
                                  help='do preprocess images')
+    arguments_group.add_argument('-l', '--learning_rate', type=float, default=0.001, required=False,
+                                 help='Learning Rate for Optimizer')
+
     args = vars(parser.parse_args())
 
     data_dict = DATASETS[args['data']]
@@ -485,14 +490,14 @@ if __name__ == '__main__':
         args['preprocess'] = False
     else:
         args['preprocess'] = True
-    # train_network(data_dict=data_dict, **args)
+    train_network(data_dict=data_dict, **args)
     evaluate_network(data_dict,
                      z_dim=args['z_dim'],
                      n_files=30,
                      arch_style=args['arch_style'],
                      k=4)
-    # visualize_trained_network_results(data_dict,
-    #                                   z_dim=args['z_dim'],
-    #                                   arch_style=args['arch_style'],
-    #                                   preprocess=args['preprocess'])
+    visualize_trained_network_results(data_dict,
+                                      z_dim=args['z_dim'],
+                                      arch_style=args['arch_style'],
+                                      preprocess=args['preprocess'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
