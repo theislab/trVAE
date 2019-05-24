@@ -434,15 +434,16 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     else:
         color = ['condition']
 
-    train_data.obs.loc[(train_data.obs['condition'] == source_key) & (
-        train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
-    train_data.obs.loc[
-        (train_data.obs['condition'] == source_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'training'
-    train_data.obs.loc[(train_data.obs['condition'] == target_key) & (
-        train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
-    train_data.obs.loc[
-        (train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'heldout'
-    print(train_data.obs['labels'].value_counts())
+    if train_digits is not None:
+        train_data.obs.loc[(train_data.obs['condition'] == source_key) & (
+            train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
+        train_data.obs.loc[
+            (train_data.obs['condition'] == source_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'training'
+        train_data.obs.loc[(train_data.obs['condition'] == target_key) & (
+            train_data.obs['labels'].isin(train_digits)), 'type'] = 'training'
+        train_data.obs.loc[
+            (train_data.obs['condition'] == target_key) & (train_data.obs['labels'].isin(test_digits)), 'type'] = 'heldout'
+
     sc.pp.neighbors(train_data)
     sc.tl.umap(train_data)
     sc.pl.umap(train_data, color=color,
@@ -450,10 +451,11 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
                show=False,
                wspace=0.5)
 
-    sc.tl.umap(train_data)
-    sc.pl.umap(train_data, color=['type'],
-               save=f'_{data_name}_data_type.png',
-               show=False)
+    if train_digits is not None:
+        sc.tl.umap(train_data)
+        sc.pl.umap(train_data, color=['type'],
+                   save=f'_{data_name}_data_type.png',
+                   show=False)
 
     sc.pp.neighbors(latent_with_true_labels)
     sc.tl.umap(latent_with_true_labels)
