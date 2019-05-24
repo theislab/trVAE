@@ -173,16 +173,18 @@ def train_network(data_dict=None,
                            dropout_rate=dropout_rate)
 
     print(train_data.shape, valid_data.shape)
-
-    network.train(train_data,
-                  use_validation=True,
-                  valid_data=valid_data,
-                  n_epochs=n_epochs,
-                  batch_size=batch_size,
-                  verbose=2,
-                  early_stop_limit=100,
-                  shuffle=True,
-                  save=True)
+    if os.path.exists(f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/mmd_cvae.h5"):
+        network.restore_model()
+    else:
+        network.train(train_data,
+                      use_validation=True,
+                      valid_data=valid_data,
+                      n_epochs=n_epochs,
+                      batch_size=batch_size,
+                      verbose=2,
+                      early_stop_limit=100,
+                      shuffle=True,
+                      save=True)
 
     print("Model has been trained")
 
@@ -226,7 +228,8 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if train_digits is not None:
             valid_data = data[data.obs['labels'].isin(test_digits)]
-
+        else:
+            valid_data = data.copy()
         source_images = valid_data[valid_data.obs["condition"] == source_key].X
         target_images = valid_data[valid_data.obs["condition"] == target_key].X
 
