@@ -593,7 +593,7 @@ class RCCVAE:
             valid_labels, _ = label_encoder(valid_data)
             x_test = [x_valid, valid_labels, valid_labels]
             y_test = [x_valid, valid_labels]
-            histories = self.cvae_model.fit(
+            histories = self.gpu_cvae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
@@ -603,7 +603,7 @@ class RCCVAE:
                 callbacks=callbacks,
                 verbose=verbose)
         else:
-            histories = self.cvae_model.fit(
+            histories = self.gpu_cvae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
