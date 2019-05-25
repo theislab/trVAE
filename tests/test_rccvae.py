@@ -425,10 +425,10 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     mmd_latent_with_fake_labels.obs['condition'] = train_data.obs['condition'].values
 
     if data_name.__contains__("mnist") or data_name == "celeba":
-        latent_with_true_labels.obs['labels'] = train_data.obs['labels']
-        latent_with_fake_labels.obs['labels'] = train_data.obs['labels']
-        mmd_latent_with_true_labels.obs['labels'] = train_data.obs['labels']
-        mmd_latent_with_fake_labels.obs['labels'] = train_data.obs['labels']
+        latent_with_true_labels.obs['labels'] = train_data.obs['labels'].values
+        latent_with_fake_labels.obs['labels'] = train_data.obs['labels'].values
+        mmd_latent_with_true_labels.obs['labels'] = train_data.obs['labels'].values
+        mmd_latent_with_fake_labels.obs['labels'] = train_data.obs['labels'].values
 
         color = ['condition', 'labels']
     else:
@@ -453,7 +453,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
     if train_digits is not None:
         sc.tl.umap(train_data)
-        sc.pl.umap(train_data, color=['type'],
+        sc.pl.umap(train_data, color=['type', 'labels'],
                    save=f'_{data_name}_data_type.png',
                    show=False)
 
