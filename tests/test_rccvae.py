@@ -65,7 +65,8 @@ def train_network(data_dict=None,
                   dropout_rate=0.2,
                   arch_style=1,
                   preprocess=True,
-                  learning_rate=0.001
+                  learning_rate=0.001,
+                  gpus=1,
                   ):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
@@ -170,6 +171,7 @@ def train_network(data_dict=None,
                            train_with_fake_labels=False,
                            learning_rate=learning_rate,
                            model_path=f"../models/{data_name}-{img_resize}-{preprocess}/{arch_style}-{z_dim}/",
+                           gpus=gpus,
                            dropout_rate=dropout_rate)
 
     print(train_data.shape, valid_data.shape)
