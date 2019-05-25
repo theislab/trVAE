@@ -517,6 +517,8 @@ if __name__ == '__main__':
                                  help='do preprocess images')
     arguments_group.add_argument('-l', '--learning_rate', type=float, default=0.001, required=False,
                                  help='Learning Rate for Optimizer')
+    arguments_group.add_argument('-g', '--gpus', type=int, default=1, required=False,
+                                 help='Learning Rate for Optimizer')
 
     args = vars(parser.parse_args())
 
