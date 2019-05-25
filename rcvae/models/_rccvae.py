@@ -65,7 +65,7 @@ class RCCVAE:
 
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
-        self._loss_function()
+        self._loss_function(compile_gpu_model=True)
         self.cvae_model.summary()
 
     def _encoder(self, x, y, name="encoder"):
@@ -367,7 +367,7 @@ class RCCVAE:
         xy_kernel = RCCVAE.compute_kernel(x, y, method=kernel_method, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
-    def _loss_function(self):
+    def _loss_function(self, compile_gpu_model=True):
         """
             Defines the loss function of C-VAE network after constructing the whole
             network. This will define the KL Divergence and Reconstruction loss for
@@ -397,10 +397,16 @@ class RCCVAE:
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
-            self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                    loss=[kl_recon_loss, mmd_loss],
-                                    metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
-                                             self.cvae_model.outputs[1].name: mmd_loss})
+            if compile_gpu_model:
+                self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
+                                        loss=[kl_recon_loss, mmd_loss],
+                                        metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
+                                                 self.cvae_model.outputs[1].name: mmd_loss})
+            else:
+                self.cvae_model.compile(optimizer=self.cvae_optimizer,
+                                            loss=[kl_recon_loss, mmd_loss],
+                                            metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
+                                                     self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()
 
@@ -524,7 +530,7 @@ class RCCVAE:
         self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False)
         self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
-        self._loss_function()
+        self._loss_function(compile_gpu_model=False)
 
     def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
               threshold=0.0025, initial_run=True,
