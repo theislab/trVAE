@@ -296,13 +296,17 @@ class RCCVAE:
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
-
-        self.cvae_model = multi_gpu_model(self.cvae_model,
-                                          gpus=self.n_gpus)
-        self.encoder_model = multi_gpu_model(self.encoder_model,
+        if self.n_gpus > 1:
+            self.gpu_cvae_model = multi_gpu_model(self.cvae_model,
+                                              gpus=self.n_gpus)
+            self.gpu_encoder_model = multi_gpu_model(self.encoder_model,
+                                                 gpus=self.n_gpus)
+            self.gpu_decoder_model = multi_gpu_model(self.decoder_model,
                                              gpus=self.n_gpus)
-        self.decoder_model = multi_gpu_model(self.decoder_model,
-                                             gpus=self.n_gpus)
+        else:
+            self.gpu_cvae_model = self.cvae_model
+            self.gpu_encoder_model = self.encoder_model
+            self.gpu_decoder_model = self.decoder_model
 
     @staticmethod
     def compute_kernel(x, y, method='rbf', **kwargs):
