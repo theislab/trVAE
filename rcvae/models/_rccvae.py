@@ -11,6 +11,7 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
+from keras.utils.multi_gpu_utils import multi_gpu_model
 from scipy import sparse
 
 from .utils import label_encoder
@@ -55,6 +56,7 @@ class RCCVAE:
         self.train_with_fake_labels = kwargs.get("train_with_fake_labels", False)
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.arch_style = kwargs.get("arch_style", 1)
+        self.n_gpus = kwargs.get("gpus", 1)
 
         self.x = Input(shape=self.x_dim, name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
@@ -121,7 +123,8 @@ class RCCVAE:
             model.summary()
             return mean, log_var, model
         else:
-            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(y)
+            h = Dense(128, activation='relu')(y)
+            h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(h)
             h = Reshape((*self.x_dim[:-1], 1))(h)
             h = concatenate([x, h])
 
@@ -213,12 +216,12 @@ class RCCVAE:
             model.summary()
             return h, h_mmd, model
         else:
-            encode_y = Dense(128, activation='linear', kernel_initializer='he_normal')(y)
+            encode_y = Dense(128, activation='relu')(y)
             zy = concatenate([z, encode_y], axis=1)
             zy = Activation('relu')(zy)
 
-            h_mmd = Dense(self.mmd_dim, activation="linear", kernel_initializer='he_normal')(zy)
-            h_mmd = Activation('relu')(h_mmd)
+            h = Dense(self.mmd_dim, activation="linear", kernel_initializer='he_normal')(zy)
+            h_mmd = Activation('relu', name="mmd")(h)
 
             h = Dense(1024, kernel_initializer='he_normal')(h_mmd)
             h = Activation('relu')(h)
@@ -293,6 +296,13 @@ class RCCVAE:
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
+
+        self.cvae_model = multi_gpu_model(self.cvae_model,
+                                          gpus=self.n_gpus)
+        self.encoder_model = multi_gpu_model(self.encoder_model,
+                                             gpus=self.n_gpus)
+        self.decoder_model = multi_gpu_model(self.decoder_model,
+                                             gpus=self.n_gpus)
 
     @staticmethod
     def compute_kernel(x, y, method='rbf', **kwargs):
