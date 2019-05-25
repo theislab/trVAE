@@ -11,7 +11,7 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
-from keras.utils.multi_gpu_utils import multi_gpu_model
+from keras.utils import multi_gpu_model
 from scipy import sparse
 
 from .utils import label_encoder
