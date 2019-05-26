@@ -514,9 +514,9 @@ if __name__ == '__main__':
     arguments_group.add_argument('-r', '--dropout_rate', type=float, default=0.4, required=False,
                                  help='Dropout ratio')
     arguments_group.add_argument('-w', '--width', type=int, default=0, required=False,
-                                 help='Image size to be resize')
+                                 help='Image Width to be resize')
     arguments_group.add_argument('-h', '--height', type=int, default=0, required=False,
-                                 help='Image size to be resize')
+                                 help='Image Height to be resize')
     arguments_group.add_argument('-p', '--preprocess', type=int, default=True, required=False,
                                  help='do preprocess images')
     arguments_group.add_argument('-l', '--learning_rate', type=float, default=0.001, required=False,
