@@ -20,8 +20,8 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
                             verbose=True):
     data_path = os.path.dirname(file_path)
     zip_filename = os.path.basename(file_path).split(".")[0]
-    if restore and os.path.exists(os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}.h5ad")):
-        return sc.read(os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}.h5ad"))
+    if restore and os.path.exists(os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad")):
+        return sc.read(os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad"))
 
     def load_attr_list(file_path):
         indices = []
@@ -30,11 +30,7 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
             lines = f.read().splitlines()
             columns = lines[1].split(" ")
             columns.remove('')
-            if max_n_images is not None:
-                max_n = max_n_images
-            else:
-                max_n = len(lines)
-            for i in range(2, max_n):
+            for i in range(2, len(lines)):
                 elements = lines[i].split()
                 indices.append(elements[0])
                 attributes.append(list(map(int, elements[1:])))
@@ -117,7 +113,7 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
         print(data.shape, attr_df.shape)
         data.obs['labels'] = attr_df[gender].values
         data.obs['condition'] = attr_df[attribute].values
-        sc.write(filename=os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}.h5ad"), adata=data)
+        sc.write(filename=os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad"), adata=data)
     return data
 
 
