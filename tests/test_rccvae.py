@@ -67,6 +67,7 @@ def train_network(data_dict=None,
                   preprocess=True,
                   learning_rate=0.001,
                   gpus=1,
+                  max_size=50000,
                   ):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
@@ -83,7 +84,7 @@ def train_network(data_dict=None,
                                              attr_path="../data/celeba/list_attr_celeba.txt",
                                              gender=gender,
                                              attribute=attribute,
-                                             max_n_images=50000,
+                                             max_n_images=max_size,
                                              img_resize=img_resize,
                                              restore=True,
                                              save=True)
@@ -521,6 +522,8 @@ if __name__ == '__main__':
                                  help='Learning Rate for Optimizer')
     arguments_group.add_argument('-g', '--gpus', type=int, default=1, required=False,
                                  help='Learning Rate for Optimizer')
+    arguments_group.add_argument('-x', '--max_size', type=int, default=50000, required=False,
+                                 help='Max Size for CelebA')
 
     args = vars(parser.parse_args())
 
@@ -532,6 +535,9 @@ if __name__ == '__main__':
         args['preprocess'] = False
     else:
         args['preprocess'] = True
+
+    if args['max_size'] == 0:
+        args['max_size'] = None
     train_network(data_dict=data_dict, **args)
     evaluate_network(data_dict,
                      z_dim=args['z_dim'],
