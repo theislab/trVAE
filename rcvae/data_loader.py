@@ -113,6 +113,7 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
 
     if save:
         data = anndata.AnnData(X=images_df.values)
+        attr_df = attr_df.loc[images_df.index]
         print(data.shape, attr_df.shape)
         data.obs['labels'] = attr_df[gender].values
         data.obs['condition'] = attr_df[attribute].values
