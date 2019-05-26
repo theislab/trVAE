@@ -515,7 +515,7 @@ if __name__ == '__main__':
                                  help='Dropout ratio')
     arguments_group.add_argument('-w', '--width', type=int, default=0, required=False,
                                  help='Image Width to be resize')
-    arguments_group.add_argument('-h', '--height', type=int, default=0, required=False,
+    arguments_group.add_argument('-e', '--height', type=int, default=0, required=False,
                                  help='Image Height to be resize')
     arguments_group.add_argument('-p', '--preprocess', type=int, default=True, required=False,
                                  help='do preprocess images')
