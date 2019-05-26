@@ -71,8 +71,8 @@ def prepare_and_load_celeba(file_path, attr_path,
                             img_resize=64,
                             verbose=True):
     data_path = os.path.dirname(file_path)
-    if restore and os.path.exists(os.path.join(data_path, f"celeba_{attribute}.h5ad")):
-        return sc.read(os.path.join(data_path, f"celeba_{attribute}.h5ad"))
+    if restore and os.path.exists(os.path.join(data_path, f"celeba_{attribute}_{img_resize}.h5ad")):
+        return sc.read(os.path.join(data_path, f"celeba_{attribute}_{img_resize}.h5ad"))
 
     def load_attr_list(file_path):
         indices = []
@@ -133,7 +133,7 @@ def prepare_and_load_celeba(file_path, attr_path,
         print(data.shape, attr_df.shape)
         data.obs['labels'] = attr_df[gender].values
         data.obs['condition'] = attr_df[attribute].values
-        sc.write(filename=os.path.join(data_path, f"celeba_{attribute}.h5ad"), adata=data)
+        sc.write(filename=os.path.join(data_path, f"celeba_{attribute}_{img_resize}.h5ad"), adata=data)
     return data
 
 
