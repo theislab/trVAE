@@ -175,7 +175,8 @@ def train_network(data_dict=None,
                            dropout_rate=dropout_rate)
 
     print(train_data.shape, valid_data.shape)
-    if os.path.exists(f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/mmd_cvae.h5"):
+    if os.path.exists(
+            f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/mmd_cvae.h5"):
         network.restore_model()
     else:
         network.train(train_data,
@@ -216,47 +217,55 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
                                              save=False)
 
         valid_data = data.copy()[data.obs['labels'] == -1]  # get females (Male = -1)
+        train_data = data.copy()[data.obs['labels'] == +1]  # get males (Male = 1)
+
         if sparse.issparse(valid_data.X):
             valid_data.X = valid_data.X.A
 
-        source_images = valid_data[valid_data.obs["condition"] == source_key].X
-        target_images = valid_data[valid_data.obs["condition"] == target_key].X
+        source_images_train = valid_data[valid_data.obs["condition"] == source_key].X
+        source_images_valid = train_data[valid_data.obs["condition"] == source_key].X
 
-        source_images = np.reshape(source_images, (-1, img_width, img_height, n_channels))
-        target_images = np.reshape(target_images, (-1, img_width, img_height, n_channels))
+        source_images_train = np.reshape(source_images_train, (-1, img_width, img_height, n_channels))
+        source_images_valid = np.reshape(source_images_valid, (-1, img_width, img_height, n_channels))
 
         if preprocess:
-            source_images /= 255.0
-            target_images /= 255.0
+            source_images_train /= 255.0
+            source_images_valid /= 255.0
     else:
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if train_digits is not None:
+            train_data = data[data.obs['labels'].isin(train_digits)]
             valid_data = data[data.obs['labels'].isin(test_digits)]
         else:
+            train_data = data.copy()
             valid_data = data.copy()
-        source_images = valid_data[valid_data.obs["condition"] == source_key].X
-        target_images = valid_data[valid_data.obs["condition"] == target_key].X
 
-        source_images = np.reshape(source_images, (-1, img_width, img_height, n_channels))
-        target_images = np.reshape(target_images, (-1, img_width, img_height, n_channels))
+        source_images_train = train_data[train_data.obs["condition"] == source_key].X
+        target_images_train = train_data[train_data.obs["condition"] == target_key].X
+
+        source_images_train = np.reshape(source_images_train, (-1, img_width, img_height, n_channels))
+        target_images_train = np.reshape(target_images_train, (-1, img_width, img_height, n_channels))
+
+        source_images_valid = valid_data[valid_data.obs["condition"] == source_key].X
+        target_images_valid = valid_data[valid_data.obs["condition"] == target_key].X
+
+        source_images_valid = np.reshape(source_images_valid, (-1, img_width, img_height, n_channels))
+        target_images_valid = np.reshape(target_images_valid, (-1, img_width, img_height, n_channels))
 
         if preprocess:
-            source_images /= 255.0
-            target_images /= 255.0
+            source_images_train /= 255.0
+            source_images_valid /= 255.0
+
+            target_images_train /= 255.0
+            target_images_valid /= 255.0
 
     image_shape = (img_width, img_height, n_channels)
 
-    source_labels = np.zeros(shape=source_images.shape[0])
-    target_labels = np.ones(shape=target_images.shape[0])
+    source_images_train = np.reshape(source_images_train, (-1, np.prod(image_shape)))
+    source_images_valid = np.reshape(source_images_valid, (-1, np.prod(image_shape)))
 
-    source_images = np.reshape(source_images, (-1, np.prod(image_shape)))
-    target_images = np.reshape(target_images, (-1, np.prod(image_shape)))
-
-    source_data = anndata.AnnData(X=source_images)
-    source_data.obs["condition"] = source_labels
-
-    target_data = anndata.AnnData(X=target_images)
-    target_data.obs["condition"] = target_labels
+    source_data_train = anndata.AnnData(X=source_images_train)
+    source_data_valid = anndata.AnnData(X=source_images_valid)
 
     network = rcvae.RCCVAE(x_dimension=image_shape,
                            z_dimension=z_dim,
@@ -265,8 +274,10 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
 
     network.restore_model()
 
-    results_path = f"../results/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/{source_key} to {target_key}/"
-    os.makedirs(results_path, exist_ok=True)
+    results_path_train = f"../results/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/{source_key} to {target_key}/train/"
+    results_path_valid = f"../results/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/{source_key} to {target_key}/valid/"
+    os.makedirs(results_path_train, exist_ok=True)
+    os.makedirs(results_path_valid, exist_ok=True)
 
     if sparse.issparse(valid_data.X):
         valid_data.X = valid_data.X.A
@@ -274,40 +285,55 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         k = len(test_digits)
     for j in range(n_files):
         if test_digits is not None:
-            source_sample = []
-            target_sample = []
-            for digit in test_digits:
-                source_images_digit = valid_data[
-                    (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == source_key)]
-                target_images_digit = valid_data[
-                    (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == target_key)]
-                if j == 0:
-                    source_images_digit.X /= 255.0
-                random_samples = np.random.choice(source_images_digit.shape[0], 1, replace=False)
+            source_sample_train = []
+            source_sample_valid = []
 
-                source_sample.append(source_images_digit.X[random_samples])
-                target_sample.append(target_images_digit.X[random_samples])
+            target_sample_train = []
+            target_sample_valid = []
+
+            # for digit in test_digits:
+            #     source_images_digit_valid = valid_data[
+            #         (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == source_key)]
+            #     target_images_digit_valid = valid_data[
+            #         (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == target_key)]
+            #     if j == 0:
+            #         source_images_digit_valid.X /= 255.0
+            #     random_samples = np.random.choice(source_images_digit.shape[0], 1, replace=False)
+            #
+            #     source_sample.append(source_images_digit.X[random_samples])
+            #     target_sample.append(target_images_digit.X[random_samples])
         else:
-            random_samples = np.random.choice(source_images.shape[0], k, replace=False)
-            source_sample = source_data.X[random_samples]
+            random_samples_train = np.random.choice(source_data_train.shape[0], k, replace=False)
+            random_samples_valid = np.random.choice(source_data_valid.shape[0], k, replace=False)
+            source_sample_train = source_data_train.X[random_samples_train]
+            source_sample_valid = source_data_valid.X[random_samples_valid]
 
-        source_sample = np.array(source_sample)
-        if data_name.__contains__("mnist"):
-            target_sample = np.array(target_sample)
-            target_sample_reshaped = np.reshape(target_sample, (-1, *image_shape))
+        source_sample_train = np.array(source_sample_train)
+        source_sample_valid = np.array(source_sample_valid)
+        # if data_name.__contains__("mnist"):
+        #     target_sample = np.array(target_sample)
+        #     target_sample_reshaped = np.reshape(target_sample, (-1, *image_shape))
 
-        source_sample = np.reshape(source_sample, (-1, np.prod(image_shape)))
-        source_sample_reshaped = np.reshape(source_sample, (-1, *image_shape))
+        source_sample_train = np.reshape(source_sample_train, (-1, np.prod(image_shape)))
+        source_sample_train_reshaped = np.reshape(source_sample_train, (-1, *image_shape))
 
-        source_sample = anndata.AnnData(X=source_sample)
-        source_sample.obs['condition'] = np.ones(shape=(k, 1))
+        source_sample_valid = np.reshape(source_sample_valid, (-1, np.prod(image_shape)))
+        source_sample_valid_reshaped = np.reshape(source_sample_valid, (-1, *image_shape))
 
-        pred_sample = network.predict(data=source_sample,
-                                      encoder_labels=np.zeros((k, 1)),
-                                      decoder_labels=np.ones((k, 1)))
-        pred_sample = np.reshape(pred_sample, newshape=(-1, *image_shape))
+        source_sample_train = anndata.AnnData(X=source_sample_train)
+        source_sample_valid = anndata.AnnData(X=source_sample_valid)
 
-        print(source_sample.shape, source_sample_reshaped.shape, pred_sample.shape)
+        pred_sample_train = network.predict(data=source_sample_train,
+                                            encoder_labels=np.zeros((k, 1)),
+                                            decoder_labels=np.ones((k, 1)))
+        pred_sample_train = np.reshape(pred_sample_train, newshape=(-1, *image_shape))
+
+        pred_sample_valid = network.predict(data=source_sample_valid,
+                                            encoder_labels=np.zeros((k, 1)),
+                                            decoder_labels=np.ones((k, 1)))
+        pred_sample_valid = np.reshape(pred_sample_valid, newshape=(-1, *image_shape))
+
+        print(source_sample_train.shape, source_sample_train_reshaped.shape, pred_sample_train.shape)
 
         plt.close("all")
         if data_name.__contains__("mnist"):
@@ -316,17 +342,17 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
             fig, ax = plt.subplots(k, 2, figsize=(k * 1, 6))
         for i in range(k):
             ax[i, 0].axis('off')
-            if source_sample_reshaped.shape[-1] > 1:
-                ax[i, 0].imshow(source_sample_reshaped[i])
+            if source_sample_train_reshaped.shape[-1] > 1:
+                ax[i, 0].imshow(source_sample_train_reshaped[i])
             else:
-                ax[i, 0].imshow(source_sample_reshaped[i, :, :, 0], cmap='Greys')
+                ax[i, 0].imshow(source_sample_train_reshaped[i, :, :, 0], cmap='Greys')
             ax[i, 1].axis('off')
-            if data_name.__contains__("mnist"):
-                ax[i, 2].axis('off')
+            # if data_name.__contains__("mnist"):
+            #     ax[i, 2].axis('off')
             if i == 0:
                 if data_name == "celeba":
-                    ax[i, 0].set_title(f"{data_dict['gender']} without {data_dict['attribute']}")
-                    ax[i, 1].set_title(f"{data_dict['gender']} with {data_dict['attribute']}")
+                    ax[i, 0].set_title(f"without {data_dict['attribute']}")
+                    ax[i, 1].set_title(f"with {data_dict['attribute']}")
                 elif data_name.__contains__("mnist"):
                     ax[i, 0].set_title(f"Source")
                     ax[i, 1].set_title(f"Target (Ground Truth)")
@@ -335,13 +361,49 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
                     ax[i, 0].set_title(f"{source_key}")
                     ax[i, 1].set_title(f"{target_key}")
 
-            if pred_sample.shape[-1] > 1:
-                ax[i, 1].imshow(pred_sample[i])
+            if pred_sample_train.shape[-1] > 1:
+                ax[i, 1].imshow(pred_sample_train[i])
             else:
-                ax[i, 1].imshow(pred_sample[i, :, :, 0], cmap='Greys')
+                ax[i, 1].imshow(pred_sample_train[i, :, :, 0], cmap='Greys')
+            # if data_name.__contains__("mnist"):
+            #     ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
+        plt.savefig(os.path.join(results_path_train, f"./train/sample_images_{j}.pdf"))
+
+        print(source_sample_valid.shape, source_sample_valid_reshaped.shape, pred_sample_valid.shape)
+
+        plt.close("all")
+        if data_name.__contains__("mnist"):
+            fig, ax = plt.subplots(k, 3, figsize=(k * 1, 6))
+        else:
+            fig, ax = plt.subplots(k, 2, figsize=(k * 1, 6))
+        for i in range(k):
+            ax[i, 0].axis('off')
+            if source_sample_valid_reshaped.shape[-1] > 1:
+                ax[i, 0].imshow(source_sample_valid_reshaped[i])
+            else:
+                ax[i, 0].imshow(source_sample_valid_reshaped[i, :, :, 0], cmap='Greys')
+            ax[i, 1].axis('off')
             if data_name.__contains__("mnist"):
-                ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
-        plt.savefig(os.path.join(results_path, f"./sample_images_{data_name}_{j}.pdf"))
+                ax[i, 2].axis('off')
+            if i == 0:
+                if data_name == "celeba":
+                    ax[i, 0].set_title(f"without {data_dict['attribute']}")
+                    ax[i, 1].set_title(f"with {data_dict['attribute']}")
+                elif data_name.__contains__("mnist"):
+                    ax[i, 0].set_title(f"Source")
+                    ax[i, 1].set_title(f"Target (Ground Truth)")
+                    ax[i, 2].set_title(f"Target (Predicted)")
+                else:
+                    ax[i, 0].set_title(f"{source_key}")
+                    ax[i, 1].set_title(f"{target_key}")
+
+            if pred_sample_valid.shape[-1] > 1:
+                ax[i, 1].imshow(pred_sample_valid[i])
+            else:
+                ax[i, 1].imshow(pred_sample_valid[i, :, :, 0], cmap='Greys')
+            # if data_name.__contains__("mnist"):
+            #     ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
+        plt.savefig(os.path.join(results_path_valid, f"./sample_images_{j}.pdf"))
 
 
 def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, preprocess=True):
