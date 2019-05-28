@@ -170,12 +170,12 @@ def train_network(data_dict=None,
                            arch_style=arch_style,
                            train_with_fake_labels=False,
                            learning_rate=learning_rate,
-                           model_path=f"../models/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/",
+                           model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/",
                            gpus=gpus,
                            dropout_rate=dropout_rate)
 
     print(train_data.shape, valid_data.shape)
-    if os.path.exists(f"../models/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/mmd_cvae.h5"):
+    if os.path.exists(f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/mmd_cvae.h5"):
         network.restore_model()
     else:
         network.train(train_data,
@@ -261,7 +261,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
     network = rcvae.RCCVAE(x_dimension=image_shape,
                            z_dimension=z_dim,
                            arch_style=arch_style,
-                           model_path=f"../models/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/")
+                           model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/")
 
     network.restore_model()
 
@@ -401,7 +401,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     network = rcvae.RCCVAE(x_dimension=(img_width, img_height, n_channels),
                            z_dimension=z_dim,
                            arch_style=arch_style,
-                           model_path=f"../models/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/", )
+                           model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/", )
 
     network.restore_model()
 
