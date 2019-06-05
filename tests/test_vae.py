@@ -25,10 +25,8 @@ DATASETS = {
 
 def train_network(data_dict=None,
                   z_dim=100,
-                  mmd_dimension=256,
+                  subsample=20000,
                   alpha=0.001,
-                  beta=100,
-                  kernel='multi-scale-rbf',
                   n_epochs=500,
                   batch_size=512,
                   dropout_rate=0.2,
@@ -39,6 +37,7 @@ def train_network(data_dict=None,
     cell_type_key = data_dict['cell_type']
 
     train_data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+    train_data = train_data[:subsample]
 
     spec_cell_type = data_dict.get("spec_cell_types", None)
     if spec_cell_type is not []:
@@ -64,7 +63,7 @@ def train_network(data_dict=None,
     print(f"Model for {data_name} has been trained")
 
 
-def visualize_trained_network_results(data_dict, z_dim=100):
+def visualize_trained_network_results(data_dict, z_dim=100, subsample=20000):
     plt.close("all")
     data_name = data_dict['name']
     metadata_path = data_dict['metadata']
@@ -72,6 +71,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
     spec_cell_type = data_dict.get("spec_cell_types", None)
 
     data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+    data = data[:subsample]
     cell_types = data.obs[cell_type_key].unique().tolist()
 
     path_to_save = f"../results/VAE/{data_name}/{z_dim}/Visualizations/"
@@ -113,85 +113,6 @@ def visualize_trained_network_results(data_dict, z_dim=100):
     plt.close("all")
 
 
-def visualize_trained_network_results_multimodal(data_dict, z_dim=100):
-    plt.close("all")
-    data_name = data_dict.get('name', None)
-    source_key = data_dict.get('source_key', None)
-    target_key = data_dict.get('target_key', None)
-
-    data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
-    path_to_save = f"../results/RCVAE/{data_name}/{z_dim}/{source_key} to {target_key}/Visualizations/"
-    os.makedirs(path_to_save, exist_ok=True)
-    sc.settings.figdir = os.path.abspath(path_to_save)
-
-    network = rcvae.RCVAE(x_dimension=data.shape[1],
-                          z_dimension=z_dim,
-                          model_path=f"../models/RCVAE/{data_name}/{z_dim}/", )
-    network.restore_model()
-    if sparse.issparse(data.X):
-        data.X = data.X.A
-
-    feed_data = data.X
-    train_labels, _ = rcvae.label_encoder(data)
-    fake_labels = np.ones(train_labels.shape)
-    latent_with_true_labels = network.to_latent(feed_data, train_labels)
-    latent_with_fake_labels = network.to_latent(feed_data, fake_labels)
-    mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=False)
-    mmd_latent_with_fake_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=True)
-
-    import matplotlib as mpl
-    mpl.rcParams.update(mpl.rcParamsDefault)
-
-    latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
-    latent_with_true_labels.obs['condition'] = data.obs['condition'].values
-    # latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
-
-    latent_with_fake_labels = sc.AnnData(X=latent_with_fake_labels)
-    latent_with_fake_labels.obs['condition'] = data.obs['condition'].values
-    # latent_with_fake_labels.obs[cell_type_key] = data.obs[cell_type_key].values
-
-    mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
-    mmd_latent_with_true_labels.obs['condition'] = data.obs['condition'].values
-    # mmd_latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
-
-    mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
-    mmd_latent_with_fake_labels.obs['condition'] = data.obs['condition'].values
-    # mmd_latent_with_fake_labels.obs[cell_type_key] = data.obs[cell_type_key].values
-
-    color = ['condition']
-
-    sc.pp.neighbors(data)
-    sc.tl.umap(data)
-    sc.pl.umap(data, color=color,
-               save=f'_{data_name}_train_data',
-               show=False)
-
-    sc.pp.neighbors(latent_with_true_labels)
-    sc.tl.umap(latent_with_true_labels)
-    sc.pl.umap(latent_with_true_labels, color=color,
-               save=f"_{data_name}_latent_with_true_labels",
-               show=False)
-
-    sc.pp.neighbors(latent_with_fake_labels)
-    sc.tl.umap(latent_with_fake_labels)
-    sc.pl.umap(latent_with_fake_labels, color=color,
-               save=f"_{data_name}__latent_with_fake_labels",
-               show=False)
-
-    sc.pp.neighbors(mmd_latent_with_true_labels)
-    sc.tl.umap(mmd_latent_with_true_labels)
-    sc.pl.umap(mmd_latent_with_true_labels, color=color,
-               save=f"_{data_name}_mmd_latent_with_true_labels",
-               show=False)
-
-    sc.pp.neighbors(mmd_latent_with_fake_labels)
-    sc.tl.umap(mmd_latent_with_fake_labels)
-    sc.pl.umap(mmd_latent_with_fake_labels, color=color,
-               save=f"_{data_name}_mmd_latent_with_fake_labels",
-               show=False)
-    plt.close("all")
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')
     arguments_group = parser.add_argument_group("Parameters")
@@ -211,6 +132,8 @@ if __name__ == '__main__':
                                  help='Learning rate of optimizer')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='Learning rate of optimizer')
+    arguments_group.add_argument('-s', '--subsample', type=int, default=20000, required=False,
+                                 help='Size of subsampling')
 
     args = vars(parser.parse_args())
 
@@ -219,5 +142,5 @@ if __name__ == '__main__':
     if args['do_train'] == 1:
         del args['do_train']
         train_network(data_dict=data_dict, **args)
-        visualize_trained_network_results_multimodal(data_dict, z_dim=args['z_dim'])
+        visualize_trained_network_results(data_dict, z_dim=args['z_dim'], subsample=args['subsample'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
