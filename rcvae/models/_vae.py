@@ -58,7 +58,7 @@ class VAE:
 
         self.encoder_model.summary()
         self.decoder_model.summary()
-        # self.vae_model.summary()
+        self.vae_model.summary()
 
     def _encoder(self, x, name="encoder"):
         """
@@ -422,8 +422,8 @@ class VAE:
         if shuffle:
             train_data = shuffle_data(train_data)
 
-        x = [train_data.X]
-        y = [train_data.X]
+        x = train_data.X
+        y = train_data.X
         if use_validation:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
@@ -431,8 +431,8 @@ class VAE:
             if shuffle:
                 valid_data = shuffle_data(valid_data)
 
-            x_valid = [valid_data.X]
-            y_valid = [valid_data.X]
+            x_valid = valid_data.X
+            y_valid = valid_data.X
             histories = self.vae_model.fit(
                 x=x,
                 y=y,
