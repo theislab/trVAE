@@ -58,7 +58,7 @@ class VAE:
 
         self.encoder_model.summary()
         self.decoder_model.summary()
-        self.vae_model.summary()
+        # self.vae_model.summary()
 
     def _encoder(self, x, name="encoder"):
         """
@@ -168,7 +168,7 @@ class VAE:
         reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs)
         self.vae_model = Model(inputs=self.x,
                                outputs=reconstruction_output,
-                               name="cvae")
+                               name="vae")
 
     @staticmethod
     def compute_kernel(x, y, kernel='rbf', **kwargs):
@@ -246,8 +246,8 @@ class VAE:
             recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
             return recon_loss + self.alpha * kl_loss
 
-        self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
-        self.vae_model.compile(optimizer=self.cvae_optimizer,
+        self.vae_optimizer = keras.optimizers.Adam(lr=self.lr)
+        self.vae_model.compile(optimizer=self.vae_optimizer,
                                loss=kl_recon_loss,
                                metrics={self.vae_model.outputs[0].name: kl_recon_loss})
 
