@@ -10,6 +10,7 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, Lambda, Resh
     MaxPooling1D, Flatten, Conv2DTranspose, UpSampling2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
+from keras.utils import multi_gpu_model
 from scipy import sparse
 
 from rcvae.models.utils import shuffle_data
@@ -48,13 +49,14 @@ class VAE:
         self.conditions = kwargs.get("condition_list")
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
+        self.n_gpus = kwargs.get("gpus", 1)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
-        self._loss_function()
+        self._loss_function(compile_gpu_model=True)
 
         self.encoder_model.summary()
         self.decoder_model.summary()
@@ -171,6 +173,18 @@ class VAE:
                                outputs=reconstruction_output,
                                name="vae")
 
+        if self.n_gpus > 1:
+            self.gpu_vae_model = multi_gpu_model(self.vae_model,
+                                                 gpus=self.n_gpus)
+            self.gpu_encoder_model = multi_gpu_model(self.encoder_model,
+                                                     gpus=self.n_gpus)
+            self.gpu_decoder_model = multi_gpu_model(self.decoder_model,
+                                                     gpus=self.n_gpus)
+        else:
+            self.gpu_vae_model = self.vae_model
+            self.gpu_encoder_model = self.encoder_model
+            self.gpu_decoder_model = self.decoder_model
+
     @staticmethod
     def compute_kernel(x, y, kernel='rbf', **kwargs):
         """
@@ -230,7 +244,7 @@ class VAE:
         xy_kernel = VAE.compute_kernel(x, y, kernel=kernel, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
-    def _loss_function(self):
+    def _loss_function(self, compile_gpu_model=True):
         """
             Defines the loss function of C-VAE network after constructing the whole
             network. This will define the KL Divergence and Reconstruction loss for
@@ -248,9 +262,14 @@ class VAE:
             return recon_loss + self.alpha * kl_loss
 
         self.vae_optimizer = keras.optimizers.Adam(lr=self.lr)
-        self.vae_model.compile(optimizer=self.vae_optimizer,
-                               loss=kl_recon_loss,
-                               metrics={self.vae_model.outputs[0].name: kl_recon_loss})
+        if compile_gpu_model:
+            self.gpu_vae_model.compile(optimizer=self.vae_optimizer,
+                                       loss=kl_recon_loss,
+                                       metrics={self.vae_model.outputs[0].name: kl_recon_loss})
+        else:
+            self.vae_model.compile(optimizer=self.vae_optimizer,
+                                   loss=kl_recon_loss,
+                                   metrics={self.vae_model.outputs[0].name: kl_recon_loss})
 
     def to_latent(self, data):
         """

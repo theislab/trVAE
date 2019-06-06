@@ -31,6 +31,7 @@ def train_network(data_dict=None,
                   batch_size=512,
                   dropout_rate=0.2,
                   learning_rate=0.001,
+                  gpus=1,
                   ):
     data_name = data_dict['name']
     metadata_path = data_dict['metadata']
@@ -44,12 +45,18 @@ def train_network(data_dict=None,
         cell_types = spec_cell_type
 
     train_size = int(train_data.shape[0] * 0.85)
-    net_train_data = train_data.copy()[:train_size]
-    net_valid_data = train_data.copy()[train_size:]
+    indices = np.arange(train_data.shape[0])
+    np.random.shuffle(indices)
+    train_idx = indices[:train_size]
+    valid_idx = indices[train_size:]
+
+    net_train_data = train_data.copy()[train_idx, :]
+    net_valid_data = train_data.copy()[valid_idx, :]
 
     network = rcvae.VAE(x_dimension=net_train_data.shape[1],
                         z_dimension=z_dim,
                         alpha=alpha,
+                        gpus=gpus,
                         learning_rate=learning_rate,
                         model_path=f"../models/VAE/{data_name}/{z_dim}/",
                         dropout_rate=dropout_rate)
@@ -138,6 +145,8 @@ if __name__ == '__main__':
                                  help='Learning rate of optimizer')
     arguments_group.add_argument('-s', '--subsample', type=int, default=20000, required=False,
                                  help='Size of subsampling')
+    arguments_group.add_argument('-g', '--gpus', type=int, default=1, required=False,
+                                 help='Learning Rate for Optimizer')
 
     args = vars(parser.parse_args())
 
