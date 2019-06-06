@@ -127,7 +127,7 @@ class VAE:
 
         h = UpSampling2D(size=(3, 1))(h)
         h = Conv2DTranspose(64, kernel_size=(336, 1), activation='relu', padding='valid')(h)
-        h = Conv2DTranspose(1, kernel_size=(256, 1), activation='relu', padding='same')(h)
+        h = Conv2DTranspose(1, kernel_size=(256, 1), activation='sigmoid', padding='same')(h)
         h = Reshape((self.x_dim,))(h)
 
         model = Model(inputs=z, outputs=h, name=name)
