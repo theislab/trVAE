@@ -43,7 +43,9 @@ def train_network(data_dict=None,
     if spec_cell_type is not []:
         cell_types = spec_cell_type
 
-    net_train_data = train_data.copy()
+    train_size = int(train_data.shape[0] * 0.85)
+    net_train_data = train_data.copy()[:train_size]
+    net_valid_data = train_data.copy()[train_size:]
 
     network = rcvae.VAE(x_dimension=net_train_data.shape[1],
                         z_dimension=z_dim,
@@ -53,6 +55,8 @@ def train_network(data_dict=None,
                         dropout_rate=dropout_rate)
 
     network.train(net_train_data,
+                  use_validation=True,
+                  valid_data=net_valid_data,
                   n_epochs=n_epochs,
                   batch_size=batch_size,
                   verbose=2,
