@@ -453,7 +453,7 @@ class VAE:
 
             x_valid = valid_data.X
             y_valid = valid_data.X
-            histories = self.vae_model.fit(
+            histories = self.gpu_vae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
@@ -463,7 +463,7 @@ class VAE:
                 callbacks=callbacks,
                 verbose=verbose)
         else:
-            histories = self.vae_model.fit(
+            histories = self.gpu_vae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
