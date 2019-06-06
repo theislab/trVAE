@@ -39,6 +39,7 @@ def train_network(data_dict=None,
     cell_type_key = data_dict['cell_type']
 
     train_data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019.h5ad")
+    train_data.X += abs(train_data.X.min())
     train_data = train_data[:subsample]
 
     spec_cell_type = data_dict.get("spec_cell_types", None)
@@ -83,6 +84,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=20000):
     spec_cell_type = data_dict.get("spec_cell_types", None)
 
     data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019.h5ad")
+    data.X += abs(data.X.min())
     data = data[:subsample]
     cell_types = data.obs[cell_type_key].unique().tolist()
 

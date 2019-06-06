@@ -124,7 +124,7 @@ class VAE:
 
         # h = UpSampling2D(size=(4, 1))(h)
         h = Conv2DTranspose(32, kernel_size=(3152, 1), activation='relu', padding='valid')(h)
-        h = Conv2DTranspose(1, kernel_size=(256, 1), activation='sigmoid', padding='same')(h)
+        h = Conv2DTranspose(1, kernel_size=(256, 1), activation='relu', padding='same')(h)
         h = Reshape((self.x_dim,))(h)
 
         model = Model(inputs=z, outputs=h, name=name)
@@ -253,8 +253,8 @@ class VAE:
 
         def kl_recon_loss(y_true, y_pred):
             kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-            recon_loss = 0.5 * K.sum(K.binary_crossentropy(y_true, y_pred), axis=-1)
-            # # recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
+            # recon_loss = 0.5 * K.sum(K.binary_crossentropy(y_true, y_pred), axis=-1)
+            recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
             # output_shape = K.shape(y_pred)
             #
             # def get_column(tensor, col):
