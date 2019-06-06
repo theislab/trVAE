@@ -1,6 +1,7 @@
 import logging
 import os
 
+import anndata
 import keras
 import numpy as np
 import tensorflow as tf
@@ -78,14 +79,7 @@ class VAE:
         h = Reshape((self.x_dim, 1))(x)
 
         h = Conv1D(64, kernel_size=256, activation='relu')(h)
-        h = Conv1D(64, kernel_size=256, activation='relu')(h)
-        h = Conv1D(64, kernel_size=256, activation='relu')(h)
-        h = MaxPooling1D(pool_size=5)(h)
-
-        h = Conv1D(32, kernel_size=256, activation='relu')(h)
-        h = Conv1D(32, kernel_size=256, activation='relu')(h)
-        h = Conv1D(32, kernel_size=256, activation='relu')(h)
-        h = MaxPooling1D(pool_size=5)(h)
+        h = MaxPooling1D(pool_size=50)(h)
 
         h = Flatten()(h)
 
@@ -116,18 +110,19 @@ class VAE:
 
         h = Reshape((256, 1, 1))(h)
 
-        h = UpSampling2D(size=(4, 1))(h)
-        h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
+        h = UpSampling2D(size=(16, 1))(h)
+        # h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same',
+        #                     kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(64, kernel_size=(512, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
 
-        h = UpSampling2D(size=(2, 1))(h)
-        h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same',
-                            kernel_initializer='he_normal')(h)
+        # h = UpSampling2D(size=(2, 1))(h)
+        # h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same',
+        #                     kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same')(h)
 
-        h = UpSampling2D(size=(2, 1))(h)
+        # h = UpSampling2D(size=(4, 1))(h)
         h = Conv2DTranspose(64, kernel_size=(905, 1), activation='relu', padding='valid')(h)
         h = Conv2DTranspose(1, kernel_size=(256, 1), activation='sigmoid', padding='same')(h)
         h = Reshape((self.x_dim,))(h)
@@ -258,8 +253,28 @@ class VAE:
 
         def kl_recon_loss(y_true, y_pred):
             kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-            # recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
-            recon_loss = 0.5 * K.binary_crossentropy(y_true, y_pred)
+            recon_loss = 0.5 * K.sum(K.binary_crossentropy(y_true, y_pred), axis=-1)
+            # # recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
+            # output_shape = K.shape(y_pred)
+            #
+            # def get_column(tensor, col):
+            #     with tf.variable_scope("gather_cols", reuse=tf.AUTO_REUSE):
+            #         tensor = K.tf.convert_to_tensor(tensor, name='tensor')
+            #         col = K.tf.convert_to_tensor(col, name='column')
+            #
+            #         return tf.transpose(tf.nn.embedding_lookup(tf.transpose(tensor), col))
+            #
+            # def body(i):
+            #     y_true_i = get_column(y_true, i)
+            #     y_pred_i = get_column(y_pred, i)
+            #     bc_loss = K.binary_crossentropy(y_true_i, y_pred_i)
+            #     print(bc_loss)
+            #     return bc_loss
+
+            # recon_loss = K.sum(K.map_fn(body, K.arange(0, self.x_dim)), axis=0)
+            # recon_loss = K.cast(recon_loss, dtype='float32')
+            # print(recon_loss)
+            # print(kl_loss)
             return recon_loss + self.alpha * kl_loss
 
         self.vae_optimizer = keras.optimizers.Adam(lr=self.lr)
@@ -479,3 +494,12 @@ class VAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
+
+
+if __name__ == '__main__':
+    net = VAE(x_dimension=5000, z_dimension=2)
+    data = np.random.binomial(n=1, p=0.8, size=(10, 5000))
+    print(data)
+    print(data.shape)
+    data = anndata.AnnData(X=data)
+    net.train(data, use_validation=False, verbose=1, batch_size=2)
