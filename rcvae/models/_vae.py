@@ -116,19 +116,19 @@ class VAE:
 
         h = Reshape((256, 1, 1))(h)
 
-        h = UpSampling2D(size=(5, 1))(h)
-        h = Conv2DTranspose(64, kernel_size=(1024, 1), activation='relu', padding='same',
-                            kernel_initializer='he_normal')(h)
+        h = UpSampling2D(size=(4, 1))(h)
+        h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
+        # h = Conv2DTranspose(64, kernel_size=(512, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
 
-        h = UpSampling2D(size=(5, 1))(h)
-        h = Conv2DTranspose(64, kernel_size=(1022, 1), activation='relu', padding='same',
+        h = UpSampling2D(size=(2, 1))(h)
+        h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same',
                             kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same')(h)
 
-        h = UpSampling2D(size=(3, 1))(h)
-        h = Conv2DTranspose(64, kernel_size=(336, 1), activation='relu', padding='valid')(h)
+        h = UpSampling2D(size=(2, 1))(h)
+        h = Conv2DTranspose(64, kernel_size=(905, 1), activation='relu', padding='valid')(h)
         h = Conv2DTranspose(1, kernel_size=(256, 1), activation='sigmoid', padding='same')(h)
         h = Reshape((self.x_dim,))(h)
 
@@ -478,3 +478,5 @@ class VAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
+if __name__ == '__main__':
+    VAE(x_dimension=5000, z_dimension=10)
