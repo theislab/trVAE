@@ -479,5 +479,3 @@ class VAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
-if __name__ == '__main__':
-    VAE(x_dimension=5000, z_dimension=10)
