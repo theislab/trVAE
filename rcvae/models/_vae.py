@@ -1,7 +1,6 @@
 import logging
 import os
 
-import anndata
 import keras
 import numpy as np
 import tensorflow as tf
@@ -78,8 +77,9 @@ class VAE:
         """
         h = Reshape((self.x_dim, 1))(x)
 
-        h = Conv1D(64, kernel_size=256, activation='relu')(h)
-        h = MaxPooling1D(pool_size=50)(h)
+        h = Conv1D(32, kernel_size=256, activation='relu', padding='same')(h)
+        h = Conv1D(32, kernel_size=256, activation='relu', padding='same')(h)
+        h = MaxPooling1D(pool_size=100)(h)
 
         h = Flatten()(h)
 
@@ -110,8 +110,8 @@ class VAE:
 
         h = Reshape((256, 1, 1))(h)
 
-        h = UpSampling2D(size=(16, 1))(h)
-        # h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same',
+        h = UpSampling2D(size=(64, 1))(h)
+        # h = Conv2DTranspose(32, kernel_size=(256, 1), activation='relu', padding='same',
         #                     kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(64, kernel_size=(512, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
@@ -123,7 +123,7 @@ class VAE:
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same')(h)
 
         # h = UpSampling2D(size=(4, 1))(h)
-        h = Conv2DTranspose(64, kernel_size=(905, 1), activation='relu', padding='valid')(h)
+        h = Conv2DTranspose(32, kernel_size=(3152, 1), activation='relu', padding='valid')(h)
         h = Conv2DTranspose(1, kernel_size=(256, 1), activation='sigmoid', padding='same')(h)
         h = Reshape((self.x_dim,))(h)
 

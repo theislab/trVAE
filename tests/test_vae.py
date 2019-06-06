@@ -16,7 +16,7 @@ DATASETS = {
     "atac": {"name": 'atac',
              "matrix_file": "atac_matrix.binary.qc_filtered.mtx.gz",
              "metadata": "cell_metadata.txt",
-             'cell_type': 'cell_label\n',
+             'cell_type': 'our_cell_label',
              'spec_cell_types': [],
              },
 
@@ -38,7 +38,7 @@ def train_network(data_dict=None,
     metadata_path = data_dict['metadata']
     cell_type_key = data_dict['cell_type']
 
-    train_data = sc.read(f"../data/{data_name}/anna/{data_name}_preprocessed.h5ad")
+    train_data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019.h5ad")
     train_data = train_data[:subsample]
 
     spec_cell_type = data_dict.get("spec_cell_types", None)
@@ -82,7 +82,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=20000):
     cell_type_key = data_dict['cell_type']
     spec_cell_type = data_dict.get("spec_cell_types", None)
 
-    data = sc.read(f"../data/{data_name}/anna/{data_name}_preprocessed.h5ad")
+    data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019.h5ad")
     data = data[:subsample]
     cell_types = data.obs[cell_type_key].unique().tolist()
 
