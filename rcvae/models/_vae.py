@@ -75,15 +75,15 @@ class VAE:
         """
         h = Reshape((self.x_dim, 1))(x)
 
-        h = Conv1D(128, kernel_size=1024, activation='relu')(h)
-        h = Conv1D(128, kernel_size=1024, activation='relu')(h)
-        h = Conv1D(128, kernel_size=1024, activation='relu')(h)
-        h = MaxPooling1D(pool_size=50)(h)
+        h = Conv1D(64, kernel_size=256, activation='relu')(h)
+        h = Conv1D(64, kernel_size=256, activation='relu')(h)
+        h = Conv1D(64, kernel_size=256, activation='relu')(h)
+        h = MaxPooling1D(pool_size=5)(h)
 
-        h = Conv1D(64, kernel_size=1024, activation='relu')(h)
-        h = Conv1D(64, kernel_size=1024, activation='relu')(h)
-        h = Conv1D(64, kernel_size=1024, activation='relu')(h)
-        h = MaxPooling1D(pool_size=50)(h)
+        h = Conv1D(32, kernel_size=256, activation='relu')(h)
+        h = Conv1D(32, kernel_size=256, activation='relu')(h)
+        h = Conv1D(32, kernel_size=256, activation='relu')(h)
+        h = MaxPooling1D(pool_size=5)(h)
 
         h = Flatten()(h)
 
@@ -114,19 +114,20 @@ class VAE:
 
         h = Reshape((256, 1, 1))(h)
 
-        h = UpSampling2D(size=(70, 1))(h)
-        h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same',
+        h = UpSampling2D(size=(5, 1))(h)
+        h = Conv2DTranspose(64, kernel_size=(1024, 1), activation='relu', padding='same',
                             kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
 
-        h = UpSampling2D(size=(4, 1))(h)
-        h = Conv2DTranspose(256, kernel_size=(1022, 1), activation='relu', padding='valid',
+        h = UpSampling2D(size=(5, 1))(h)
+        h = Conv2DTranspose(64, kernel_size=(1022, 1), activation='relu', padding='same',
                             kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same')(h)
 
-        h = UpSampling2D(size=(6, 1))(h)
-        h = Conv2DTranspose(1, kernel_size=(1024, 1), activation='relu', padding='same')(h)
+        h = UpSampling2D(size=(3, 1))(h)
+        h = Conv2DTranspose(64, kernel_size=(336, 1), activation='relu', padding='valid')(h)
+        h = Conv2DTranspose(1, kernel_size=(256, 1), activation='relu', padding='same')(h)
         h = Reshape((self.x_dim,))(h)
 
         model = Model(inputs=z, outputs=h, name=name)
