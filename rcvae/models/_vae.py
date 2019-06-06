@@ -114,12 +114,12 @@ class VAE:
 
         h = Reshape((256, 1, 1))(h)
 
-        h = UpSampling2D(size=(50, 1))(h)
+        h = UpSampling2D(size=(70, 1))(h)
         h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same',
                             kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
 
-        h = UpSampling2D(size=(5.6, 1))(h)
+        h = UpSampling2D(size=(4, 1))(h)
         h = Conv2DTranspose(256, kernel_size=(1022, 1), activation='relu', padding='valid',
                             kernel_initializer='he_normal')(h)
         # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
@@ -363,7 +363,7 @@ class VAE:
             network.restore_model()
             ```
         """
-        self.vae_model = load_model(os.path.join(self.model_to_use, 'mmd_vae.h5'), compile=False)
+        self.vae_model = load_model(os.path.join(self.model_to_use, 'vae.h5'), compile=False)
         self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
         self._loss_function()
@@ -453,7 +453,7 @@ class VAE:
                 verbose=verbose)
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
-            self.vae_model.save(os.path.join(self.model_to_use, "mmd_vae.h5"), overwrite=True)
+            self.vae_model.save(os.path.join(self.model_to_use, "vae.h5"), overwrite=True)
             self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
