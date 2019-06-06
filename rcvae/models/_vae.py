@@ -258,7 +258,8 @@ class VAE:
 
         def kl_recon_loss(y_true, y_pred):
             kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-            recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
+            # recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
+            recon_loss = 0.5 * K.binary_crossentropy(y_true, y_pred)
             return recon_loss + self.alpha * kl_loss
 
         self.vae_optimizer = keras.optimizers.Adam(lr=self.lr)
