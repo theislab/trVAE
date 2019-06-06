@@ -32,6 +32,7 @@ def train_network(data_dict=None,
                   dropout_rate=0.2,
                   learning_rate=0.001,
                   gpus=1,
+                  verbose=2,
                   ):
     data_name = data_dict['name']
     metadata_path = data_dict['metadata']
@@ -66,7 +67,7 @@ def train_network(data_dict=None,
                   valid_data=net_valid_data,
                   n_epochs=n_epochs,
                   batch_size=batch_size,
-                  verbose=2,
+                  verbose=verbose,
                   early_stop_limit=100,
                   shuffle=True,
                   save=True)
@@ -146,6 +147,8 @@ if __name__ == '__main__':
     arguments_group.add_argument('-s', '--subsample', type=int, default=20000, required=False,
                                  help='Size of subsampling')
     arguments_group.add_argument('-g', '--gpus', type=int, default=1, required=False,
+                                 help='Learning Rate for Optimizer')
+    arguments_group.add_argument('-v', '--verbose', type=int, default=2, required=False,
                                  help='Learning Rate for Optimizer')
 
     args = vars(parser.parse_args())
