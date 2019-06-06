@@ -494,12 +494,3 @@ class VAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
-
-
-if __name__ == '__main__':
-    net = VAE(x_dimension=5000, z_dimension=2)
-    data = np.random.binomial(n=1, p=0.8, size=(10, 5000))
-    print(data)
-    print(data.shape)
-    data = anndata.AnnData(X=data)
-    net.train(data, use_validation=False, verbose=1, batch_size=2)
