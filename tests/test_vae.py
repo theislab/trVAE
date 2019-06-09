@@ -16,7 +16,7 @@ DATASETS = {
     "atac": {"name": 'atac',
              "matrix_file": "atac_matrix.binary.qc_filtered.mtx.gz",
              "metadata": "cell_metadata.txt",
-             'cell_type': 'cusanovich_label',
+             'cell_type': 'cusanovich_label\n',
              'spec_cell_types': [],
              },
 
