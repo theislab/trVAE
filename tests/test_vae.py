@@ -62,7 +62,7 @@ def train_network(data_dict=None,
                         alpha=alpha,
                         gpus=gpus,
                         learning_rate=learning_rate,
-                        model_path=f"../models/VAE/{data_name}/{z_dim}/",
+                        model_path=f"../models/VAE/{data_name}-{arch_style}/{z_dim}/",
                         arch_style=arch_style,
                         dropout_rate=dropout_rate)
 
@@ -101,7 +101,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=None, arch
     network = rcvae.VAE(x_dimension=data.shape[1],
                         z_dimension=z_dim,
                         arch_style=arch_style,
-                        model_path=f"../models/VAE/{data_name}/{z_dim}/", )
+                        model_path=f"../models/VAE/{data_name}-{arch_style}/{z_dim}/", )
 
     network.restore_model()
 
