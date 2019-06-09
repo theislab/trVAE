@@ -167,5 +167,5 @@ if __name__ == '__main__':
     if args['do_train'] == 1:
         del args['do_train']
         train_network(data_dict=data_dict, **args)
-        visualize_trained_network_results(data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'])
+    visualize_trained_network_results(data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
