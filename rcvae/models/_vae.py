@@ -50,6 +50,7 @@ class VAE:
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
         self.n_gpus = kwargs.get("gpus", 1)
+        self.arch_style = kwargs.get("arch_style", 1)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
@@ -75,21 +76,36 @@ class VAE:
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
-        h = Reshape((self.x_dim, 1))(x)
+        if self.arch_style == 1:
+            h = Reshape((self.x_dim, 1))(x)
 
-        h = Conv1D(32, kernel_size=256, activation='relu', padding='same')(h)
-        h = Conv1D(32, kernel_size=256, activation='relu', padding='same')(h)
-        h = MaxPooling1D(pool_size=100)(h)
+            h = Conv1D(32, kernel_size=256, activation='relu', padding='same')(h)
+            h = Conv1D(32, kernel_size=256, activation='relu', padding='same')(h)
+            h = MaxPooling1D(pool_size=100)(h)
 
-        h = Flatten()(h)
+            h = Flatten()(h)
 
-        h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(h)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+            h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+        elif self.arch_style == 2:
+            h = Dense(4096, kernel_initializer=self.init_w, use_bias=False)(x)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
+            h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
+            h = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
+
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
+
         model = Model(inputs=x, outputs=[mean, log_var, z], name=name)
         return mean, log_var, model
 
@@ -104,28 +120,42 @@ class VAE:
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
-        h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(z)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
+        if self.arch_style == 1:
+            h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(z)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
 
-        h = Reshape((256, 1, 1))(h)
+            h = Reshape((256, 1, 1))(h)
 
-        h = UpSampling2D(size=(64, 1))(h)
-        # h = Conv2DTranspose(32, kernel_size=(256, 1), activation='relu', padding='same',
-        #                     kernel_initializer='he_normal')(h)
-        # h = Conv2DTranspose(64, kernel_size=(512, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
-        # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
+            h = UpSampling2D(size=(64, 1))(h)
+            # h = Conv2DTranspose(32, kernel_size=(256, 1), activation='relu', padding='same',
+            #                     kernel_initializer='he_normal')(h)
+            # h = Conv2DTranspose(64, kernel_size=(512, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
+            # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
 
-        # h = UpSampling2D(size=(2, 1))(h)
-        # h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same',
-        #                     kernel_initializer='he_normal')(h)
-        # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
-        # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same')(h)
+            # h = UpSampling2D(size=(2, 1))(h)
+            # h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same',
+            #                     kernel_initializer='he_normal')(h)
+            # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
+            # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same')(h)
 
-        # h = UpSampling2D(size=(4, 1))(h)
-        h = Conv2DTranspose(32, kernel_size=(3152, 1), activation='relu', padding='valid')(h)
-        h = Conv2DTranspose(1, kernel_size=(256, 1), activation='relu', padding='same')(h)
-        h = Reshape((self.x_dim,))(h)
+            # h = UpSampling2D(size=(4, 1))(h)
+            h = Conv2DTranspose(32, kernel_size=(3152, 1), activation='relu', padding='valid')(h)
+            h = Conv2DTranspose(1, kernel_size=(256, 1), activation='sigmoid', padding='same')(h)
+            h = Reshape((self.x_dim,))(h)
+
+        if self.arch_style == 2:
+            h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(z)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
+            h = Dense(4096, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
+            h = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True)(h)
 
         model = Model(inputs=z, outputs=h, name=name)
         return h, model

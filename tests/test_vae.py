@@ -16,7 +16,7 @@ DATASETS = {
     "atac": {"name": 'atac',
              "matrix_file": "atac_matrix.binary.qc_filtered.mtx.gz",
              "metadata": "cell_metadata.txt",
-             'cell_type': 'our_cell_label',
+             'cell_type': 'cusanovich_label',
              'spec_cell_types': [],
              },
 
@@ -25,7 +25,7 @@ DATASETS = {
 
 def train_network(data_dict=None,
                   z_dim=100,
-                  subsample=20000,
+                  subsample=None,
                   alpha=0.001,
                   n_epochs=500,
                   batch_size=512,
@@ -33,6 +33,7 @@ def train_network(data_dict=None,
                   learning_rate=0.001,
                   gpus=1,
                   verbose=2,
+                  arch_style=1,
                   ):
     data_name = data_dict['name']
     metadata_path = data_dict['metadata']
@@ -40,7 +41,8 @@ def train_network(data_dict=None,
 
     train_data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019.h5ad")
     train_data.X += abs(train_data.X.min())
-    train_data = train_data[:subsample]
+    if subsample is not None:
+        train_data = train_data[:subsample]
 
     spec_cell_type = data_dict.get("spec_cell_types", None)
     if spec_cell_type is not []:
@@ -61,6 +63,7 @@ def train_network(data_dict=None,
                         gpus=gpus,
                         learning_rate=learning_rate,
                         model_path=f"../models/VAE/{data_name}/{z_dim}/",
+                        arch_style=arch_style,
                         dropout_rate=dropout_rate)
 
     network.train(net_train_data,
@@ -76,7 +79,7 @@ def train_network(data_dict=None,
     print(f"Model for {data_name} has been trained")
 
 
-def visualize_trained_network_results(data_dict, z_dim=100, subsample=20000):
+def visualize_trained_network_results(data_dict, z_dim=100, subsample=None, arch_style=1):
     plt.close("all")
     data_name = data_dict['name']
     metadata_path = data_dict['metadata']
@@ -85,7 +88,8 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=20000):
 
     data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019.h5ad")
     data.X += abs(data.X.min())
-    data = data[:subsample]
+    if subsample is not None:
+        data = data[:subsample]
     cell_types = data.obs[cell_type_key].unique().tolist()
 
     path_to_save = f"../results/VAE/{data_name}/{z_dim}/Visualizations/"
@@ -96,6 +100,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=20000):
 
     network = rcvae.VAE(x_dimension=data.shape[1],
                         z_dimension=z_dim,
+                        arch_style=arch_style,
                         model_path=f"../models/VAE/{data_name}/{z_dim}/", )
 
     network.restore_model()
@@ -146,9 +151,11 @@ if __name__ == '__main__':
                                  help='Learning rate of optimizer')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='Learning rate of optimizer')
-    arguments_group.add_argument('-s', '--subsample', type=int, default=20000, required=False,
-                                 help='Size of subsampling')
+    # arguments_group.add_argument('-s', '--subsample', type=int, default=20000, required=False,
+    #                              help='Size of subsampling')
     arguments_group.add_argument('-g', '--gpus', type=int, default=1, required=False,
+                                 help='Learning Rate for Optimizer')
+    arguments_group.add_argument('-s', '--arch_style', type=int, default=1, required=False,
                                  help='Learning Rate for Optimizer')
     arguments_group.add_argument('-v', '--verbose', type=int, default=2, required=False,
                                  help='Learning Rate for Optimizer')
@@ -160,5 +167,5 @@ if __name__ == '__main__':
     if args['do_train'] == 1:
         del args['do_train']
         train_network(data_dict=data_dict, **args)
-        visualize_trained_network_results(data_dict, z_dim=args['z_dim'], subsample=args['subsample'])
+        visualize_trained_network_results(data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
