@@ -6,11 +6,11 @@ import scanpy as sc
 from scipy import sparse
 
 import rcvae
+from matplotlib import pyplot as plt
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
 
-from matplotlib import pyplot as plt
 
 DATASETS = {
     "atac": {"name": 'atac',
