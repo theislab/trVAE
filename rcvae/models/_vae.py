@@ -142,7 +142,7 @@ class VAE:
             # h = UpSampling2D(size=(4, 1))(h)
             # h = Conv2DTranspose(4, kernel_size=(3152, 1), activation='relu', padding='valid')(h)
             h = Conv2DTranspose(4, kernel_size=(905, 1), activation='relu', padding='valid')(h)
-            h = Conv2DTranspose(1, kernel_size=(256, 1), activation='sigmoid', padding='same')(h)
+            h = Conv2DTranspose(1, kernel_size=(256, 1), activation='relu', padding='same')(h)
             h = Reshape((self.x_dim,))(h)
 
         if self.arch_style == 2:
@@ -156,7 +156,7 @@ class VAE:
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
 
-            h = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True)(h)
+            h = Dense(self.x_dim, activation='relu', kernel_initializer=self.init_w, use_bias=True)(h)
 
         model = Model(inputs=z, outputs=h, name=name)
         return h, model
