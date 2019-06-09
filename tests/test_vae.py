@@ -39,7 +39,7 @@ def train_network(data_dict=None,
     metadata_path = data_dict['metadata']
     cell_type_key = data_dict['cell_type']
 
-    train_data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019.h5ad")
+    train_data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019_5000.h5ad")
     train_data.X += abs(train_data.X.min())
     if subsample is not None:
         train_data = train_data[:subsample]
@@ -86,7 +86,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=None, arch
     cell_type_key = data_dict['cell_type']
     spec_cell_type = data_dict.get("spec_cell_types", None)
 
-    data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019.h5ad")
+    data = sc.read(f"../data/{data_name}/anna/processed_adata_Cusanovich_brain_May29_2019_5000.h5ad")
     data.X += abs(data.X.min())
     if subsample is not None:
         data = data[:subsample]
