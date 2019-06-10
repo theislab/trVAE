@@ -79,7 +79,7 @@ class VAE:
         if self.arch_style == 1:
             h = Reshape((self.x_dim, 1))(x)
 
-            h = Conv1D(4, kernel_size=256, activation='relu', padding='valid')(h)
+            h = Conv1D(32, kernel_size=256, activation='relu', padding='valid')(h)
             # h = Conv1D(32, kernel_size=256, activation='relu', padding='same')(h)
             h = MaxPooling1D(pool_size=100)(h)
 
@@ -141,7 +141,7 @@ class VAE:
 
             # h = UpSampling2D(size=(4, 1))(h)
             # h = Conv2DTranspose(4, kernel_size=(3152, 1), activation='relu', padding='valid')(h)
-            h = Conv2DTranspose(4, kernel_size=(905, 1), activation='relu', padding='valid')(h)
+            h = Conv2DTranspose(32, kernel_size=(905, 1), activation='relu', padding='valid')(h)
             h = Conv2DTranspose(1, kernel_size=(256, 1), activation='relu', padding='same')(h)
             h = Reshape((self.x_dim,))(h)
 
