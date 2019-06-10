@@ -92,7 +92,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=None, arch
         data = data[:subsample]
     cell_types = data.obs[cell_type_key].unique().tolist()
 
-    path_to_save = f"../results/VAE/{data_name}/{z_dim}/Visualizations/"
+    path_to_save = f"../results/VAE/{data_name}/{arch_style}-{z_dim}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
     sc.settings.figdir = os.path.abspath(path_to_save)
 
