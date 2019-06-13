@@ -29,7 +29,7 @@ FASHION_MNIST_CLASS_DICT = {
 
 DATASETS = {
     "CelebA": {"name": 'celeba', "gender": "Male", 'attribute': "Smiling", 'source_key': -1, "target_key": 1,
-               "width": 64, 'height': 78, "n_channels": 3},
+               "width": 64, 'height': 64, "n_channels": 3},
 
     "MNIST": {"name": 'mnist', "source_key": 1, "target_key": 7,
               "train_digits": [], "test_digits": [],

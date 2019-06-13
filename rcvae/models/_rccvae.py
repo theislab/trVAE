@@ -13,7 +13,6 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from scipy import sparse
-
 from .utils import label_encoder
 
 log = logging.getLogger(__file__)
@@ -68,7 +67,7 @@ class RCCVAE:
         self._loss_function(compile_gpu_model=True)
         self.cvae_model.summary()
 
-    def _encoder(self, x, y, name="encoder"):
+    def _encoder(self, name="encoder"):
         """
             Constructs the encoder sub-network of C-VAE. This function implements the
             encoder part of Variational Auto-encoder. It will transform primary
@@ -82,10 +81,10 @@ class RCCVAE:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         if self.arch_style == 1:  # Baseline CNN
-            h = Dense(128, activation='relu')(y)
+            h = Dense(128, activation='relu')(self.encoder_labels)
             h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(h)
             h = Reshape((*self.x_dim[:-1], 1))(h)
-            h = concatenate([x, h])
+            h = concatenate([self.x, h])
             h = Conv2D(64, kernel_size=(4, 4), strides=2, padding='same')(h)
             h = LeakyReLU()(h)
             h = Conv2D(128, kernel_size=(4, 4), strides=2, padding='same')(h)
@@ -98,12 +97,12 @@ class RCCVAE:
             mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
             z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
-            model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
+            model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
             model.summary()
             return mean, log_var, model
         elif self.arch_style == 2:  # FCN
-            x_reshaped = Reshape(target_shape=(np.prod(self.x_dim),))(x)
-            xy = concatenate([x_reshaped, y], axis=1)
+            x_reshaped = Reshape(target_shape=(np.prod(self.x_dim),))(self.x)
+            xy = concatenate([x_reshaped, self.encoder_labels], axis=1)
             h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(xy)
             h = BatchNormalization(axis=1)(h)
             h = LeakyReLU()(h)
@@ -119,30 +118,31 @@ class RCCVAE:
             mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
             z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
-            model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
+            model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
             model.summary()
             return mean, log_var, model
         else:
-            h = Dense(128, activation='relu')(y)
+            h = Dense(128, activation='relu')(self.encoder_labels)
             h = Dense(np.prod(self.x_dim[:-1]), activation='relu')(h)
             h = Reshape((*self.x_dim[:-1], 1))(h)
-            h = concatenate([x, h])
+            h = concatenate([self.x, h])
 
-            conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(h)
-            conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv1)
-            pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+            self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(h)
+            self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv1)
+            pool1 = MaxPooling2D(pool_size=(2, 2))(self.conv1)
 
-            conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
-            conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv2)
-            pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+            self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
+            self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv2)
+            pool2 = MaxPooling2D(pool_size=(2, 2))(self.conv2)
 
-            conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
-            conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv3)
-            pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
+            self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
+            self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv3)
+            pool3 = MaxPooling2D(pool_size=(2, 2))(self.conv3)
 
             conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
             conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
-            pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
+            self.drop4 = Dropout(self.dr_rate)(conv4)
+            pool4 = MaxPooling2D(pool_size=(2, 2))(self.drop4)
 
             flat = Flatten(name='flatten')(pool4)
 
@@ -161,11 +161,11 @@ class RCCVAE:
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(dense)
 
             z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
-            model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
+            model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
             model.summary()
             return mean, log_var, model
 
-    def _mmd_decoder(self, z, y, name="decoder"):
+    def _mmd_decoder(self, name="decoder"):
         """
             Constructs the decoder sub-network of C-VAE. This function implements the
             decoder part of Variational Auto-encoder. It will transform constructed
@@ -177,7 +177,7 @@ class RCCVAE:
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
         if self.arch_style == 1:  # Baseline CNN for MNIST
-            zy = concatenate([z, y], axis=1)
+            zy = concatenate([self.z, self.decoder_labels], axis=1)
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization(axis=1)(h)
             h_mmd = LeakyReLU(name="mmd")(h)
@@ -192,11 +192,11 @@ class RCCVAE:
             # h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Conv2DTranspose(self.x_dim[-1], kernel_size=(4, 4), padding='same', activation="relu")(h)
-            model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
+            model = Model(inputs=[self.z, self.decoder_labels], outputs=[h, h_mmd], name=name)
             model.summary()
             return h, h_mmd, model
         elif self.arch_style == 2:  # FCN
-            zy = concatenate([z, y], axis=1)
+            zy = concatenate([self.z, self.decoder_labels], axis=1)
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization(axis=1)(h)
             h_mmd = LeakyReLU(name="mmd")(h)
@@ -212,12 +212,12 @@ class RCCVAE:
             h = Dense(np.prod(self.x_dim), kernel_initializer=self.init_w, use_bias=True)(h)
             h = Activation('relu', name="reconstruction_output")(h)
             h = Reshape(target_shape=self.x_dim)(h)
-            model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
+            model = Model(inputs=[self.z, self.decoder_labels], outputs=[h, h_mmd], name=name)
             model.summary()
             return h, h_mmd, model
         else:
-            encode_y = Dense(128, activation='relu')(y)
-            zy = concatenate([z, encode_y], axis=1)
+            encode_y = Dense(128, activation='relu')(self.decoder_labels)
+            zy = concatenate([self.z, encode_y], axis=1)
             zy = Activation('relu')(zy)
 
             h = Dense(self.mmd_dim, activation="linear", kernel_initializer='he_normal')(zy)
@@ -236,23 +236,28 @@ class RCCVAE:
 
             up6 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(h))
-            conv6 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up6)
+            merge6 = concatenate([self.drop4, up6], axis=3)
+            conv6 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge6)
 
             up7 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv6))
-            conv7 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up7)
+            merge7 = concatenate([self.conv3, up7], axis=3)
+            conv7 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge7)
 
             up8 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv7))
-            conv8 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up8)
+            merge8 = concatenate([self.conv2, up8], axis=3)
+            conv8 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge8)
 
             up9 = Conv2D(32, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv8))
-            conv9 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up9)
+            merge9 = concatenate([self.conv1, up9], axis=3)
+            conv9 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(merge9)
 
             conv10 = Conv2D(self.x_dim[-1], 1, activation='relu')(conv9)
 
-            model = Model(inputs=[z, y], outputs=[conv10, h_mmd], name=name)
+            model = Model(inputs=[self.x, self.z, self.encoder_labels, self.decoder_labels], outputs=[conv10, h_mmd],
+                          name=name)
             model.summary()
             return h, h_mmd, model
 
@@ -287,10 +292,13 @@ class RCCVAE:
         """
 
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
-        self.mu, self.log_var, self.encoder_model = self._encoder(*inputs[:2], name="encoder")
-        self.x_hat, self.mmd_hl, self.decoder_model = self._mmd_decoder(self.z, self.decoder_labels,
-                                                                        name="decoder")
-        decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
+        self.x_hat, self.mmd_hl, self.decoder_model = self._mmd_decoder(name="decoder")
+        if self.arch_style < 3:
+            decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        else:
+            decoder_outputs = self.decoder_model(
+                [self.x, self.encoder_model(inputs[:2])[2], self.encoder_labels, self.decoder_labels])
         reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
@@ -298,11 +306,11 @@ class RCCVAE:
                                 name="cvae")
         if self.n_gpus > 1:
             self.gpu_cvae_model = multi_gpu_model(self.cvae_model,
-                                              gpus=self.n_gpus)
+                                                  gpus=self.n_gpus)
             self.gpu_encoder_model = multi_gpu_model(self.encoder_model,
-                                                 gpus=self.n_gpus)
+                                                     gpus=self.n_gpus)
             self.gpu_decoder_model = multi_gpu_model(self.decoder_model,
-                                             gpus=self.n_gpus)
+                                                     gpus=self.n_gpus)
         else:
             self.gpu_cvae_model = self.cvae_model
             self.gpu_encoder_model = self.encoder_model
@@ -399,14 +407,14 @@ class RCCVAE:
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
             if compile_gpu_model:
                 self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[kl_recon_loss, mmd_loss],
-                                        metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
-                                                 self.cvae_model.outputs[1].name: mmd_loss})
-            else:
-                self.cvae_model.compile(optimizer=self.cvae_optimizer,
                                             loss=[kl_recon_loss, mmd_loss],
                                             metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
                                                      self.cvae_model.outputs[1].name: mmd_loss})
+            else:
+                self.cvae_model.compile(optimizer=self.cvae_optimizer,
+                                        loss=[kl_recon_loss, mmd_loss],
+                                        metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
+                                                 self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()
 
@@ -448,7 +456,7 @@ class RCCVAE:
         mmd_latent = model.cvae_model.predict([data, encoder_labels, decoder_labels])[1]
         return mmd_latent
 
-    def _reconstruct(self, data, encoder_labels, decoder_labels, use_data=False):
+    def _reconstruct(self, data, encoder_labels, decoder_labels):
         """
             Map back the latent space encoding via the decoder.
             # Parameters
@@ -464,11 +472,11 @@ class RCCVAE:
                 rec_data: 'numpy nd-array'
                     returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
         """
-        if use_data:
-            latent = data
+        latent = self.to_latent(data, encoder_labels)
+        if self.arch_style < 3:
+            rec_data = self.decoder_model.predict([latent, decoder_labels])
         else:
-            latent = self.to_latent(data, encoder_labels)
-        rec_data = self.decoder_model.predict([latent, decoder_labels])
+            rec_data = self.decoder_model.predict([data, latent, encoder_labels, decoder_labels])
         return rec_data
 
     def predict(self, data, encoder_labels, decoder_labels, data_space='None'):
@@ -498,9 +506,7 @@ class RCCVAE:
 
         input_data = np.reshape(data.X, (-1, *self.x_dim))
 
-        if data_space == 'latent':
-            stim_pred = self._reconstruct(input_data, encoder_labels, decoder_labels, use_data=True)
-        elif data_space == 'mmd':
+        if data_space == 'mmd':
             stim_pred = self._reconstruct_from_mmd(input_data)
         else:
             stim_pred = self._reconstruct(input_data, encoder_labels, decoder_labels)
