@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
-from keras.layers import Activation
+from keras.layers import Activation, AveragePooling2D
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Conv2D, \
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.layers.advanced_activations import LeakyReLU
@@ -129,20 +129,20 @@ class RCCVAE:
 
             self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(h)
             self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv1)
-            pool1 = MaxPooling2D(pool_size=(2, 2))(self.conv1)
+            pool1 = AveragePooling2D(pool_size=(2, 2))(self.conv1)
 
             self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
             self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv2)
-            pool2 = MaxPooling2D(pool_size=(2, 2))(self.conv2)
+            pool2 = AveragePooling2D(pool_size=(2, 2))(self.conv2)
 
             self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
             self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv3)
-            pool3 = MaxPooling2D(pool_size=(2, 2))(self.conv3)
+            pool3 = AveragePooling2D(pool_size=(2, 2))(self.conv3)
 
             conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
             conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
             self.drop4 = Dropout(self.dr_rate)(conv4)
-            pool4 = MaxPooling2D(pool_size=(2, 2))(self.drop4)
+            pool4 = AveragePooling2D(pool_size=(2, 2))(self.drop4)
 
             flat = Flatten(name='flatten')(pool4)
 
