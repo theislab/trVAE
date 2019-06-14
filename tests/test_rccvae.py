@@ -367,7 +367,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
                 ax[i, 1].imshow(pred_sample_train[i, :, :, 0], cmap='Greys')
             # if data_name.__contains__("mnist"):
             #     ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
-        plt.savefig(os.path.join(results_path_train, f"./train/sample_images_{j}.pdf"))
+        plt.savefig(os.path.join(results_path_train, f"sample_images_{j}.pdf"))
 
         print(source_sample_valid.shape, source_sample_valid_reshaped.shape, pred_sample_valid.shape)
 
