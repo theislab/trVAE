@@ -70,6 +70,7 @@ def train_network(data_dict=None,
                   learning_rate=0.001,
                   gpus=1,
                   max_size=50000,
+                  early_stopping_limit=50,
                   ):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
@@ -181,7 +182,7 @@ def train_network(data_dict=None,
                   n_epochs=n_epochs,
                   batch_size=batch_size,
                   verbose=2,
-                  early_stop_limit=200,
+                  early_stop_limit=early_stopping_limit,
                   shuffle=True,
                   save=True)
 
@@ -584,7 +585,9 @@ if __name__ == '__main__':
     arguments_group.add_argument('-x', '--max_size', type=int, default=50000, required=False,
                                  help='Max Size for CelebA')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
-                                 help='Max Size for CelebA')
+                                 help='do train the network')
+    arguments_group.add_argument('-y', '--early_stopping_limit', type=int, default=50, required=False,
+                                 help='do train the network')
 
     args = vars(parser.parse_args())
 
