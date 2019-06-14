@@ -175,19 +175,15 @@ def train_network(data_dict=None,
                            dropout_rate=dropout_rate)
 
     print(train_data.shape, valid_data.shape)
-    if os.path.exists(
-            f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/mmd_cvae.h5"):
-        network.restore_model()
-    else:
-        network.train(train_data,
-                      use_validation=True,
-                      valid_data=valid_data,
-                      n_epochs=n_epochs,
-                      batch_size=batch_size,
-                      verbose=2,
-                      early_stop_limit=200,
-                      shuffle=True,
-                      save=True)
+    network.train(train_data,
+                  use_validation=True,
+                  valid_data=valid_data,
+                  n_epochs=n_epochs,
+                  batch_size=batch_size,
+                  verbose=2,
+                  early_stop_limit=200,
+                  shuffle=True,
+                  save=True)
 
     print("Model has been trained")
 
@@ -587,6 +583,8 @@ if __name__ == '__main__':
                                  help='Learning Rate for Optimizer')
     arguments_group.add_argument('-x', '--max_size', type=int, default=50000, required=False,
                                  help='Max Size for CelebA')
+    arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
+                                 help='Max Size for CelebA')
 
     args = vars(parser.parse_args())
 
@@ -606,8 +604,9 @@ if __name__ == '__main__':
     del args['data']
     del args['width']
     del args['height']
-
-    train_network(data_dict=data_dict, **args)
+    if args['do_train'] > 0:
+        del args['do_train']
+        train_network(data_dict=data_dict, **args)
     evaluate_network(data_dict,
                      z_dim=args['z_dim'],
                      n_files=30,
