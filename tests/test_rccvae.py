@@ -222,8 +222,8 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         if sparse.issparse(valid_data.X):
             valid_data.X = valid_data.X.A
 
-        source_images_train = valid_data[valid_data.obs["condition"] == source_key].X
-        source_images_valid = train_data[valid_data.obs["condition"] == source_key].X
+        source_images_train = train_data[valid_data.obs["condition"] == source_key].X
+        source_images_valid = valid_data[valid_data.obs["condition"] == source_key].X
 
         source_images_train = np.reshape(source_images_train, (-1, img_width, img_height, n_channels))
         source_images_valid = np.reshape(source_images_valid, (-1, img_width, img_height, n_channels))
