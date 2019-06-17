@@ -6,11 +6,11 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
-from keras.layers import Activation, AveragePooling2D
+from keras.layers import Activation, AveragePooling2D, Add
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Conv2D, \
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.layers.advanced_activations import LeakyReLU
-from keras.models import Model, load_model
+from keras.models import Model, load_model, model_from_json
 from keras.utils import multi_gpu_model
 from scipy import sparse
 from .utils import label_encoder
@@ -49,6 +49,7 @@ class RCCVAE:
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
         self.beta = kwargs.get("beta", 100)
+        self.gamma = kwargs.get("gamma", 1.0)
         self.conditions = kwargs.get("condition_list")
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
@@ -129,20 +130,20 @@ class RCCVAE:
 
             self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(h)
             self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv1)
-            pool1 = AveragePooling2D(pool_size=(2, 2))(self.conv1)
+            pool1 = MaxPooling2D(pool_size=(2, 2))(self.conv1)
 
             self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
             self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv2)
-            pool2 = AveragePooling2D(pool_size=(2, 2))(self.conv2)
+            pool2 = MaxPooling2D(pool_size=(2, 2))(self.conv2)
 
             self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
             self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv3)
-            pool3 = AveragePooling2D(pool_size=(2, 2))(self.conv3)
+            pool3 = MaxPooling2D(pool_size=(2, 2))(self.conv3)
 
             conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
             conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
             self.drop4 = Dropout(self.dr_rate)(conv4)
-            pool4 = AveragePooling2D(pool_size=(2, 2))(self.drop4)
+            pool4 = MaxPooling2D(pool_size=(2, 2))(self.drop4)
 
             flat = Flatten(name='flatten')(pool4)
 
@@ -235,22 +236,22 @@ class RCCVAE:
 
             up6 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(h))
-            # merge6 = concatenate([self.drop4, up6], axis=3)
+            up6 = Add()([self.drop4, up6])
             conv6 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up6)
 
             up7 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv6))
-            # merge7 = concatenate([self.conv3, up7], axis=3)
+            up7 = Add()([self.conv3, up7])
             conv7 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up7)
 
             up8 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv7))
-            # merge8 = concatenate([self.conv2, up8], axis=3)
+            up8 = Add()([self.conv2, up8])
             conv8 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up8)
 
             up9 = Conv2D(32, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv8))
-            # merge9 = concatenate([self.conv1, up9], axis=3)
+            up9 = Add()([self.conv1, up9])
             conv9 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up9)
 
             conv10 = Conv2D(self.x_dim[-1], 1, activation='relu')(conv9)
