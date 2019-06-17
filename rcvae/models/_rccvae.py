@@ -217,8 +217,8 @@ class RCCVAE:
             zy = concatenate([self.z, encode_y], axis=1)
             zy = Activation('relu')(zy)
 
-            zy = concatenate([zy, self.enc_dense], axis=1)
-            zy = Activation('relu')(zy)
+            # zy = concatenate([zy, self.enc_dense], axis=1)
+            # zy = Activation('relu')(zy)
 
             h = Dense(self.mmd_dim, activation="linear", kernel_initializer='he_normal')(zy)
             h_mmd = Activation('relu', name="mmd")(h)
