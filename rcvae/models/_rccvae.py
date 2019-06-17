@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
-from keras.layers import Activation, Add
+from keras.layers import Activation
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Conv2D, \
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.layers.advanced_activations import LeakyReLU
@@ -237,22 +237,22 @@ class RCCVAE:
 
             up6 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(h))
-            up6 = Add()([self.drop4, up6])
+            # up6 = Add()([self.drop4, up6])
             conv6 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up6)
 
             up7 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv6))
-            up7 = Add()([self.conv3, up7])
+            # up7 = Add()([self.conv3, up7])
             conv7 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up7)
 
             up8 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv7))
-            up8 = Add()([self.conv2, up8])
+            # up8 = Add()([self.conv2, up8])
             conv8 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up8)
 
             up9 = Conv2D(32, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv8))
-            up9 = Add()([self.conv1, up9])
+            # up9 = Add()([self.conv1, up9])
             conv9 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up9)
 
             conv10 = Conv2D(self.x_dim[-1], 1, activation='relu')(conv9)
@@ -389,22 +389,6 @@ class RCCVAE:
         """
 
         def batch_loss():
-            def kl_recon_loss(y_true, y_pred):
-                y_pred = K.reshape(y_pred, (-1, *self.x_dim))
-                y_true = K.reshape(y_true, (-1, *self.x_dim))
-
-                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-                recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
-                return recon_loss + self.alpha * kl_loss
-
-            def mmd_loss(real_labels, y_pred):
-                y_pred = K.reshape(y_pred, (-1, self.mmd_dim))
-                with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
-                    real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
-                    source_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=2)
-                    loss = self.compute_mmd(source_mmd, dest_mmd, self.kernel_method)
-                    return self.beta * loss
-
             facenet_model = load_model(filepath="../models/facenet_model.h5")
 
             def perceptual_loss(input_image, reconstructed_image):
@@ -427,6 +411,23 @@ class RCCVAE:
                     p_loss += K.mean(K.square(h1 - h2), axis=-1)
 
                 return p_loss
+
+            def kl_recon_loss(y_true, y_pred):
+                y_pred = K.reshape(y_pred, (-1, *self.x_dim))
+                y_true = K.reshape(y_true, (-1, *self.x_dim))
+
+                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
+                # recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
+                recon_loss = perceptual_loss(y_true, y_pred)
+                return self.gamma * recon_loss + self.alpha * kl_loss
+
+            def mmd_loss(real_labels, y_pred):
+                y_pred = K.reshape(y_pred, (-1, self.mmd_dim))
+                with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
+                    real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
+                    source_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=2)
+                    loss = self.compute_mmd(source_mmd, dest_mmd, self.kernel_method)
+                    return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
             if compile_gpu_model:
