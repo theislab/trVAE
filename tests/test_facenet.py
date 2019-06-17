@@ -74,7 +74,6 @@ def train_network(data_dict=None,
 
     train_data = data[train_idx, :]
     valid_data = data[test_idx, :]
-    print(train_data.shape, valid_data.shape)
 
     network = rcvae.FaceNet(x_dimension=(img_width, img_height, n_channels),
                             learning_rate=learning_rate,

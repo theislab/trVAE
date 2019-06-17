@@ -94,6 +94,11 @@ class FaceNet:
         dense = LeakyReLU()(dense)
         dense = Dropout(self.dr_rate)(dense)
 
+        dense = Dense(64)(dense)
+        dense = BatchNormalization()(dense)
+        dense = LeakyReLU()(dense)
+        dense = Dropout(self.dr_rate)(dense)
+
         dense = Dense(4, activation='softmax')(dense)
 
         self.model = Model(inputs=self.x, outputs=dense)
@@ -186,6 +191,8 @@ class FaceNet:
             valid_labels = to_categorical(valid_data.obs['label'].values)
             x_test = x_valid
             y_test = valid_labels
+            print(x.shape, y.shape)
+            print(x_test.shape, y_test.shape)
             histories = self.gpu_model.fit(x=x,
                                            y=y,
                                            epochs=n_epochs,
@@ -195,6 +202,7 @@ class FaceNet:
                                            callbacks=callbacks,
                                            verbose=verbose)
         else:
+            print(x.shape, y.shape)
             histories = self.gpu_model.fit(x=x,
                                            y=y,
                                            epochs=n_epochs,
