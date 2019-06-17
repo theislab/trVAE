@@ -53,7 +53,7 @@ class FaceNet:
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
         self._loss_function(compile_gpu_model=True)
-        self.cvae_model.summary()
+        self.model.summary()
 
     def _create_network(self):
         """

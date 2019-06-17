@@ -6,13 +6,14 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
-from keras.layers import Activation, AveragePooling2D, Add
+from keras.layers import Activation, Add
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Conv2D, \
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.layers.advanced_activations import LeakyReLU
-from keras.models import Model, load_model, model_from_json
+from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from scipy import sparse
+
 from .utils import label_encoder
 
 log = logging.getLogger(__file__)
@@ -403,6 +404,28 @@ class RCCVAE:
                     source_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=2)
                     loss = self.compute_mmd(source_mmd, dest_mmd, self.kernel_method)
                     return self.beta * loss
+
+            facenet_model = load_model(filepath="../models/facenet_model.h5")
+
+            def perceptual_loss(input_image, reconstructed_image):
+                outputs = [facenet_model.get_layer(l) for l in facenet_model.layers]
+
+                model = Model(inputs=facenet_model.input, outputs=outputs)
+
+                h1_list = model(input_image)
+                h2_list = model(reconstructed_image)
+
+                if not isinstance(h1_list, list):
+                    h1_list = [h1_list]
+                    h2_list = [h2_list]
+
+                p_loss = 0.0
+                for h1, h2 in zip(h1_list, h2_list):
+                    h1 = K.batch_flatten(h1)
+                    h2 = K.batch_flatten(h2)
+                    p_loss += K.mean(K.square(h1 - h2), axis=-1)
+
+                return p_loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
             if compile_gpu_model:
