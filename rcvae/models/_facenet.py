@@ -67,18 +67,21 @@ class FaceNet:
             # Returns
                 Nothing will be returned.
         """
-        conv = Conv2D(32, 3, padding='same')(self.x)
-        conv = BatchNormalization()(conv)
+        conv = Conv2D(32, 3, padding='same', name='conv1')(self.x)
+        conv = LeakyReLU()(conv)
+        conv = Conv2D(32, 3, padding='same', name='conv2')(conv)
         conv = LeakyReLU()(conv)
         max_pooling = MaxPooling2D(2)(conv)
 
-        conv = Conv2D(64, 3, padding='same')(max_pooling)
-        conv = BatchNormalization()(conv)
+        conv = Conv2D(64, 3, padding='same', name='conv3')(max_pooling)
+        conv = LeakyReLU()(conv)
+        conv = Conv2D(64, 3, padding='same', name='conv4')(conv)
         conv = LeakyReLU()(conv)
         max_pooling = MaxPooling2D(2)(conv)
 
-        conv = Conv2D(64, 3, padding='same')(max_pooling)
-        conv = BatchNormalization()(conv)
+        conv = Conv2D(64, 3, padding='same', name='conv5')(max_pooling)
+        conv = LeakyReLU()(conv)
+        conv = Conv2D(64, 3, padding='same', name='conv6')(conv)
         conv = LeakyReLU()(conv)
         max_pooling = MaxPooling2D(2)(conv)
 

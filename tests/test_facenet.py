@@ -81,7 +81,6 @@ def train_network(data_dict=None,
                             gpus=gpus,
                             dropout_rate=dropout_rate)
 
-    print(train_data.shape, valid_data.shape)
     network.train(train_data,
                   use_validation=True,
                   valid_data=valid_data,
