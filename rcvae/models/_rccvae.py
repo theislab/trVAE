@@ -393,7 +393,7 @@ class RCCVAE:
 
             def perceptual_loss(input_image, reconstructed_image):
                 layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6']
-                outputs = [facenet_model.get_layer(l) for l in layers]
+                outputs = [facenet_model.get_layer(l).output for l in layers]
 
                 model = Model(inputs=facenet_model.input, outputs=outputs)
 
