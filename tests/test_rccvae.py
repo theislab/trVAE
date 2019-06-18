@@ -590,7 +590,7 @@ if __name__ == '__main__':
                                  help='do train the network')
     arguments_group.add_argument('-y', '--early_stopping_limit', type=int, default=50, required=False,
                                  help='do train the network')
-    arguments_group.add_argument('-h', '--gamma', type=int, default=50, required=False,
+    arguments_group.add_argument('-f', '--gamma', type=float, default=1.0, required=False,
                                  help='do train the network')
 
     args = vars(parser.parse_args())
