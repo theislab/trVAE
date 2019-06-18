@@ -257,7 +257,7 @@ class RCCVAE:
 
             conv10 = Conv2D(self.x_dim[-1], 1, activation='relu')(conv9)
 
-            model = Model(inputs=[self.x, self.z, self.encoder_labels, self.decoder_labels], outputs=[conv10, h_mmd],
+            model = Model(inputs=[self.z, self.decoder_labels], outputs=[conv10, h_mmd],
                           name=name)
             model.summary()
             return h, h_mmd, model
@@ -295,11 +295,11 @@ class RCCVAE:
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
         self.x_hat, self.mmd_hl, self.decoder_model = self._mmd_decoder(name="decoder")
-        if self.arch_style < 3:
-            decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
-        else:
-            decoder_outputs = self.decoder_model(
-                [self.x, self.encoder_model(inputs[:2])[2], self.encoder_labels, self.decoder_labels])
+        # if self.arch_style < 3:
+        decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        # else:
+        #     decoder_outputs = self.decoder_model(
+        #         [self.x, self.encoder_model(inputs[:2])[2], self.encoder_labels, self.decoder_labels])
         reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
@@ -498,10 +498,10 @@ class RCCVAE:
                     returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
         """
         latent = self.to_latent(data, encoder_labels)
-        if self.arch_style < 3:
-            rec_data = self.decoder_model.predict([latent, decoder_labels])
-        else:
-            rec_data = self.decoder_model.predict([data, latent, encoder_labels, decoder_labels])
+        # if self.arch_style < 3:
+        rec_data = self.decoder_model.predict([latent, decoder_labels])
+        # else:
+        #     rec_data = self.decoder_model.predict([data, latent, encoder_labels, decoder_labels])
         return rec_data
 
     def predict(self, data, encoder_labels, decoder_labels, data_space='None'):
