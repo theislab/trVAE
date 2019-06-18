@@ -61,6 +61,7 @@ def train_network(data_dict=None,
                   mmd_dimension=256,
                   alpha=0.001,
                   beta=100,
+                  gamma=1.0,
                   kernel='multi-scale-rbf',
                   n_epochs=500,
                   batch_size=512,
@@ -167,6 +168,7 @@ def train_network(data_dict=None,
                            mmd_dimension=mmd_dimension,
                            alpha=alpha,
                            beta=beta,
+                           gamma=gamma,
                            kernel=kernel,
                            arch_style=arch_style,
                            train_with_fake_labels=False,
@@ -587,6 +589,8 @@ if __name__ == '__main__':
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='do train the network')
     arguments_group.add_argument('-y', '--early_stopping_limit', type=int, default=50, required=False,
+                                 help='do train the network')
+    arguments_group.add_argument('-h', '--gamma', type=int, default=50, required=False,
                                  help='do train the network')
 
     args = vars(parser.parse_args())

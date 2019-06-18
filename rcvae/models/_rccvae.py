@@ -392,7 +392,7 @@ class RCCVAE:
             facenet_model = load_model(filepath="../models/facenet_model.h5")
 
             def perceptual_loss(input_image, reconstructed_image):
-                layers = ['conv1']
+                layers = ['conv1', 'conv2', 'conv3', 'conv4']
                 outputs = [facenet_model.get_layer(l).output for l in layers]
 
                 model = Model(inputs=facenet_model.input, outputs=outputs)
@@ -417,9 +417,9 @@ class RCCVAE:
                 y_true = K.reshape(y_true, (-1, *self.x_dim))
 
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-                # recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
-                recon_loss = perceptual_loss(y_true, y_pred)
-                return self.gamma * recon_loss + self.alpha * kl_loss
+                recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
+                p_loss = perceptual_loss(y_true, y_pred)
+                return self.gamma * p_loss + self.alpha * kl_loss + recon_loss
 
             def mmd_loss(real_labels, y_pred):
                 y_pred = K.reshape(y_pred, (-1, self.mmd_dim))
