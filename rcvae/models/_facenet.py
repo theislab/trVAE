@@ -67,34 +67,21 @@ class FaceNet:
             # Returns
                 Nothing will be returned.
         """
-        conv = Conv2D(32, 3, padding='same', kernel_initializer='he_normal')(self.x)
+        conv = Conv2D(8, 6, padding='same', kernel_initializer='he_normal')(self.x)
         conv = LeakyReLU(name='conv1')(conv)
-        conv = Conv2D(32, 3, padding='same', kernel_initializer='he_normal')(conv)
-        conv = LeakyReLU(name='conv2')(conv)
         max_pooling = MaxPooling2D(2)(conv)
 
-        conv = Conv2D(64, 3, padding='same', kernel_initializer='he_normal')(max_pooling)
-        conv = LeakyReLU(name='conv3')(conv)
-        conv = Conv2D(64, 3, padding='same', kernel_initializer='he_normal')(conv)
+        conv = Conv2D(16, 4, padding='same', kernel_initializer='he_normal')(max_pooling)
         conv = LeakyReLU(name='conv4')(conv)
         max_pooling = MaxPooling2D(2)(conv)
 
-        conv = Conv2D(128, 3, padding='same', kernel_initializer='he_normal')(max_pooling)
-        conv = LeakyReLU(name='conv5')(conv)
-        conv = Conv2D(128, 3, padding='same', kernel_initializer='he_normal')(conv)
-        conv = LeakyReLU(name='conv6')(conv)
-        conv = Conv2D(128, 3, padding='same', kernel_initializer='he_normal')(conv)
+        conv = Conv2D(32, 3, padding='same', kernel_initializer='he_normal')(max_pooling)
         conv = LeakyReLU(name='conv7')(conv)
         max_pooling = MaxPooling2D(2)(conv)
 
         flat = Flatten()(max_pooling)
 
-        dense = Dense(1024, kernel_initializer='he_normal')(flat)
-        dense = BatchNormalization()(dense)
-        dense = LeakyReLU()(dense)
-        dense = Dropout(self.dr_rate)(dense)
-
-        dense = Dense(64, kernel_initializer='he_normal')(dense)
+        dense = Dense(512, kernel_initializer='he_normal')(flat)
         dense = BatchNormalization()(dense)
         dense = LeakyReLU()(dense)
         dense = Dropout(self.dr_rate)(dense)
