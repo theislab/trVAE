@@ -5,6 +5,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
+from keras.applications.vgg16 import VGG16
 from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Activation
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Conv2D, \
@@ -389,16 +390,23 @@ class RCCVAE:
         """
 
         def batch_loss():
-            facenet_model = load_model(filepath="../models/facenet_model.h5")
+            vgg16 = VGG16()
 
             def perceptual_loss(input_image, reconstructed_image):
-                layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6']
-                outputs = [facenet_model.get_layer(l).output for l in layers]
+                layers = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1',
+                          'block3_conv2', 'block3_conv3']
+                outputs = [vgg16.get_layer(l).output for l in layers]
 
-                model = Model(inputs=facenet_model.input, outputs=outputs)
+                model = Model(inputs=vgg16.input, outputs=outputs)
 
-                h1_list = model(input_image)
-                h2_list = model(reconstructed_image)
+                input_image_resized = tf.image.resize_images(input_image, tf.constant([224, 224], dtype=tf.int32),
+                                                             method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                reconstructed_image_resized = tf.image.resize_images(reconstructed_image,
+                                                                     tf.constant([224, 224], dtype=tf.int32),
+                                                                     method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+
+                h1_list = model(input_image_resized)
+                h2_list = model(reconstructed_image_resized)
 
                 if not isinstance(h1_list, list):
                     h1_list = [h1_list]
