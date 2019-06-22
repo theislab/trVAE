@@ -45,6 +45,7 @@ class RCCVAE:
     """
 
     def __init__(self, x_dimension, z_dimension=100, **kwargs):
+        tf.reset_default_graph()
         self.x_dim = x_dimension if isinstance(x_dimension, tuple) else (x_dimension,)
         self.z_dim = z_dimension
         self.image_shape = x_dimension
