@@ -391,7 +391,7 @@ class RCCVAE:
 
         def batch_loss():
             facenet = load_model("../models/facenet_model.h5")
-            vgg = VGG16(input_shape=self.x_dim)
+            vgg = VGG16(include_top=False, input_shape=self.x_dim)
             facenet_layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6', 'conv7']
             vgg_layers = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1',
                           'block3_conv2', 'block3_conv3']
