@@ -393,7 +393,7 @@ class RCCVAE:
 
         def batch_loss():
             vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
-            vgg_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', ]
+            vgg_layers = ['conv1_1']
             outputs = [vggface.get_layer(l).output for l in vgg_layers]
             model = Model(inputs=vggface.input, outputs=outputs)
 
