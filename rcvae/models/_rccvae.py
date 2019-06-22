@@ -14,6 +14,8 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from scipy import sparse
+from keras.applications.imagenet_utils import preprocess_input
+from keras_vggface.vggface import VGGFace
 
 from .utils import label_encoder
 
@@ -390,12 +392,10 @@ class RCCVAE:
         """
 
         def batch_loss():
-            facenet = load_model("../models/facenet_model.h5")
-            vgg = VGG16(include_top=False, input_shape=self.x_dim)
-            facenet_layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6', 'conv7']
-            vgg_layers = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', ]
-            outputs = [vgg.get_layer(l).output for l in vgg_layers]
-            model = Model(inputs=vgg.input, outputs=outputs)
+            vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
+            vgg_layers = ['conv1_1', 'conv1_2', 'conv2_1', 'conv2_2', ]
+            outputs = [vggface.get_layer(l).output for l in vgg_layers]
+            model = Model(inputs=vggface.input, outputs=outputs)
 
             for layer in model.layers:
                 layer.trainable = False
@@ -409,6 +409,9 @@ class RCCVAE:
 
                 # h1_list = model(input_image_resized)
                 # h2_list = model(reconstructed_image_resized)
+
+                input_image = preprocess_input(input_image, mode='tf', data_format='channels_last')
+                reconstructed_image = preprocess_input(reconstructed_image, mode='tf', data_format='channels_last')
 
                 h1_list = model(input_image)
                 h2_list = model(reconstructed_image)
