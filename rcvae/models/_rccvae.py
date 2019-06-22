@@ -393,8 +393,7 @@ class RCCVAE:
             facenet = load_model("../models/facenet_model.h5")
             vgg = VGG16(include_top=False, input_shape=self.x_dim)
             facenet_layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6', 'conv7']
-            vgg_layers = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1',
-                          'block3_conv2', 'block3_conv3']
+            vgg_layers = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2',]
             outputs = [vgg.get_layer(l).output for l in vgg_layers]
             model = Model(inputs=vgg.input, outputs=outputs)
 
