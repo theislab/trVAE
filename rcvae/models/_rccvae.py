@@ -15,7 +15,6 @@ from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from scipy import sparse
 
-from ._facenet import FaceNet
 from .utils import label_encoder
 
 log = logging.getLogger(__file__)
@@ -392,21 +391,28 @@ class RCCVAE:
 
         def batch_loss():
             facenet = load_model("../models/facenet_model.h5")
+            vgg = VGG16(input_shape=self.x_dim)
+            facenet_layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6', 'conv7']
+            vgg_layers = ['block1_conv1', 'block1_conv2', 'block2_conv1', 'block2_conv2', 'block3_conv1',
+                          'block3_conv2', 'block3_conv3']
+            outputs = [vgg.get_layer(l).output for l in vgg_layers]
+            model = Model(inputs=vgg.input, outputs=outputs)
+
+            for layer in model.layers:
+                layer.trainable = False
 
             def perceptual_loss(input_image, reconstructed_image):
-                layers = ['conv1', 'conv2', 'conv3', 'conv4', 'conv5', 'conv6', 'conv7']
-                outputs = [facenet.get_layer(l).output for l in layers]
+                # input_image_resized = tf.image.resize_images(input_image, tf.constant([224, 224], dtype=tf.int32),
+                #                                              method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+                # reconstructed_image_resized = tf.image.resize_images(reconstructed_image,
+                #                                                      tf.constant([224, 224], dtype=tf.int32),
+                #                                                      method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
 
-                model = Model(inputs=facenet.input, outputs=outputs)
+                # h1_list = model(input_image_resized)
+                # h2_list = model(reconstructed_image_resized)
 
-                input_image_resized = tf.image.resize_images(input_image, tf.constant([224, 224], dtype=tf.int32),
-                                                             method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-                reconstructed_image_resized = tf.image.resize_images(reconstructed_image,
-                                                                     tf.constant([224, 224], dtype=tf.int32),
-                                                                     method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-
-                h1_list = model(input_image_resized)
-                h2_list = model(reconstructed_image_resized)
+                h1_list = model(input_image)
+                h2_list = model(reconstructed_image)
 
                 if not isinstance(h1_list, list):
                     h1_list = [h1_list]
