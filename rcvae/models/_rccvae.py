@@ -410,6 +410,9 @@ class RCCVAE:
                 # h1_list = model(input_image_resized)
                 # h2_list = model(reconstructed_image_resized)
 
+                input_image *= 255.0
+                reconstructed_image *= 255.0
+
                 input_image = preprocess_input(input_image, mode='tf', data_format='channels_last')
                 reconstructed_image = preprocess_input(reconstructed_image, mode='tf', data_format='channels_last')
 
