@@ -177,7 +177,6 @@ def plot_boxplot(data_dict,
                  score_type="median_score",
                  y_measure="SE",
                  scale="log"):
-
     data_name = data_dict.get('name', None)
     ctrl_key = data_dict.get("source_key", None)
     stim_key = data_dict.get("target_key", None)
@@ -381,6 +380,30 @@ def reconstruct_whole_data(data_dict={}, z_dim=100):
 
         print(f"Finish Reconstructing for {cell_type}")
     all_data.write_h5ad(f"../data/reconstructed/RCVAE/{data_name}.h5ad")
+
+
+def stacked_violin_plot(data_dict, method, score_type="median_score"):
+    data_name = data_dict.get('name', None)
+    ctrl_key = data_dict.get("source_key", None)
+    stim_key = data_dict.get("target_key", None)
+    cell_type_key = data_dict.get("cell_type", None)
+
+    train = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+    recon_data = sc.read(f"../data/reconstructed/RCVAE/{data_name}.h5ad")
+
+    path_to_save = f"../results/RCVAE/Benchmark/{data_name}/"
+    sc.settings.figdir = path_to_save
+    conditions = {"ctrl": ctrl_key, "stim": stim_key}
+
+    diff_genes = score(train, n_deg=10, n_genes=500, cell_type_key=cell_type_key, conditions=conditions,
+                       sortby=score_type)
+    diff_genes = diff_genes["genes"].tolist()
+    sc.pl.stacked_violin(recon_data,
+                         var_names=diff_genes,
+                         groupby="condition",
+                         save=f"_{method}_{score_type}_{data_name}.pdf",
+                         swap_axes=True,
+                         show=True)
 
 
 def visualize_trained_network_results(data_dict, z_dim=100):
@@ -648,6 +671,7 @@ if __name__ == '__main__':
         train_network(data_dict=data_dict, **args)
         visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'])
     reconstruct_whole_data(data_dict=data_dict, z_dim=args['z_dim'])
+    stacked_violin_plot(data_dict, method="RCVAE", score_type="median_score")
     plot_boxplot(data_dict=data_dict, method="RCVAE", n_genes=50, restore=False,
                  score_type="median_score", y_measure="AE:max(x, 1)", scale="normal")
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
