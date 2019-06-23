@@ -402,15 +402,6 @@ class RCCVAE:
                 layer.trainable = False
 
             def perceptual_loss(input_image, reconstructed_image):
-                # input_image_resized = tf.image.resize_images(input_image, tf.constant([224, 224], dtype=tf.int32),
-                #                                              method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-                # reconstructed_image_resized = tf.image.resize_images(reconstructed_image,
-                #                                                      tf.constant([224, 224], dtype=tf.int32),
-                #                                                      method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-
-                # h1_list = model(input_image_resized)
-                # h2_list = model(reconstructed_image_resized)
-
                 input_image *= 255.0
                 reconstructed_image *= 255.0
 
