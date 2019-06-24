@@ -392,7 +392,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
     cell_types = data.obs[cell_type_key].unique().tolist()
 
     spec_cell_type = data_dict.get("spec_cell_types", None)
-    if spec_cell_type is not []:
+    if spec_cell_type:
         cell_types = spec_cell_type
 
     for cell_type in cell_types:
@@ -646,4 +646,6 @@ if __name__ == '__main__':
         train_network(data_dict=data_dict, **args)
         visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'])
     reconstruct_whole_data(data_dict=data_dict, z_dim=args['z_dim'])
+    plot_boxplot(data_dict=data_dict, method="scGen", n_genes=50, restore=False,
+                 score_type="median_score", y_measure="AE:max(x, 1)", scale="normal")
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
