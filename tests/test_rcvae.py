@@ -87,26 +87,23 @@ def train_network(data_dict=None,
         print(f"Model for {cell_type} has been trained")
 
 
-
 def train_network_multi(data_dict=None,
-                  z_dim=100,
-                  mmd_dimension=256,
-                  alpha=0.001,
-                  beta=100,
-                  kernel='multi-scale-rbf',
-                  n_epochs=500,
-                  batch_size=512,
-                  dropout_rate=0.2,
-                  learning_rate=0.001,
-                  ):
+                        z_dim=100,
+                        mmd_dimension=256,
+                        alpha=0.001,
+                        beta=100,
+                        kernel='multi-scale-rbf',
+                        n_epochs=500,
+                        batch_size=512,
+                        dropout_rate=0.2,
+                        learning_rate=0.001,
+                        ):
     data_name = data_dict['name']
     target_key = data_dict.get('target_key', None)
     print(data_name)
 
     train_data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
     valid_data = sc.read(f"../data/{data_name}/valid_{data_name}.h5ad")
-
-
 
     network = rcvae.RCVAE(x_dimension=train_data.shape[1],
                           z_dimension=z_dim,
@@ -128,6 +125,7 @@ def train_network_multi(data_dict=None,
                   early_stop_limit=600,
                   shuffle=False,
                   save=True)
+
 
 def reconstruct_whole_data(data_dict={}, z_dim=100):
     data_name = data_dict.get('name', None)
@@ -332,8 +330,6 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         plt.close("all")
 
 
-
-
 def visualize_trained_network_results_multimodal(data_dict, z_dim=100):
     plt.close("all")
     data_name = data_dict.get('name', None)
@@ -344,7 +340,6 @@ def visualize_trained_network_results_multimodal(data_dict, z_dim=100):
     path_to_save = f"../results/RCVAE/{data_name}/{z_dim}/{source_key} to {target_key}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
     sc.settings.figdir = os.path.abspath(path_to_save)
-
 
     network = rcvae.RCVAE(x_dimension=data.shape[1],
                           z_dimension=z_dim,
@@ -412,8 +407,6 @@ def visualize_trained_network_results_multimodal(data_dict, z_dim=100):
                save=f"_{data_name}_mmd_latent_with_fake_labels",
                show=False)
     plt.close("all")
-
-
 
 
 if __name__ == '__main__':
