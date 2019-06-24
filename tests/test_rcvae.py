@@ -43,6 +43,7 @@ def train_network(data_dict=None,
                   kernel='multi-scale-rbf',
                   n_epochs=500,
                   batch_size=512,
+                  early_stop_limit=50,
                   dropout_rate=0.2,
                   learning_rate=0.001,
                   ):
@@ -81,7 +82,7 @@ def train_network(data_dict=None,
                       n_epochs=n_epochs,
                       batch_size=batch_size,
                       verbose=2,
-                      early_stop_limit=600,
+                      early_stop_limit=early_stop_limit,
                       shuffle=True,
                       save=True)
 
@@ -631,6 +632,8 @@ if __name__ == '__main__':
                                  help='Dropout ratio')
     arguments_group.add_argument('-l', '--learning_rate', type=float, default=0.001, required=False,
                                  help='Learning rate of optimizer')
+    arguments_group.add_argument('-y', '--early_stop_limit', type=int, default=50, required=False,
+                                 help='do train the network')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='Learning rate of optimizer')
 
@@ -640,8 +643,7 @@ if __name__ == '__main__':
     del args['data']
     if args['do_train'] == 1:
         del args['do_train']
-        # train_network(data_dict=data_dict, **args)
-        train_network_multi(data_dict=data_dict, **args)
-        visualize_trained_network_results_multimodal(data_dict, z_dim=args['z_dim'])
-    # reconstruct_whole_data(data_dict,s['z_dim'])
+        train_network(data_dict=data_dict, **args)
+        visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'])
+    reconstruct_whole_data(data_dict=data_dict, z_dim=args['z_dim'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
