@@ -192,6 +192,8 @@ def plot_boxplot(data_dict,
     conditions = {"ctrl": ctrl_key, "stim": stim_key}
 
     path_to_save = f"../results/RCVAE/Benchmark/{data_name}/"
+    os.makedirs(path_to_save, exist_ok=True)
+
     sc.settings.figdir = path_to_save
 
     diff_genes = score(train, n_deg=10 * n_genes, n_genes=500, cell_type_key=cell_type_key,
