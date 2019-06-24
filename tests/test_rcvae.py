@@ -3,6 +3,7 @@ import os
 
 import anndata
 import numpy as np
+import pandas as pd
 import scanpy as sc
 from scipy import sparse
 
@@ -125,6 +126,204 @@ def train_network_multi(data_dict=None,
                   early_stop_limit=600,
                   shuffle=False,
                   save=True)
+
+
+def score(adata, n_deg=10, n_genes=1000, condition_key="condition", cell_type_key="cell_type",
+          conditions={"stim": "stimulated", "ctrl": "control"},
+          sortby="median_score"):
+    import scanpy as sc
+    import numpy as np
+    from scipy.stats import entropy
+    import pandas as pd
+    sc.tl.rank_genes_groups(adata, groupby=condition_key, method="wilcoxon", n_genes=n_genes)
+    gene_names = adata.uns["rank_genes_groups"]['names'][conditions['stim']]
+    gene_lfcs = adata.uns["rank_genes_groups"]['logfoldchanges'][conditions['stim']]
+    diff_genes_df = pd.DataFrame({"names": gene_names, "lfc": gene_lfcs})
+    diff_genes = diff_genes_df["names"].tolist()[:n_genes]
+    print(len(diff_genes))
+
+    adata_deg = adata[:, diff_genes].copy()
+    cell_types = adata_deg.obs[cell_type_key].cat.categories.tolist()
+    lfc_temp = np.zeros((len(cell_types), n_genes))
+    for j, ct in enumerate(cell_types):
+        if cell_type_key == "cell_type":  # if data is pbmc
+            stim = adata_deg[(adata_deg.obs[cell_type_key] == ct) &
+                             (adata_deg.obs[condition_key] == conditions["stim"])].X.mean(0).A1
+            ctrl = adata_deg[(adata_deg.obs[cell_type_key] == ct) &
+                             (adata_deg.obs[condition_key] == conditions["ctrl"])].X.mean(0).A1
+        else:
+            stim = adata_deg[(adata_deg.obs[cell_type_key] == ct) &
+                             (adata_deg.obs[condition_key] == conditions["stim"])].X.mean(0)
+            ctrl = adata_deg[(adata_deg.obs[cell_type_key] == ct) &
+                             (adata_deg.obs[condition_key] == conditions["ctrl"])].X.mean(0)
+        lfc_temp[j] = np.abs((stim - ctrl)[None, :])
+    norm_lfc = lfc_temp / lfc_temp.sum(0).reshape((1, n_genes))
+    ent_scores = entropy(norm_lfc)
+    median = np.median(lfc_temp, axis=0)
+    med_scores = np.max(np.abs((lfc_temp - median)), axis=0)
+    df_score = pd.DataFrame({"genes": adata_deg.var_names.tolist(), "median_score": med_scores,
+                             "entropy_score": ent_scores})
+    if sortby == "median_score":
+        return df_score.sort_values(by=['median_score'], ascending=False).iloc[:n_deg, :]
+    else:
+        return df_score.sort_values(by=['entropy_score'], ascending=False).iloc[:n_deg, :]
+
+
+def plot_boxplot(data_dict,
+                 method,
+                 n_genes=100,
+                 restore=True,
+                 score_type="median_score",
+                 y_measure="SE",
+                 scale="log"):
+
+    data_name = data_dict.get('name', None)
+    ctrl_key = data_dict.get("source_key", None)
+    stim_key = data_dict.get("target_key", None)
+    cell_type_key = data_dict.get("cell_type", None)
+
+    train = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+    recon_data = sc.read(f"../data/reconstructed/RCVAE/{data_name}.h5ad")
+
+    import matplotlib
+    matplotlib.rc('ytick', labelsize=14)
+    matplotlib.rc('xtick', labelsize=14)
+    conditions = {"ctrl": ctrl_key, "stim": stim_key}
+
+    path_to_save = f"../results/RCVAE/Benchmark/{data_name}/"
+    sc.settings.figdir = path_to_save
+
+    diff_genes = score(train, n_deg=10 * n_genes, n_genes=500, cell_type_key=cell_type_key,
+                       conditions=conditions,
+                       sortby=score_type)
+    diff_genes = diff_genes["genes"].tolist()
+
+    # epsilon = 1e-7
+    os.makedirs(os.path.join(path_to_save, f"./boxplots/Top_{10 * n_genes}/{y_measure}/"), exist_ok=True)
+    if not restore:
+        n_cell_types = len(train.obs[cell_type_key].unique().tolist())
+        all_scores = np.zeros(shape=(n_cell_types * 10 * n_genes, 1))
+        for bin_idx in range(10):
+            for cell_type_idx, cell_type in enumerate(train.obs[cell_type_key].unique().tolist()):
+                real_stim = recon_data[(recon_data.obs[cell_type_key] == cell_type) & (
+                        recon_data.obs["condition"] == f"{cell_type}_real_stim")]
+                pred_stim = recon_data[(recon_data.obs[cell_type_key] == cell_type) & (
+                        recon_data.obs["condition"] == f"{cell_type}_pred_stim")]
+
+                real_stim = real_stim[:, diff_genes[bin_idx * n_genes:(bin_idx + 1) * n_genes]]
+                pred_stim = pred_stim[:, diff_genes[bin_idx * n_genes:(bin_idx + 1) * n_genes]]
+                if sparse.issparse(real_stim.X):
+                    real_stim_avg = np.average(real_stim.X.A, axis=0)
+                    pred_stim_avg = np.average(pred_stim.X.A, axis=0)
+                else:
+                    real_stim_avg = np.average(real_stim.X, axis=0)
+                    pred_stim_avg = np.average(pred_stim.X, axis=0)
+                if y_measure == "SE":  # (x - xhat) ^ 2
+                    y_measures = np.abs(np.square(real_stim_avg - pred_stim_avg))
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "AE":  # x - xhat
+                    y_measures = np.abs(real_stim_avg - pred_stim_avg)
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "AE:x":  # (x - xhat) / x
+                    y_measures = np.abs(real_stim_avg - pred_stim_avg)
+                    y_measures = np.divide(y_measures, real_stim_avg)
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "SE:x^2":  # (x - xhat) / x^2
+                    y_measures = np.abs(np.square(real_stim_avg - pred_stim_avg))
+                    y_measures = np.divide(y_measures, np.power(real_stim_avg, 2))
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "AE:max(x, 1)":  # (x - xhat) / max(x, 1)
+                    y_measures = np.abs(real_stim_avg - pred_stim_avg)
+                    y_measures = np.divide(y_measures, np.maximum(real_stim_avg, 1.0))
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "SE:max(x, 1)^2":  # (x - xhat)^2 / max(x, 1)^2
+                    y_measures = np.abs(np.square(real_stim_avg - pred_stim_avg))
+                    y_measures = np.divide(y_measures, np.power(np.maximum(real_stim_avg, 1.0), 2))
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "SE:max(x, 1)":  # (x - xhat)^2 / max(x, 1)
+                    y_measures = np.abs(np.square(real_stim_avg - pred_stim_avg))
+                    y_measures = np.divide(y_measures, np.power(np.maximum(real_stim_avg, 1.0), 1.0))
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "1 - AE:x":  # 1 - ((x - xhat) / x)
+                    y_measures = np.abs(real_stim_avg - pred_stim_avg)
+                    y_measures = np.divide(y_measures, real_stim_avg)
+                    y_measures = np.abs(1.0 - y_measures)
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "1 - SE:x^2":  # 1 - ((x - xhat) / x)^2
+                    y_measures = np.abs(np.square(real_stim_avg - pred_stim_avg))
+                    y_measures = np.divide(y_measures, np.power(real_stim_avg, 2))
+                    y_measures = np.abs(1.0 - y_measures)
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "1 - AE:max(x, 1)":  # 1 - ((x - xhat) / max(x, 1.0))
+                    y_measures = np.abs(real_stim_avg - pred_stim_avg)
+                    y_measures = np.true_divide(y_measures, np.maximum(real_stim_avg, 1.0))
+                    y_measures = np.abs(1.0 - y_measures)
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                elif y_measure == "1 - SE:max(x, 1)^2":  # 1 - ((x - xhat) / max(x, 1.0))
+                    y_measures = np.abs(np.square(real_stim_avg - pred_stim_avg))
+                    y_measures = np.true_divide(y_measures, np.power(np.maximum(real_stim_avg, 1.0), 2))
+                    y_measures = np.abs(1.0 - y_measures)
+                    y_measures_reshaped = np.reshape(y_measures, (-1,))
+                if scale == "log":
+                    y_measures_reshaped = np.log(y_measures_reshaped)
+                start = n_cell_types * n_genes * bin_idx
+                all_scores[start + n_genes * cell_type_idx:start + n_genes * (cell_type_idx + 1),
+                0] = y_measures_reshaped
+        all_scores = np.reshape(all_scores, (-1,))
+        print(all_scores.shape)
+    else:
+        all_scores = np.loadtxt(
+            fname=f"./boxplots/Top_{10 * n_genes}/{y_measure}/y_measures_{score_type}_{n_genes}_({y_measure}).txt",
+            delimiter=",")
+    import seaborn as sns
+    conditions = [f"Bin-{i // (n_cell_types * n_genes) + 1}" for i in range(n_cell_types * 10 * n_genes)]
+    all_scores_df = pd.DataFrame({"scores": all_scores})
+    all_scores_df["conditions"] = conditions
+    ax = sns.boxplot(data=all_scores_df, x="conditions", y="scores", whis=np.inf)
+    # if scale != "log" and y_measure == "AE:max(x, 1)":
+    #     ax.set_ylim(0.0, 1.75)
+    # elif scale != "log" and y_measure == "SE:max(x, 1)":
+    #     ax.set_ylim(0.0, 3.0)
+    # elif y_measure == "AE:max(x, 1)":
+    #     ax.set_ylim(-15.0, 0.5)
+    # elif y_measure == "SE:max(x, 1)":
+    #     ax.set_ylim(-30.5, 1.0)
+    xlabels = ['Bin-%i' % i for i in range(10)]
+    ax.set_xticklabels(xlabels, rotation=90)
+    if y_measure == "SE":
+        plt.ylabel("(x - xhat) ^ 2")
+    elif y_measure == "AE":
+        plt.ylabel("|x - xhat|")
+    elif y_measure == "AE:x":
+        plt.ylabel("|x - xhat| / x")
+    elif y_measure == "SE:x^2":
+        plt.ylabel("((x - xhat) ^ 2) / (x ^ 2)")
+    elif y_measure == "AE:max(x, 1)":
+        if scale == "log":
+            plt.ylabel("log(|x - xhat| / max(x, 1))")
+        else:
+            plt.ylabel("|x - xhat| / max(x, 1)")
+    elif y_measure == "SE:max(x, 1)^2":
+        plt.ylabel("(x - xhat)^2 / max(x, 1)^2")
+    elif y_measure == "SE:max(x, 1)":
+        if scale == "log":
+            plt.ylabel("log((x - xhat)^2 / max(x, 1))")
+        else:
+            plt.ylabel("(x - xhat)^2 / max(x, 1)")
+    elif y_measure == "1 - AE:x":
+        plt.ylabel("1 - (|x - xhat| / x)")
+    elif y_measure == "1 - SE:x^2":
+        plt.ylabel("1 - ((x - xhat)^2 / x^2)")
+    elif y_measure == "1 - AE:max(x, 1)":
+        plt.ylabel("1 - (|x - xhat| / max(x, 1))")
+    elif y_measure == "1 - SE:max(x, 1)^2":
+        plt.ylabel("1 - ((x - xhat)^2 / max(x, 1)^2)")
+    os.makedirs(os.path.join(path_to_save, f"./boxplots/Top_{10 * n_genes}/{y_measure}/"), exist_ok=True)
+    plt.tight_layout()
+    name = os.path.join(path_to_save,
+                        f"./boxplots/Top_{10 * n_genes}/{y_measure}/{method}_{data_name}_boxplot_{score_type}_{n_genes}_{scale}.pdf")
+    plt.savefig(name, dpi=300)
+    plt.close()
 
 
 def reconstruct_whole_data(data_dict={}, z_dim=100):
