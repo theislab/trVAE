@@ -441,11 +441,11 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                           encoder_labels=np.ones((cell_type_ctrl.shape[0], 1)),
                                           decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1)
         pred_adata1 = anndata.AnnData(X=pred_celltypes1)
-        pred_adata1.obs['condition'] = ['predicted1'] * pred_adata1.shape[0]
+        pred_adata1.obs['condition'] = ['ctrl to hpoly'] * pred_adata1.shape[0]
         pred_adata1.var = cell_type_adata.var
 
         pred_adata2 = anndata.AnnData(X=pred_celltypes2)
-        pred_adata2.obs['condition'] = ['predicted2'] * pred_adata2.shape[0]
+        pred_adata2.obs['condition'] = ['hpoly to sal'] * pred_adata2.shape[0]
         pred_adata2.var = cell_type_adata.var
 
         if data_name == "pbmc":
