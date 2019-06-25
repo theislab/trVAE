@@ -191,7 +191,7 @@ def train_network(data_dict=None,
     print("Model has been trained")
 
 
-def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, preprocess=True):
+def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, preprocess=True, max_size=80000):
     data_name = data_dict['name']
     source_key = data_dict.get('source_key', None)
     target_key = data_dict.get('target_key', None)
@@ -209,7 +209,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
                                              landmark_path="../data/celeba/list_landmarks_align_celeba.txt",
                                              gender=gender,
                                              attribute=attribute,
-                                             max_n_images=50000,
+                                             max_n_images=max_size,
                                              img_width=img_width,
                                              img_height=img_height,
                                              restore=True,
@@ -405,7 +405,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         plt.savefig(os.path.join(results_path_valid, f"./sample_images_{j}.pdf"))
 
 
-def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, preprocess=True):
+def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, preprocess=True, max_size=80000):
     plt.close("all")
     data_name = data_dict.get('name', None)
     source_key = data_dict.get('source_key', None)
@@ -428,7 +428,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
                                              landmark_path="../data/celeba/list_landmarks_align_celeba.txt",
                                              gender=gender,
                                              attribute=attribute,
-                                             max_n_images=50000,
+                                             max_n_images=max_size,
                                              img_width=img_width,
                                              img_height=img_height,
                                              restore=True,
@@ -618,9 +618,11 @@ if __name__ == '__main__':
                      z_dim=args['z_dim'],
                      n_files=30,
                      arch_style=args['arch_style'],
+                     max_size=args['max_size'],
                      k=4)
     visualize_trained_network_results(data_dict,
                                       z_dim=args['z_dim'],
                                       arch_style=args['arch_style'],
+                                      max_size=args['max_size'],
                                       preprocess=args['preprocess'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
