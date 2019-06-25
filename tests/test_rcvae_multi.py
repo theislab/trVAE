@@ -71,11 +71,11 @@ def train_network(data_dict=None,
 
     for cell_type in cell_types:
         net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
-                                             (train_data.obs['condition'] == target_key1 | train_data.obs[
-                                                 'condition'] == target_key2))]
+                                             ((train_data.obs['condition'] == target_key1) | (
+                                                     train_data.obs['condition'] == target_key2)))]
         net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
-                                             (valid_data.obs['condition'] == target_key1 | valid_data.obs[
-                                                 'condition'] == target_key2))]
+                                             ((valid_data.obs['condition'] == target_key1) | (
+                                                         valid_data.obs['condition'] == target_key2)))]
 
         network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                    z_dimension=z_dim,
