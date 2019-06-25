@@ -327,6 +327,11 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
 
         source_sample_train = np.reshape(source_sample_train, (-1, np.prod(image_shape)))
         source_sample_train_reshaped = np.reshape(source_sample_train, (-1, *image_shape))
+        if data_name.__contains__("mnist"):
+            target_sample_train = np.reshape(target_sample_train, (-1, np.prod(image_shape)))
+            target_sample_train_reshaped = np.reshape(target_sample_train, (-1, *image_shape))
+            target_sample_valid = np.reshape(target_sample_valid, (-1, np.prod(image_shape)))
+            target_sample_valid_reshaped = np.reshape(target_sample_valid, (-1, *image_shape))
 
         source_sample_valid = np.reshape(source_sample_valid, (-1, np.prod(image_shape)))
         source_sample_valid_reshaped = np.reshape(source_sample_valid, (-1, *image_shape))
@@ -347,8 +352,10 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         print(source_sample_train.shape, source_sample_train_reshaped.shape, pred_sample_train.shape)
 
         plt.close("all")
+        if train_digits is not None:
+            k = len(train_digits)
         if data_name.__contains__("mnist"):
-            fig, ax = plt.subplots(k, 3, figsize=(k * 1, 6))
+            fig, ax = plt.subplots(len(train_digits), 3, figsize=(k * 1, 6))
         else:
             fig, ax = plt.subplots(k, 2, figsize=(k * 1, 6))
         for i in range(k):
@@ -375,7 +382,8 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
             if pred_sample_train.shape[-1] > 1:
                 ax[i, 1].imshow(pred_sample_train[i])
             else:
-                ax[i, 1].imshow(pred_sample_train[i, :, :, 0], cmap='Greys')
+                ax[i, 1].imshow(target_sample_train_reshaped[i, :, :, 0], cmap='Greys')
+                ax[i, 2].imshow(pred_sample_train[i, :, :, 0], cmap='Greys')
             # if data_name.__contains__("mnist"):
             #     ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
         plt.savefig(os.path.join(results_path_train, f"sample_images_{j}.pdf"))
@@ -383,6 +391,8 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         print(source_sample_valid.shape, source_sample_valid_reshaped.shape, pred_sample_valid.shape)
 
         plt.close("all")
+        if test_digits is not None:
+            k = len(test_digits)
         if data_name.__contains__("mnist"):
             fig, ax = plt.subplots(k, 3, figsize=(k * 1, 6))
         else:
@@ -411,7 +421,8 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
             if pred_sample_valid.shape[-1] > 1:
                 ax[i, 1].imshow(pred_sample_valid[i])
             else:
-                ax[i, 1].imshow(pred_sample_valid[i, :, :, 0], cmap='Greys')
+                ax[i, 1].imshow(target_sample_valid_reshaped[i, :, :, 0], cmap='Greys')
+                ax[i, 2].imshow(pred_sample_valid[i, :, :, 0], cmap='Greys')
             # if data_name.__contains__("mnist"):
             #     ax[i, 2].imshow(target_sample_reshaped[i, :, :, 0], cmap='Greys')
         plt.savefig(os.path.join(results_path_valid, f"./sample_images_{j}.pdf"))
