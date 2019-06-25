@@ -436,8 +436,8 @@ class RCCVAE:
 
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
                 recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
-                p_loss = perceptual_loss(y_true, y_pred)
-                return self.gamma * p_loss + self.alpha * kl_loss + recon_loss
+                # p_loss = perceptual_loss(y_true, y_pred)
+                return self.alpha * kl_loss + recon_loss
 
             def mmd_loss(real_labels, y_pred):
                 y_pred = K.reshape(y_pred, (-1, self.mmd_dim))
