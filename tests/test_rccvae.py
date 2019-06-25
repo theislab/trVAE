@@ -620,9 +620,9 @@ if __name__ == '__main__':
                      arch_style=args['arch_style'],
                      max_size=args['max_size'],
                      k=4)
-    visualize_trained_network_results(data_dict,
-                                      z_dim=args['z_dim'],
-                                      arch_style=args['arch_style'],
-                                      max_size=args['max_size'],
-                                      preprocess=args['preprocess'])
+    # visualize_trained_network_results(data_dict,
+    #                                   z_dim=args['z_dim'],
+    #                                   arch_style=args['arch_style'],
+    #                                   max_size=args['max_size'],
+    #                                   preprocess=args['preprocess'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
