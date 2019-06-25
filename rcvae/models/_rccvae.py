@@ -17,7 +17,7 @@ from keras.utils import multi_gpu_model
 from keras_vggface.vggface import VGGFace
 from scipy import sparse
 
-from .utils import label_encoder
+from utils import label_encoder
 
 log = logging.getLogger(__file__)
 
@@ -68,12 +68,13 @@ class RCCVAE:
         self.decoder_labels = Input(shape=(1,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
-        self.vggface = VGGFace(include_top=False, input_shape=(64, 64, 3), model='vgg16')
-        self.vggface_layers = ["conv1_1", 'conv1_2',
-                               'conv2_1', 'conv2_2',
-                               'conv3_1', 'conv3_2', 'conv3_3',
-                               'conv4_1', 'conv4_2', 'conv4_3',
-                               'conv5_1', 'conv5_2', 'conv5_3']
+        if self.x_dim[0] > 48:
+            self.vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
+            self.vggface_layers = ["conv1_1", 'conv1_2',
+                                   'conv2_1', 'conv2_2',
+                                   'conv3_1', 'conv3_2', 'conv3_3',
+                                   'conv4_1', 'conv4_2', 'conv4_3',
+                                   'conv5_1', 'conv5_2', 'conv5_3']
 
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
@@ -177,8 +178,9 @@ class RCCVAE:
 
             z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
             model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
-            for layer_name in self.vggface_layers[1:]:
-                model.get_layer(layer_name).set_weights(self.vggface.get_layer(layer_name).get_weights())
+            if self.x_dim[0] > 48:
+                for layer_name in self.vggface_layers[1:]:
+                    model.get_layer(layer_name).set_weights(self.vggface.get_layer(layer_name).get_weights())
             model.summary()
             return mean, log_var, model
 
@@ -401,15 +403,15 @@ class RCCVAE:
         """
 
         def batch_loss():
-            vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
-            vgg_layers = ['conv1_1']
-            outputs = [vggface.get_layer(l).output for l in vgg_layers]
-            model = Model(inputs=vggface.input, outputs=outputs)
-
-            for layer in model.layers:
-                layer.trainable = False
-
             def perceptual_loss(input_image, reconstructed_image):
+                vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
+                vgg_layers = ['conv1_1']
+                outputs = [vggface.get_layer(l).output for l in vgg_layers]
+                model = Model(inputs=vggface.input, outputs=outputs)
+
+                for layer in model.layers:
+                    layer.trainable = False
+
                 input_image *= 255.0
                 reconstructed_image *= 255.0
 
