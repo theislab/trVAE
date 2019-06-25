@@ -15,7 +15,8 @@ if not os.getcwd().endswith("tests"):
 from matplotlib import pyplot as plt
 
 DATASETS = {
-    "HpolySal": {"name1": 'hpoly', 'name2': 'salmonella', "source_key": "Control", "target_key1": 'Hpoly.Day10',
+    "HpolySal": {'name': 'Hpoly+Salmonella', "name1": 'hpoly', 'name2': 'salmonella', "source_key": "Control",
+                 "target_key1": 'Hpoly.Day10',
                  'target_key2': 'Salmonella', "cell_type": "cell_label", 'spec_cell_types': []},
 
 }
@@ -57,7 +58,8 @@ def train_network(data_dict=None,
                   learning_rate=0.001,
                   ):
     data_name = data_dict['name']
-    target_key = data_dict.get('target_key', None)
+    target_key1 = data_dict.get('target_key1', None)
+    target_key2 = data_dict.get('target_key2', None)
     cell_type_key = data_dict.get("cell_type", None)
 
     train_data, valid_data = merge_data(data_dict)
@@ -68,10 +70,12 @@ def train_network(data_dict=None,
         cell_types = spec_cell_type
 
     for cell_type in cell_types:
-        net_train_data = train_data.copy()[
-            ~((train_data.obs[cell_type_key] == cell_type) & (train_data.obs['condition'] == target_key))]
-        net_valid_data = valid_data.copy()[
-            ~((valid_data.obs[cell_type_key] == cell_type) & (valid_data.obs['condition'] == target_key))]
+        net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
+                                             (train_data.obs['condition'] == target_key1 | train_data.obs[
+                                                 'condition'] == target_key2))]
+        net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
+                                             (valid_data.obs['condition'] == target_key1 | valid_data.obs[
+                                                 'condition'] == target_key2))]
 
         network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                    z_dimension=z_dim,
