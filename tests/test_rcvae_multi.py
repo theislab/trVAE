@@ -17,7 +17,7 @@ from matplotlib import pyplot as plt
 DATASETS = {
     "HpolySal": {'name': 'Hpoly+Salmonella', "name1": 'hpoly', 'name2': 'salmonella', "source_key": "Control",
                  "target_key1": 'Hpoly.Day10',
-                 'target_key2': 'Salmonella', "cell_type": "cell_label", 'spec_cell_types': []},
+                 'target_key2': 'Salmonella', "cell_type": "cell_label", 'spec_cell_types': ['Stem']},
 
 }
 
@@ -75,7 +75,7 @@ def train_network(data_dict=None,
                                                      train_data.obs['condition'] == target_key2)))]
         net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
                                              ((valid_data.obs['condition'] == target_key1) | (
-                                                         valid_data.obs['condition'] == target_key2)))]
+                                                     valid_data.obs['condition'] == target_key2)))]
 
         network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                    z_dimension=z_dim,
@@ -385,7 +385,8 @@ def visualize_trained_network_results(data_dict, z_dim=100):
     plt.close("all")
     data_name = data_dict.get('name', None)
     source_key = data_dict.get('source_key', None)
-    target_key = data_dict.get('target_key', None)
+    target_key1 = data_dict.get('target_key1', None)
+    target_key2 = data_dict.get('target_key2', None)
     cell_type_key = data_dict.get("cell_type", None)
 
     data, _ = merge_data(data_dict)
@@ -396,11 +397,12 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         cell_types = spec_cell_type
 
     for cell_type in cell_types:
-        path_to_save = f"../results/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key}/Visualizations/"
+        path_to_save = f"../results/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/{source_key} to {target_key1}/Visualizations/"
         os.makedirs(path_to_save, exist_ok=True)
         sc.settings.figdir = os.path.abspath(path_to_save)
 
-        train_data = data.copy()[~((data.obs['condition'] == target_key) & (data.obs[cell_type_key] == cell_type))]
+        train_data = data.copy()[~(((data.obs['condition'] == target_key1) | (data.obs['condition'] == target_key2)) & (
+                data.obs[cell_type_key] == cell_type))]
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
 
@@ -417,61 +419,100 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         feed_data = data.X
 
         train_labels, _ = rcvae.label_encoder(data)
-        fake_labels = np.ones(train_labels.shape)
+        fake_labels1 = np.ones(train_labels.shape)
+        fake_labels2 = np.ones(train_labels.shape) + 1
 
         latent_with_true_labels = network.to_latent(feed_data, train_labels)
-        latent_with_fake_labels = network.to_latent(feed_data, fake_labels)
-        mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=False)
-        mmd_latent_with_fake_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=True)
+        latent_with_fake_labels1 = network.to_latent(feed_data, fake_labels1)
+        latent_with_fake_labels2 = network.to_latent(feed_data, fake_labels2)
+        mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=0)
+        mmd_latent_with_fake_labels1 = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=1)
+        mmd_latent_with_fake_labels2 = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=2)
 
         cell_type_ctrl = cell_type_adata.copy()[cell_type_adata.obs['condition'] == source_key]
+        cell_type_target1 = cell_type_adata.copy()[cell_type_adata.obs['condition'] == target_key1]
         print(cell_type_ctrl.shape, cell_type_adata.shape)
 
-        pred_celltypes = network.predict(cell_type_ctrl,
+        pred_celltypes1 = network.predict(cell_type_ctrl,
                                          encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
                                          decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
-        pred_adata = anndata.AnnData(X=pred_celltypes)
-        pred_adata.obs['condition'] = ['predicted'] * pred_adata.shape[0]
-        pred_adata.var = cell_type_adata.var
+
+        pred_celltypes2 = network.predict(cell_type_target1,
+                                          encoder_labels=np.ones((cell_type_ctrl.shape[0], 1)),
+                                          decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1)
+        pred_adata1 = anndata.AnnData(X=pred_celltypes1)
+        pred_adata1.obs['condition'] = ['predicted1'] * pred_adata1.shape[0]
+        pred_adata1.var = cell_type_adata.var
+
+        pred_adata2 = anndata.AnnData(X=pred_celltypes2)
+        pred_adata2.obs['condition'] = ['predicted2'] * pred_adata2.shape[0]
+        pred_adata2.var = cell_type_adata.var
 
         if data_name == "pbmc":
             sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=100, method="wilcoxon")
-            top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_key].tolist()
+            top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_key1].tolist()
             gene_list = top_100_genes[:10]
         else:
             sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=100, method="wilcoxon")
             top_50_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_key].tolist()
-            top_50_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_key].tolist()
+            top_50_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_key1].tolist()
             top_100_genes = top_50_up_genes + top_50_down_genes
             gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
 
-        cell_type_adata = cell_type_adata.concatenate(pred_adata)
+        cell_type_adata = cell_type_adata.concatenate(pred_adata1)
+        cell_type_adata = cell_type_adata.concatenate(pred_adata2)
 
         rcvae.plotting.reg_mean_plot(cell_type_adata,
                                      top_100_genes=top_100_genes,
                                      gene_list=gene_list,
                                      condition_key='condition',
-                                     axis_keys={"x": 'predicted', 'y': target_key},
+                                     axis_keys={"x": 'predicted1', 'y': target_key1},
                                      labels={'x': 'pred stim', 'y': 'real stim'},
                                      legend=False,
                                      fontsize=20,
                                      textsize=14,
                                      title=cell_type,
                                      path_to_save=os.path.join(path_to_save,
-                                                               f'rcvae_reg_mean_{data_name}_{cell_type}.pdf'))
+                                                               f'rcvae_reg_mean_{data_name}_{cell_type}_{source_key} to {target_key1}.pdf'))
 
         rcvae.plotting.reg_var_plot(cell_type_adata,
                                     top_100_genes=top_100_genes,
                                     gene_list=gene_list,
                                     condition_key='condition',
-                                    axis_keys={"x": 'predicted', 'y': target_key},
+                                    axis_keys={"x": 'predicted1', 'y': target_key1},
                                     labels={'x': 'pred stim', 'y': 'real stim'},
                                     legend=False,
                                     fontsize=20,
                                     textsize=14,
                                     title=cell_type,
                                     path_to_save=os.path.join(path_to_save,
-                                                              f'rcvae_reg_var_{data_name}_{cell_type}.pdf'))
+                                                              f'rcvae_reg_var_{data_name}_{cell_type}_{source_key} to {target_key1}.pdf'))
+
+        rcvae.plotting.reg_mean_plot(cell_type_adata,
+                                     top_100_genes=top_100_genes,
+                                     gene_list=gene_list,
+                                     condition_key='condition',
+                                     axis_keys={"x": 'predicted2', 'y': target_key2},
+                                     labels={'x': 'pred stim', 'y': 'real stim'},
+                                     legend=False,
+                                     fontsize=20,
+                                     textsize=14,
+                                     title=cell_type,
+                                     path_to_save=os.path.join(path_to_save,
+                                                               f'rcvae_reg_mean_{data_name}_{cell_type}_{target_key1} to {target_key2}.pdf'))
+
+        rcvae.plotting.reg_var_plot(cell_type_adata,
+                                    top_100_genes=top_100_genes,
+                                    gene_list=gene_list,
+                                    condition_key='condition',
+                                    axis_keys={"x": 'predicted2', 'y': target_key2},
+                                    labels={'x': 'pred stim', 'y': 'real stim'},
+                                    legend=False,
+                                    fontsize=20,
+                                    textsize=14,
+                                    title=cell_type,
+                                    path_to_save=os.path.join(path_to_save,
+                                                              f'rcvae_reg_var_{data_name}_{cell_type}_{target_key1} to {target_key2}.pdf'))
 
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)
@@ -480,17 +521,25 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         latent_with_true_labels.obs['condition'] = data.obs['condition'].values
         latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
 
-        latent_with_fake_labels = sc.AnnData(X=latent_with_fake_labels)
-        latent_with_fake_labels.obs['condition'] = data.obs['condition'].values
-        latent_with_fake_labels.obs[cell_type_key] = data.obs[cell_type_key].values
+        latent_with_fake_labels1 = sc.AnnData(X=latent_with_fake_labels1)
+        latent_with_fake_labels1.obs['condition'] = data.obs['condition'].values
+        latent_with_fake_labels1.obs[cell_type_key] = data.obs[cell_type_key].values
+
+        latent_with_fake_labels2 = sc.AnnData(X=latent_with_fake_labels2)
+        latent_with_fake_labels2.obs['condition'] = data.obs['condition'].values
+        latent_with_fake_labels2.obs[cell_type_key] = data.obs[cell_type_key].values
 
         mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
         mmd_latent_with_true_labels.obs['condition'] = data.obs['condition'].values
         mmd_latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
 
-        mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
-        mmd_latent_with_fake_labels.obs['condition'] = data.obs['condition'].values
-        mmd_latent_with_fake_labels.obs[cell_type_key] = data.obs[cell_type_key].values
+        mmd_latent_with_fake_labels1 = sc.AnnData(X=mmd_latent_with_fake_labels1)
+        mmd_latent_with_fake_labels1.obs['condition'] = data.obs['condition'].values
+        mmd_latent_with_fake_labels1.obs[cell_type_key] = data.obs[cell_type_key].values
+
+        mmd_latent_with_fake_labels2 = sc.AnnData(X=mmd_latent_with_fake_labels2)
+        mmd_latent_with_fake_labels2.obs['condition'] = data.obs['condition'].values
+        mmd_latent_with_fake_labels2.obs[cell_type_key] = data.obs[cell_type_key].values
 
         color = ['condition', cell_type_key]
 
@@ -506,10 +555,16 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                    save=f"_{data_name}_{cell_type}_latent_with_true_labels",
                    show=False)
 
-        sc.pp.neighbors(latent_with_fake_labels)
-        sc.tl.umap(latent_with_fake_labels)
-        sc.pl.umap(latent_with_fake_labels, color=color,
-                   save=f"_{data_name}_{cell_type}_latent_with_fake_labels",
+        sc.pp.neighbors(latent_with_fake_labels1)
+        sc.tl.umap(latent_with_fake_labels1)
+        sc.pl.umap(latent_with_fake_labels1, color=color,
+                   save=f"_{data_name}_{cell_type}_latent_with_fake_labels1",
+                   show=False)
+
+        sc.pp.neighbors(latent_with_fake_labels2)
+        sc.tl.umap(latent_with_fake_labels2)
+        sc.pl.umap(latent_with_fake_labels2, color=color,
+                   save=f"_{data_name}_{cell_type}_latent_with_fake_labels2",
                    show=False)
 
         sc.pp.neighbors(mmd_latent_with_true_labels)
@@ -518,10 +573,16 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
                    show=False)
 
-        sc.pp.neighbors(mmd_latent_with_fake_labels)
-        sc.tl.umap(mmd_latent_with_fake_labels)
-        sc.pl.umap(mmd_latent_with_fake_labels, color=color,
-                   save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels",
+        sc.pp.neighbors(mmd_latent_with_fake_labels1)
+        sc.tl.umap(mmd_latent_with_fake_labels1)
+        sc.pl.umap(mmd_latent_with_fake_labels1, color=color,
+                   save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels1",
+                   show=False)
+
+        sc.pp.neighbors(mmd_latent_with_fake_labels2)
+        sc.tl.umap(mmd_latent_with_fake_labels2)
+        sc.pl.umap(mmd_latent_with_fake_labels2, color=color,
+                   save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels2",
                    show=False)
 
         sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby='condition',
@@ -647,7 +708,7 @@ if __name__ == '__main__':
         del args['do_train']
         train_network(data_dict=data_dict, **args)
         visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'])
-    reconstruct_whole_data(data_dict=data_dict, z_dim=args['z_dim'])
-    plot_boxplot(data_dict=data_dict, method="RCVAE", n_genes=50, restore=False,
-                 score_type="median_score", y_measure="AE:max(x, 1)", scale="normal")
+    # reconstruct_whole_data(data_dict=data_dict, z_dim=args['z_dim'])
+    # plot_boxplot(data_dict=data_dict, method="RCVAE", n_genes=50, restore=False,
+    #              score_type="median_score", y_measure="AE:max(x, 1)", scale="normal")
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
