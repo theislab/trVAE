@@ -5,6 +5,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
+from keras.applications.imagenet_utils import preprocess_input
 # from keras.applications.vgg16 import VGG16
 from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Activation
@@ -13,11 +14,9 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
-from scipy import sparse
-from keras.applications.imagenet_utils import preprocess_input
 from keras_vggface.vggface import VGGFace
-
-from .utils import label_encoder
+from scipy import sparse
+from utils import label_encoder
 
 log = logging.getLogger(__file__)
 
@@ -67,6 +66,13 @@ class RCCVAE:
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
         self.decoder_labels = Input(shape=(1,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
+
+        self.vggface = VGGFace(include_top=False, input_shape=(64, 64, 3), model='vgg16')
+        self.vggface_layers = ["conv1_1", 'conv1_2',
+                               'conv2_1', 'conv2_2',
+                               'conv3_1', 'conv3_2', 'conv3_3',
+                               'conv4_1', 'conv4_2', 'conv4_3',
+                               'conv5_1', 'conv5_2', 'conv5_3']
 
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
@@ -133,24 +139,30 @@ class RCCVAE:
             h = Reshape((*self.x_dim[:-1], 1))(h)
             h = concatenate([self.x, h])
 
-            self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(h)
-            self.conv1 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv1)
-            pool1 = MaxPooling2D(pool_size=(2, 2))(self.conv1)
+            conv1 = Conv2D(64, 3, activation='relu', padding='same', name='conv1_1')(h)
+            conv1 = Conv2D(64, 3, activation='relu', padding='same', name='conv1_2')(conv1)
+            pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
 
-            self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool1)
-            self.conv2 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv2)
-            pool2 = MaxPooling2D(pool_size=(2, 2))(self.conv2)
+            conv2 = Conv2D(128, 3, activation='relu', padding='same', name='conv2_1')(pool1)
+            conv2 = Conv2D(128, 3, activation='relu', padding='same', name='conv2_2')(conv2)
+            pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
 
-            self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool2)
-            self.conv3 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(self.conv3)
-            pool3 = MaxPooling2D(pool_size=(2, 2))(self.conv3)
+            conv3 = Conv2D(256, 3, activation='relu', padding='same', name='conv3_1')(pool2)
+            conv3 = Conv2D(256, 3, activation='relu', padding='same', name='conv3_2')(conv3)
+            conv3 = Conv2D(256, 3, activation='relu', padding='same', name='conv3_3')(conv3)
+            pool3 = MaxPooling2D(pool_size=(2, 2))(conv3)
 
-            conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(pool3)
-            conv4 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(conv4)
-            self.drop4 = Dropout(self.dr_rate)(conv4)
-            pool4 = MaxPooling2D(pool_size=(2, 2))(self.drop4)
+            conv4 = Conv2D(512, 3, activation='relu', padding='same', name='conv4_1')(pool3)
+            conv4 = Conv2D(512, 3, activation='relu', padding='same', name='conv4_2')(conv4)
+            conv4 = Conv2D(512, 3, activation='relu', padding='same', name='conv4_3')(conv4)
+            pool4 = MaxPooling2D(pool_size=(2, 2))(conv4)
 
-            flat = Flatten(name='flatten')(pool4)
+            conv5 = Conv2D(512, 3, activation='relu', padding='same', name='conv5_1')(pool4)
+            conv5 = Conv2D(512, 3, activation='relu', padding='same', name='conv5_2')(conv5)
+            conv5 = Conv2D(512, 3, activation='relu', padding='same', name='conv5_3')(conv5)
+            pool5 = MaxPooling2D(pool_size=(2, 2))(conv5)
+
+            flat = Flatten(name='flatten')(pool5)
 
             dense = Dense(1024, activation='linear', name='fc1')(flat)
             dense = Activation('relu')(dense)
@@ -164,6 +176,8 @@ class RCCVAE:
 
             z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
             model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
+            for layer_name in self.vggface_layers[1:]:
+                model.get_layer(layer_name).set_weights(self.vggface.get_layer(layer_name).get_weights())
             model.summary()
             return mean, log_var, model
 
@@ -184,14 +198,11 @@ class RCCVAE:
             h = BatchNormalization(axis=1)(h)
             h_mmd = LeakyReLU(name="mmd")(h)
             h = Dense(np.prod(self.x_dim), kernel_initializer=self.init_w, use_bias=False)(h_mmd)
-            # h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Reshape(target_shape=self.x_dim)(h)
             h = Conv2DTranspose(128, kernel_size=(4, 4), padding='same')(h)
-            # h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Conv2DTranspose(64, kernel_size=(4, 4), padding='same')(h)
-            # h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Conv2DTranspose(self.x_dim[-1], kernel_size=(4, 4), padding='same', activation="relu")(h)
             model = Model(inputs=[self.z, self.decoder_labels], outputs=[h, h_mmd], name=name)
@@ -241,22 +252,18 @@ class RCCVAE:
 
             up6 = Conv2D(256, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(h))
-            # up6 = Add()([self.drop4, up6])
             conv6 = Conv2D(256, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up6)
 
             up7 = Conv2D(128, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv6))
-            # up7 = Add()([self.conv3, up7])
             conv7 = Conv2D(128, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up7)
 
             up8 = Conv2D(64, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv7))
-            # up8 = Add()([self.conv2, up8])
             conv8 = Conv2D(64, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up8)
 
             up9 = Conv2D(32, 2, activation='relu', padding='same', kernel_initializer='he_normal')(
                 UpSampling2D(size=(2, 2))(conv8))
-            # up9 = Add()([self.conv1, up9])
             conv9 = Conv2D(32, 3, activation='relu', padding='same', kernel_initializer='he_normal')(up9)
 
             conv10 = Conv2D(self.x_dim[-1], 1, activation='relu')(conv9)
@@ -666,3 +673,6 @@ class RCCVAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
+
+
+RCCVAE(x_dimension=(64, 64, 3), z_dimension=50, mmd_dimension=256, arch_style=3)
