@@ -548,7 +548,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.pl.umap(train_data, color=color,
                    save=f'_{data_name}_{cell_type}_train_data',
                    show=False,
-                   wspace=0.1,
+                   wspace=0.15,
                    frameon=False)
 
         sc.pp.neighbors(latent_with_true_labels)
@@ -556,7 +556,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.pl.umap(latent_with_true_labels, color=color,
                    save=f"_{data_name}_{cell_type}_latent_with_true_labels",
                    show=False,
-                   wspace=0.1,
+                   wspace=0.15,
                    frameon=False)
 
         sc.pp.neighbors(latent_with_fake_labels1)
@@ -564,7 +564,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.pl.umap(latent_with_fake_labels1, color=color,
                    save=f"_{data_name}_{cell_type}_latent_with_fake_labels1",
                    show=False,
-                   wspace=0.1,
+                   wspace=0.15,
                    frameon=False)
 
         sc.pp.neighbors(latent_with_fake_labels2)
@@ -572,7 +572,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.pl.umap(latent_with_fake_labels2, color=color,
                    save=f"_{data_name}_{cell_type}_latent_with_fake_labels2",
                    show=False,
-                   wspace=0.1,
+                   wspace=0.15,
                    frameon=False)
 
         sc.pp.neighbors(mmd_latent_with_true_labels)
@@ -580,7 +580,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.pl.umap(mmd_latent_with_true_labels, color=color,
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
                    show=False,
-                   wspace=0.1,
+                   wspace=0.15,
                    frameon=False)
 
         sc.pp.neighbors(mmd_latent_with_fake_labels1)
@@ -588,7 +588,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.pl.umap(mmd_latent_with_fake_labels1, color=color,
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels1",
                    show=False,
-                   wspace=0.1,
+                   wspace=0.15,
                    frameon=False)
 
         sc.pp.neighbors(mmd_latent_with_fake_labels2)
@@ -596,13 +596,13 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.pl.umap(mmd_latent_with_fake_labels2, color=color,
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels2",
                    show=False,
-                   wspace=0.1,
+                   wspace=0.15,
                    frameon=False)
 
         sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby='condition',
                      save=f"_{data_name}_{cell_type}_{top_100_genes[0]}",
                      show=False,
-                     wspace=0.1,
+                     wspace=0.15,
                      frameon=False)
 
         plt.close("all")
