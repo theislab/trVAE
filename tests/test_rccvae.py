@@ -365,19 +365,19 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
             else:
                 ax[i, 0].imshow(source_sample_train_reshaped[i, :, :, 0], cmap='Greys')
             ax[i, 1].axis('off')
-            # if data_name.__contains__("mnist"):
-            #     ax[i, 2].axis('off')
-            if i == 0:
-                if data_name == "celeba":
-                    ax[i, 0].set_title(f"without {data_dict['attribute']}")
-                    ax[i, 1].set_title(f"with {data_dict['attribute']}")
-                elif data_name.__contains__("mnist"):
-                    ax[i, 0].set_title(f"Source")
-                    ax[i, 1].set_title(f"Target (Ground Truth)")
-                    ax[i, 2].set_title(f"Target (Predicted)")
-                else:
-                    ax[i, 0].set_title(f"{source_key}")
-                    ax[i, 1].set_title(f"{target_key}")
+            if data_name.__contains__("mnist"):
+                ax[i, 2].axis('off')
+            # if i == 0:
+            #     if data_name == "celeba":
+            #         ax[i, 0].set_title(f"without {data_dict['attribute']}")
+            #         ax[i, 1].set_title(f"with {data_dict['attribute']}")
+            #     elif data_name.__contains__("mnist"):
+            #         ax[i, 0].set_title(f"Source")
+            #         ax[i, 1].set_title(f"Target (Ground Truth)")
+            #         ax[i, 2].set_title(f"Target (Predicted)")
+            #     else:
+            #         ax[i, 0].set_title(f"{source_key}")
+            #         ax[i, 1].set_title(f"{target_key}")
 
             if pred_sample_train.shape[-1] > 1:
                 ax[i, 1].imshow(pred_sample_train[i])
@@ -406,17 +406,17 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
             ax[i, 1].axis('off')
             if data_name.__contains__("mnist"):
                 ax[i, 2].axis('off')
-            if i == 0:
-                if data_name == "celeba":
-                    ax[i, 0].set_title(f"without {data_dict['attribute']}")
-                    ax[i, 1].set_title(f"with {data_dict['attribute']}")
-                elif data_name.__contains__("mnist"):
-                    ax[i, 0].set_title(f"Source")
-                    ax[i, 1].set_title(f"Target (Ground Truth)")
-                    ax[i, 2].set_title(f"Target (Predicted)")
-                else:
-                    ax[i, 0].set_title(f"{source_key}")
-                    ax[i, 1].set_title(f"{target_key}")
+            # if i == 0:
+            #     if data_name == "celeba":
+            #         ax[i, 0].set_title(f"without {data_dict['attribute']}")
+            #         ax[i, 1].set_title(f"with {data_dict['attribute']}")
+            #     elif data_name.__contains__("mnist"):
+            #         ax[i, 0].set_title(f"Source")
+            #         ax[i, 1].set_title(f"Target (Ground Truth)")
+            #         ax[i, 2].set_title(f"Target (Predicted)")
+            #     else:
+            #         ax[i, 0].set_title(f"{source_key}")
+            #         ax[i, 1].set_title(f"{target_key}")
 
             if pred_sample_valid.shape[-1] > 1:
                 ax[i, 1].imshow(pred_sample_valid[i])
