@@ -290,17 +290,29 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
             target_sample_train = []
             target_sample_valid = []
 
-            # for digit in test_digits:
-            #     source_images_digit_valid = valid_data[
-            #         (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == source_key)]
-            #     target_images_digit_valid = valid_data[
-            #         (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == target_key)]
-            #     if j == 0:
-            #         source_images_digit_valid.X /= 255.0
-            #     random_samples = np.random.choice(source_images_digit.shape[0], 1, replace=False)
-            #
-            #     source_sample.append(source_images_digit.X[random_samples])
-            #     target_sample.append(target_images_digit.X[random_samples])
+            for digit in test_digits:
+                source_images_digit_valid = valid_data[
+                    (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == source_key)]
+                target_images_digit_valid = valid_data[
+                    (valid_data.obs['labels'] == digit) & (valid_data.obs['condition'] == target_key)]
+                if j == 0:
+                    source_images_digit_valid.X /= 255.0
+                random_samples = np.random.choice(source_images_digit_valid.shape[0], 1, replace=False)
+
+                source_sample_valid.append(source_images_digit_valid.X[random_samples])
+                target_sample_valid.append(target_images_digit_valid.X[random_samples])
+
+            for digit in train_digits:
+                source_images_digit_train = train_data[
+                    (train_data.obs['labels'] == digit) & (train_data.obs['condition'] == source_key)]
+                target_images_digit_train = train_data[
+                    (train_data.obs['labels'] == digit) & (train_data.obs['condition'] == target_key)]
+                if j == 0:
+                    source_images_digit_train.X /= 255.0
+                random_samples = np.random.choice(source_images_digit_train.shape[0], 1, replace=False)
+
+                source_sample_train.append(source_images_digit_train.X[random_samples])
+                target_sample_train.append(target_images_digit_train.X[random_samples])
         else:
             random_samples_train = np.random.choice(source_data_train.shape[0], k, replace=False)
             random_samples_valid = np.random.choice(source_data_valid.shape[0], k, replace=False)
