@@ -16,7 +16,7 @@ from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from keras_vggface.vggface import VGGFace
 from scipy import sparse
-from utils import label_encoder
+from .utils import label_encoder
 
 log = logging.getLogger(__file__)
 
