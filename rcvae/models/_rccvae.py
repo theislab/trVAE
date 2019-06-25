@@ -16,6 +16,7 @@ from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from keras_vggface.vggface import VGGFace
 from scipy import sparse
+
 from .utils import label_encoder
 
 log = logging.getLogger(__file__)
@@ -673,6 +674,3 @@ class RCCVAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
-
-
-RCCVAE(x_dimension=(64, 64, 3), z_dimension=50, mmd_dimension=256, arch_style=3)
