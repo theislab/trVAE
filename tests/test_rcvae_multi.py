@@ -466,7 +466,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                      top_100_genes=top_100_genes,
                                      gene_list=gene_list,
                                      condition_key='condition',
-                                     axis_keys={"x": 'predicted1', 'y': target_key1},
+                                     axis_keys={"x": 'ctrl to hpoly', 'y': target_key1},
                                      labels={'x': 'pred stim', 'y': 'real stim'},
                                      legend=False,
                                      fontsize=20,
@@ -479,7 +479,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                     top_100_genes=top_100_genes,
                                     gene_list=gene_list,
                                     condition_key='condition',
-                                    axis_keys={"x": 'predicted1', 'y': target_key1},
+                                    axis_keys={"x": 'ctrl to hpoly', 'y': target_key1},
                                     labels={'x': 'pred stim', 'y': 'real stim'},
                                     legend=False,
                                     fontsize=20,
@@ -492,7 +492,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                      top_100_genes=top_100_genes,
                                      gene_list=gene_list,
                                      condition_key='condition',
-                                     axis_keys={"x": 'predicted2', 'y': target_key2},
+                                     axis_keys={"x": 'hpoly to sal', 'y': target_key2},
                                      labels={'x': 'pred stim', 'y': 'real stim'},
                                      legend=False,
                                      fontsize=20,
@@ -505,7 +505,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                     top_100_genes=top_100_genes,
                                     gene_list=gene_list,
                                     condition_key='condition',
-                                    axis_keys={"x": 'predicted2', 'y': target_key2},
+                                    axis_keys={"x": 'hpoly to sal', 'y': target_key2},
                                     labels={'x': 'pred stim', 'y': 'real stim'},
                                     legend=False,
                                     fontsize=20,
@@ -547,47 +547,63 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         sc.tl.umap(train_data)
         sc.pl.umap(train_data, color=color,
                    save=f'_{data_name}_{cell_type}_train_data',
-                   show=False)
+                   show=False,
+                   wspace=0.1,
+                   frameon=False)
 
         sc.pp.neighbors(latent_with_true_labels)
         sc.tl.umap(latent_with_true_labels)
         sc.pl.umap(latent_with_true_labels, color=color,
                    save=f"_{data_name}_{cell_type}_latent_with_true_labels",
-                   show=False)
+                   show=False,
+                   wspace=0.1,
+                   frameon=False)
 
         sc.pp.neighbors(latent_with_fake_labels1)
         sc.tl.umap(latent_with_fake_labels1)
         sc.pl.umap(latent_with_fake_labels1, color=color,
                    save=f"_{data_name}_{cell_type}_latent_with_fake_labels1",
-                   show=False)
+                   show=False,
+                   wspace=0.1,
+                   frameon=False)
 
         sc.pp.neighbors(latent_with_fake_labels2)
         sc.tl.umap(latent_with_fake_labels2)
         sc.pl.umap(latent_with_fake_labels2, color=color,
                    save=f"_{data_name}_{cell_type}_latent_with_fake_labels2",
-                   show=False)
+                   show=False,
+                   wspace=0.1,
+                   frameon=False)
 
         sc.pp.neighbors(mmd_latent_with_true_labels)
         sc.tl.umap(mmd_latent_with_true_labels)
         sc.pl.umap(mmd_latent_with_true_labels, color=color,
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
-                   show=False)
+                   show=False,
+                   wspace=0.1,
+                   frameon=False)
 
         sc.pp.neighbors(mmd_latent_with_fake_labels1)
         sc.tl.umap(mmd_latent_with_fake_labels1)
         sc.pl.umap(mmd_latent_with_fake_labels1, color=color,
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels1",
-                   show=False)
+                   show=False,
+                   wspace=0.1,
+                   frameon=False)
 
         sc.pp.neighbors(mmd_latent_with_fake_labels2)
         sc.tl.umap(mmd_latent_with_fake_labels2)
         sc.pl.umap(mmd_latent_with_fake_labels2, color=color,
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_fake_labels2",
-                   show=False)
+                   show=False,
+                   wspace=0.1,
+                   frameon=False)
 
         sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby='condition',
                      save=f"_{data_name}_{cell_type}_{top_100_genes[0]}",
-                     show=False)
+                     show=False,
+                     wspace=0.1,
+                     frameon=False)
 
         plt.close("all")
 
