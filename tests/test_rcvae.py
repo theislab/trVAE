@@ -290,7 +290,6 @@ def plot_boxplot(data_dict,
     #     ax.set_ylim(-15.0, 0.5)
     # elif y_measure == "SE:max(x, 1)":
     #     ax.set_ylim(-30.5, 1.0)
-    ax.set_
     xlabels = ['Bin-%i' % i for i in range(10)]
     ax.set_xticklabels(xlabels, rotation=90)
     if y_measure == "SE":
