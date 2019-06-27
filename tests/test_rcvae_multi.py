@@ -433,20 +433,45 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         cell_type_target1 = cell_type_adata.copy()[cell_type_adata.obs['condition'] == target_key1]
         print(cell_type_ctrl.shape, cell_type_adata.shape)
 
-        pred_celltypes1 = network.predict(cell_type_ctrl,
-                                          encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
-                                          decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
+        pred_hpoly_from_ctrl = network.predict(cell_type_ctrl,
+                                               encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
+                                               decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
 
-        pred_celltypes2 = network.predict(cell_type_target1,
-                                          encoder_labels=np.ones((cell_type_ctrl.shape[0], 1)),
-                                          decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1)
-        pred_adata1 = anndata.AnnData(X=pred_celltypes1)
-        pred_adata1.obs['condition'] = ['ctrl to hpoly'] * pred_adata1.shape[0]
-        pred_adata1.var = cell_type_adata.var
+        pred_sal_from_ctrl = network.predict(cell_type_ctrl,
+                                             encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
+                                             decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1)
 
-        pred_adata2 = anndata.AnnData(X=pred_celltypes2)
-        pred_adata2.obs['condition'] = ['hpoly to sal'] * pred_adata2.shape[0]
-        pred_adata2.var = cell_type_adata.var
+        pred_sal_from_pred_hpoly = network.predict(pred_hpoly_from_ctrl,
+                                                   encoder_labels=np.ones((pred_hpoly_from_ctrl.shape[0], 1)),
+                                                   decoder_labels=np.ones((pred_hpoly_from_ctrl.shape[0], 1)) + 1)
+
+        pred_hpoly_from_pred_sal = network.predict(pred_sal_from_ctrl,
+                                                   encoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1,
+                                                   decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
+
+        pred_ctrl_from_hpoly = network.predict(cell_type_target1,
+                                               encoder_labels=np.ones((cell_type_target1.shape[0], 1)),
+                                               decoder_labels=np.zeros((cell_type_target1.shape[0], 1)))
+
+        pred_hpoly_from_ctrl_adata = anndata.AnnData(X=pred_hpoly_from_ctrl)
+        pred_hpoly_from_ctrl_adata.obs['condition'] = ['ctrl to hpoly'] * pred_hpoly_from_ctrl_adata.shape[0]
+        pred_hpoly_from_ctrl_adata.var = cell_type_adata.var
+
+        pred_sal_from_ctrl_adata = anndata.AnnData(X=pred_sal_from_ctrl)
+        pred_sal_from_ctrl_adata.obs['condition'] = ['ctrl to sal'] * pred_sal_from_ctrl_adata.shape[0]
+        pred_sal_from_ctrl_adata.var = cell_type_adata.var
+
+        pred_sal_from_pred_hpoly_adata = anndata.AnnData(X=pred_sal_from_pred_hpoly)
+        pred_sal_from_pred_hpoly_adata.obs['condition'] = ['p_hpoly to sal'] * pred_sal_from_pred_hpoly_adata.shape[0]
+        pred_sal_from_pred_hpoly_adata.var = cell_type_adata.var
+
+        pred_hpoly_from_pred_sal_adata = anndata.AnnData(X=pred_hpoly_from_pred_sal)
+        pred_hpoly_from_pred_sal_adata.obs['condition'] = ['p_sal to hpoly'] * pred_hpoly_from_pred_sal_adata.shape[0]
+        pred_hpoly_from_pred_sal_adata.var = cell_type_adata.var
+
+        pred_ctrl_from_hpoly_adata = anndata.AnnData(X=pred_ctrl_from_hpoly)
+        pred_ctrl_from_hpoly_adata.obs['condition'] = ['hpoly to ctrl'] * pred_ctrl_from_hpoly_adata.shape[0]
+        pred_ctrl_from_hpoly_adata.var = cell_type_adata.var
 
         if data_name == "pbmc":
             sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=100, method="wilcoxon")
@@ -459,8 +484,11 @@ def visualize_trained_network_results(data_dict, z_dim=100):
             top_100_genes = top_50_up_genes + top_50_down_genes
             gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
 
-        cell_type_adata = cell_type_adata.concatenate(pred_adata1)
-        cell_type_adata = cell_type_adata.concatenate(pred_adata2)
+        cell_type_adata = cell_type_adata.concatenate(pred_hpoly_from_ctrl_adata)
+        cell_type_adata = cell_type_adata.concatenate(pred_sal_from_ctrl_adata)
+        cell_type_adata = cell_type_adata.concatenate(pred_hpoly_from_pred_sal_adata)
+        cell_type_adata = cell_type_adata.concatenate(pred_sal_from_pred_hpoly_adata)
+        cell_type_adata = cell_type_adata.concatenate(pred_ctrl_from_hpoly_adata)
 
         rcvae.plotting.reg_mean_plot(cell_type_adata,
                                      top_100_genes=top_100_genes,
@@ -492,8 +520,34 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                      top_100_genes=top_100_genes,
                                      gene_list=gene_list,
                                      condition_key='condition',
-                                     axis_keys={"x": 'hpoly to sal', 'y': target_key2},
-                                     labels={'x': 'pred sal from hpoly', 'y': 'real sal'},
+                                     axis_keys={"x": 'ctrl to sal', 'y': target_key2},
+                                     labels={'x': 'pred sal from ctrl', 'y': 'real sal'},
+                                     legend=False,
+                                     fontsize=20,
+                                     textsize=14,
+                                     title=cell_type,
+                                     path_to_save=os.path.join(path_to_save,
+                                                               f'rcvae_reg_mean_{data_name}_{cell_type}_{source_key} to {target_key2}.pdf'))
+
+        rcvae.plotting.reg_var_plot(cell_type_adata,
+                                    top_100_genes=top_100_genes,
+                                    gene_list=gene_list,
+                                    condition_key='condition',
+                                    axis_keys={"x": 'ctrl to sal', 'y': target_key2},
+                                    labels={'x': 'pred sal from ctrl', 'y': 'real sal'},
+                                    legend=False,
+                                    fontsize=20,
+                                    textsize=14,
+                                    title=cell_type,
+                                    path_to_save=os.path.join(path_to_save,
+                                                              f'rcvae_reg_var_{data_name}_{cell_type}_{source_key} to {target_key2}.pdf'))
+
+        rcvae.plotting.reg_mean_plot(cell_type_adata,
+                                     top_100_genes=top_100_genes,
+                                     gene_list=gene_list,
+                                     condition_key='condition',
+                                     axis_keys={"x": 'p_hpoly to sal', 'y': target_key2},
+                                     labels={'x': 'pred sal from p_hpoly', 'y': 'real sal'},
                                      legend=False,
                                      fontsize=20,
                                      textsize=14,
@@ -505,14 +559,66 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                     top_100_genes=top_100_genes,
                                     gene_list=gene_list,
                                     condition_key='condition',
-                                    axis_keys={"x": 'hpoly to sal', 'y': target_key2},
-                                    labels={'x': 'pred sal from hpoly', 'y': 'real sal'},
+                                    axis_keys={"x": 'p_hpoly to sal', 'y': target_key2},
+                                    labels={'x': 'pred sal from p_hpoly', 'y': 'real sal'},
                                     legend=False,
                                     fontsize=20,
                                     textsize=14,
                                     title=cell_type,
                                     path_to_save=os.path.join(path_to_save,
                                                               f'rcvae_reg_var_{data_name}_{cell_type}_{target_key1} to {target_key2}.pdf'))
+
+        rcvae.plotting.reg_mean_plot(cell_type_adata,
+                                     top_100_genes=top_100_genes,
+                                     gene_list=gene_list,
+                                     condition_key='condition',
+                                     axis_keys={"x": 'p_sal to hpoly', 'y': target_key1},
+                                     labels={'x': 'pred hpoly from sal', 'y': 'real hpoly'},
+                                     legend=False,
+                                     fontsize=20,
+                                     textsize=14,
+                                     title=cell_type,
+                                     path_to_save=os.path.join(path_to_save,
+                                                               f'rcvae_reg_mean_{data_name}_{cell_type}_{target_key2} to {target_key1}.pdf'))
+
+        rcvae.plotting.reg_var_plot(cell_type_adata,
+                                    top_100_genes=top_100_genes,
+                                    gene_list=gene_list,
+                                    condition_key='condition',
+                                    axis_keys={"x": 'p_sal to hpoly', 'y': target_key1},
+                                    labels={'x': 'pred hpoly from p_sal', 'y': 'real hpoly'},
+                                    legend=False,
+                                    fontsize=20,
+                                    textsize=14,
+                                    title=cell_type,
+                                    path_to_save=os.path.join(path_to_save,
+                                                              f'rcvae_reg_var_{data_name}_{cell_type}_{target_key2} to {target_key1}.pdf'))
+
+        rcvae.plotting.reg_mean_plot(cell_type_adata,
+                                     top_100_genes=top_100_genes,
+                                     gene_list=gene_list,
+                                     condition_key='condition',
+                                     axis_keys={"x": 'hpoly to ctrl', 'y': source_key},
+                                     labels={'x': 'pred ctrl from hpoly', 'y': 'real ctrl'},
+                                     legend=False,
+                                     fontsize=20,
+                                     textsize=14,
+                                     title=cell_type,
+                                     path_to_save=os.path.join(path_to_save,
+                                                               f'rcvae_reg_mean_{data_name}_{cell_type}_{target_key1} to {source_key}.pdf'))
+
+        rcvae.plotting.reg_var_plot(cell_type_adata,
+                                    top_100_genes=top_100_genes,
+                                    gene_list=gene_list,
+                                    condition_key='condition',
+                                    axis_keys={"x": 'hpoly to ctrl', 'y': source_key},
+                                    labels={'x': 'pred ctrl from hpoly', 'y': 'real ctrl'},
+                                    legend=False,
+                                    fontsize=20,
+                                    textsize=14,
+                                    title=cell_type,
+                                    path_to_save=os.path.join(path_to_save,
+                                                              f'rcvae_reg_var_{data_name}_{cell_type}_{target_key1} to {source_key}.pdf'))
 
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)

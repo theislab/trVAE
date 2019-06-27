@@ -660,8 +660,6 @@ class RCCVAE:
                 shuffle=shuffle,
                 callbacks=callbacks,
                 verbose=verbose,
-                use_multiprocessing=True,
-                workers=8,
             )
         else:
             histories = self.gpu_cvae_model.fit(
@@ -672,8 +670,6 @@ class RCCVAE:
                 shuffle=shuffle,
                 callbacks=callbacks,
                 verbose=verbose,
-                use_multiprocessing=True,
-                workers=8
             )
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
