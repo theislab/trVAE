@@ -659,7 +659,10 @@ class RCCVAE:
                 validation_data=(x_test, y_test),
                 shuffle=shuffle,
                 callbacks=callbacks,
-                verbose=verbose)
+                verbose=verbose,
+                use_multiprocessing=True,
+                workers=8,
+            )
         else:
             histories = self.gpu_cvae_model.fit(
                 x=x,
@@ -668,7 +671,10 @@ class RCCVAE:
                 batch_size=batch_size,
                 shuffle=shuffle,
                 callbacks=callbacks,
-                verbose=verbose)
+                verbose=verbose,
+                use_multiprocessing=True,
+                workers=8
+            )
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
             self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
