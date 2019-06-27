@@ -437,37 +437,37 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                                encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
                                                decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
 
-        pred_sal_from_ctrl = network.predict(cell_type_ctrl,
-                                             encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
-                                             decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1)
-
-        pred_sal_from_pred_hpoly = network.predict(pred_hpoly_from_ctrl,
-                                                   encoder_labels=np.ones((pred_hpoly_from_ctrl.shape[0], 1)),
-                                                   decoder_labels=np.ones((pred_hpoly_from_ctrl.shape[0], 1)) + 1)
-
-        pred_hpoly_from_pred_sal = network.predict(pred_sal_from_ctrl,
-                                                   encoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1,
-                                                   decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
-
-        pred_ctrl_from_hpoly = network.predict(cell_type_target1,
-                                               encoder_labels=np.ones((cell_type_target1.shape[0], 1)),
-                                               decoder_labels=np.zeros((cell_type_target1.shape[0], 1)))
-
         pred_hpoly_from_ctrl_adata = anndata.AnnData(X=pred_hpoly_from_ctrl)
         pred_hpoly_from_ctrl_adata.obs['condition'] = ['ctrl to hpoly'] * pred_hpoly_from_ctrl_adata.shape[0]
         pred_hpoly_from_ctrl_adata.var = cell_type_adata.var
+
+        pred_sal_from_ctrl = network.predict(cell_type_ctrl,
+                                             encoder_labels=np.zeros((cell_type_ctrl.shape[0], 1)),
+                                             decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1)
 
         pred_sal_from_ctrl_adata = anndata.AnnData(X=pred_sal_from_ctrl)
         pred_sal_from_ctrl_adata.obs['condition'] = ['ctrl to sal'] * pred_sal_from_ctrl_adata.shape[0]
         pred_sal_from_ctrl_adata.var = cell_type_adata.var
 
+        pred_sal_from_pred_hpoly = network.predict(pred_hpoly_from_ctrl_adata,
+                                                   encoder_labels=np.ones((pred_hpoly_from_ctrl.shape[0], 1)),
+                                                   decoder_labels=np.ones((pred_hpoly_from_ctrl.shape[0], 1)) + 1)
+
         pred_sal_from_pred_hpoly_adata = anndata.AnnData(X=pred_sal_from_pred_hpoly)
         pred_sal_from_pred_hpoly_adata.obs['condition'] = ['p_hpoly to sal'] * pred_sal_from_pred_hpoly_adata.shape[0]
         pred_sal_from_pred_hpoly_adata.var = cell_type_adata.var
 
+        pred_hpoly_from_pred_sal = network.predict(pred_sal_from_ctrl_adata,
+                                                   encoder_labels=np.ones((cell_type_ctrl.shape[0], 1)) + 1,
+                                                   decoder_labels=np.ones((cell_type_ctrl.shape[0], 1)))
+
         pred_hpoly_from_pred_sal_adata = anndata.AnnData(X=pred_hpoly_from_pred_sal)
         pred_hpoly_from_pred_sal_adata.obs['condition'] = ['p_sal to hpoly'] * pred_hpoly_from_pred_sal_adata.shape[0]
         pred_hpoly_from_pred_sal_adata.var = cell_type_adata.var
+
+        pred_ctrl_from_hpoly = network.predict(cell_type_target1,
+                                               encoder_labels=np.ones((cell_type_target1.shape[0], 1)),
+                                               decoder_labels=np.zeros((cell_type_target1.shape[0], 1)))
 
         pred_ctrl_from_hpoly_adata = anndata.AnnData(X=pred_ctrl_from_hpoly)
         pred_ctrl_from_hpoly_adata.obs['condition'] = ['hpoly to ctrl'] * pred_ctrl_from_hpoly_adata.shape[0]
