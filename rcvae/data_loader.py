@@ -74,10 +74,10 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
         ifile = zfile.open(os.path.join(f"{zip_filename}/", filename))
         image = Image.open(ifile)
         image_landmarks = landmarks.loc[filename]
-        most_left_x = max(0, min(image_landmarks['lefteye_x'], image_landmarks['leftmouth_x']) - 20)
-        most_right_x = min(178, min(image_landmarks['righteye_x'], image_landmarks['rightmouth_x']) + 20)
+        most_left_x = max(0, min(image_landmarks['lefteye_x'], image_landmarks['leftmouth_x']) - 15)
+        most_right_x = min(178, min(image_landmarks['righteye_x'], image_landmarks['rightmouth_x']) + 15)
 
-        most_up_y = max(0, image_landmarks['lefteye_y'] - 40)
+        most_up_y = max(0, image_landmarks['lefteye_y'] - 35)
         most_down_y = min(218, image_landmarks['rightmouth_y'] + 25)
 
         image_cropped = image.crop((most_left_x, most_up_y, most_right_x, most_down_y))
