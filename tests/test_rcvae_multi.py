@@ -192,12 +192,13 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
         perturbation_list = data_dict.get("perturbation", [])
         for source, dest, name in perturbation_list:
             print(source, dest, name)
-            visualize_multi_perturbation_between(network, cell_type_adata,
-                                                 source_condition=source, target_condition=dest, name=name,
-                                                 source_label=0, target_label=1,
-                                                 cell_type=cell_type, data_name=data_name,
-                                                 top_100_genes=top_100_genes, gene_list=gene_list,
-                                                 path_to_save=path_to_save)
+            cell_type_adata = visualize_multi_perturbation_between(network, cell_type_adata,
+                                                                   source_condition=source, target_condition=dest,
+                                                                   name=name,
+                                                                   source_label=0, target_label=1,
+                                                                   cell_type=cell_type, data_name=data_name,
+                                                                   top_100_genes=top_100_genes, gene_list=gene_list,
+                                                                   path_to_save=path_to_save)
 
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)
@@ -320,6 +321,8 @@ def visualize_multi_perturbation_between(network, adata,
                                 title=cell_type,
                                 path_to_save=os.path.join(path_to_save,
                                                           f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
+
+    return adata
 
 
 if __name__ == '__main__':
