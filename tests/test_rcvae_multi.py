@@ -28,12 +28,13 @@ DATASETS = {
     "Cytof": {'name': 'cytof', 'need_merge': False,
               'source_conditions': ['Basal', 'Bez', 'Das'],
               'target_conditions': ['Bez+Das'],
-              'perturbation': [('Basal', 'Bez', 'Basal_to_Bez'),
-                               ('Basal', 'Das', 'Basal_to_Das'),
-                               ('Basal_to_Bez', 'Das', '(Basal_to_Bez)_to_Das'),
-                               ('Basal_to_Das', 'Bez', '(Basal_to_Das)_to_Bez'),
-                               ('Basal_to_Bez', 'Bez+Das', '(Basal_to_Bez)_to_Bez+Das'),
+              'perturbation': [('Basal', 'Bez', 'Basal_to_Bez', 0, 1),
+                               ('Basal', 'Das', 'Basal_to_Das', 0, 2),
+                               ('Basal_to_Bez', 'Das', '(Basal_to_Bez)_to_Das', 1, 2),
+                               ('Basal_to_Das', 'Bez', '(Basal_to_Das)_to_Bez', 2, 1),
+                               ('Basal_to_Bez', 'Bez+Das', '(Basal_to_Bez)_to_Bez+Das', 1, 3),
                                ],
+              'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Bez+Das': 3},
               'cell_type': 'cell_label'}
 
 }
@@ -80,6 +81,7 @@ def train_network(data_dict=None,
     target_keys = data_dict.get("target_conditions")
     cell_type_key = data_dict.get("cell_type", None)
     need_merge = data_dict.get('need_merge', False)
+    label_encoder = data_dict.get('label_encoder', None)
 
     if need_merge:
         train_data, valid_data = merge_data(data_dict)
@@ -113,6 +115,7 @@ def train_network(data_dict=None,
                                        dropout_rate=dropout_rate)
 
             network.train(net_train_data,
+                          label_encoder,
                           use_validation=True,
                           valid_data=net_valid_data,
                           n_epochs=n_epochs,
@@ -132,6 +135,8 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
     target_keys = data_dict.get("target_conditions")
     cell_type_key = data_dict.get("cell_type", None)
     need_merge = data_dict.get('need_merge', False)
+    label_encoder = data_dict.get('label_encoder', None)
+
     if need_merge:
         data, _ = merge_data(data_dict)
     else:
@@ -165,7 +170,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
 
         feed_data = data.X
 
-        train_labels, _ = rcvae.label_encoder(data)
+        train_labels, _ = rcvae.label_encoder(data, label_encoder)
         fake_labels = []
 
         n_conditions = len(source_keys) + len(target_keys)
@@ -190,12 +195,12 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
             top_100_genes = top_50_up_genes + top_50_down_genes
             gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
         perturbation_list = data_dict.get("perturbation", [])
-        for source, dest, name in perturbation_list:
+        for source, dest, name, source_label, target_label in perturbation_list:
             print(source, dest, name)
             cell_type_adata = visualize_multi_perturbation_between(network, cell_type_adata,
                                                                    source_condition=source, target_condition=dest,
                                                                    name=name,
-                                                                   source_label=0, target_label=1,
+                                                                   source_label=source_label, target_label=target_label,
                                                                    cell_type=cell_type, data_name=data_name,
                                                                    top_100_genes=top_100_genes, gene_list=gene_list,
                                                                    path_to_save=path_to_save)

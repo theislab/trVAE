@@ -422,7 +422,7 @@ class RCVAEMulti:
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
         self._loss_function()
 
-    def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
+    def train(self, train_data, label_encoder=None, use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
               threshold=0.0025, initial_run=True,
               shuffle=True, verbose=2, save=True):
         """
@@ -461,7 +461,7 @@ class RCVAEMulti:
         if initial_run:
             log.info("----Training----")
 
-        train_labels, _ = label_encoder(train_data)
+        train_labels, _ = label_encoder(train_data, label_encoder)
         pseudo_labels = np.ones(shape=train_labels.shape)
 
         if use_validation and valid_data is None:

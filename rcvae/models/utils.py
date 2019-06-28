@@ -1,11 +1,11 @@
 from random import shuffle
-
+import numpy as np
 import anndata
 from scipy import sparse
 from sklearn import preprocessing
 
 
-def label_encoder(adata):
+def label_encoder(adata, label_encoder=None):
     """
         Encode labels of Annotated `adata` matrix using sklearn.preprocessing.LabelEncoder class.
         Parameters
@@ -23,8 +23,14 @@ def label_encoder(adata):
         >>> train_data = sc.read("./data/train.h5ad")
         >>> train_labels, label_encoder = label_encoder(train_data)
     """
-    le = preprocessing.LabelEncoder()
-    labels = le.fit_transform(adata.obs["condition"].tolist())
+    if label_encoder is None:
+        le = preprocessing.LabelEncoder()
+        labels = le.fit_transform(adata.obs["condition"].tolist())
+    else:
+        le = None
+        labels = np.zeros(adata.shape[0])
+        for condition, label in label_encoder.items():
+            labels[adata.obs['condition'] == condition] = label
     return labels.reshape(-1, 1), le
 
 
