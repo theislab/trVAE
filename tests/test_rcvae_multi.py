@@ -307,19 +307,19 @@ def visualize_multi_perturbation_between(network, adata,
                                  path_to_save=os.path.join(path_to_save,
                                                            f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
 
-    rcvae.plotting.reg_mean_plot(adata,
-                                 top_100_genes=top_100_genes,
-                                 gene_list=gene_list,
-                                 condition_key='condition',
-                                 axis_keys={"x": f'{name}', 'y': target_condition},
-                                 labels={'x': f'{source_condition} to {target_condition}',
-                                         'y': f'real {target_condition}'},
-                                 legend=False,
-                                 fontsize=20,
-                                 textsize=14,
-                                 title=cell_type,
-                                 path_to_save=os.path.join(path_to_save,
-                                                           f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
+    rcvae.plotting.reg_var_plot(adata,
+                                top_100_genes=top_100_genes,
+                                gene_list=gene_list,
+                                condition_key='condition',
+                                axis_keys={"x": f'{name}', 'y': target_condition},
+                                labels={'x': f'{source_condition} to {target_condition}',
+                                        'y': f'real {target_condition}'},
+                                legend=False,
+                                fontsize=20,
+                                textsize=14,
+                                title=cell_type,
+                                path_to_save=os.path.join(path_to_save,
+                                                          f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
 
 
 if __name__ == '__main__':
