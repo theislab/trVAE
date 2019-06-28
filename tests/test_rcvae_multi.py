@@ -169,7 +169,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
         fake_labels = []
 
         n_conditions = len(source_keys) + len(target_keys)
-        for i in range(len(source_keys) + len(target_keys)):
+        for i in range(n_conditions):
             fake_labels.append(np.zeros(train_labels.shape) + i)
 
         latent_with_true_labels = network.to_latent(feed_data, train_labels)
@@ -191,6 +191,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
             gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
         perturbation_list = data_dict.get("perturbation", [])
         for source, dest, name in perturbation_list:
+            print(source, dest, name)
             visualize_multi_perturbation_between(network, cell_type_adata,
                                                  source_condition=source, target_condition=dest, name=name,
                                                  source_label=0, target_label=1,
