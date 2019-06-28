@@ -289,6 +289,7 @@ def visualize_multi_perturbation_between(network, adata,
 
     pred_adata = anndata.AnnData(X=pred_target)
     pred_adata.obs['condition'] = [name] * pred_target.shape[0]
+    pred_adata.var_names = adata.var_names
 
     adata = adata.concatenate(adata, pred_adata)
 
