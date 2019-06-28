@@ -34,7 +34,7 @@ DATASETS = {
                                ('Basal_to_Das', 'Bez', '(Basal_to_Das)_to_Bez'),
                                ('Basal_to_Bez', 'Bez+Das', '(Basal_to_Bez)_to_Bez+Das'),
                                ],
-              'cell_type': None}
+              'cell_type': 'cell_label'}
 
 }
 
