@@ -266,11 +266,11 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
                    wspace=0.15,
                    frameon=False)
 
-        sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby='condition',
-                     save=f"_{data_name}_{cell_type}_{top_100_genes[0]}",
-                     show=False,
-                     wspace=0.15,
-                     frameon=False)
+        # sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby='condition',
+        #              save=f"_{data_name}_{cell_type}_{top_100_genes[0]}",
+        #              show=False,
+        #              wspace=0.15,
+        #              frameon=False)
 
         plt.close("all")
 
