@@ -328,7 +328,7 @@ def visualize_multi_perturbation_between(network, adata,
                                                           f'rcvae_reg_var_{data_name}_{source_condition} to {target_condition}.pdf'))
 
     adata_scatter = adata.copy()[adata.obs['condition'].isin([name, target_condition, 'Bez', 'Das', 'Bez+Das'])]
-    sc.pl.scatter(adata_scatter, x="p4EBP1", y="pSTAT5", color="condition",
+    sc.pl.scatter(adata_scatter, x=top_100_genes[0], y=top_100_genes[1], color="condition",
                   save=f'_rcvae_{data_name}_{source_condition} to {target_condition}.pdf')
 
     return adata
