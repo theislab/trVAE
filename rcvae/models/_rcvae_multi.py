@@ -52,6 +52,7 @@ class RCVAEMulti:
         self.model_to_use = kwargs.get("model_path", "./")
         self.train_with_fake_labels = kwargs.get("train_with_fake_labels", False)
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
+        self.arch_style = kwargs.get("arch_style", 1)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
@@ -80,14 +81,24 @@ class RCVAEMulti:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         xy = concatenate([x, y], axis=1)
-        h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(xy)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
-        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+        if self.arch_style == 1:
+            h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(xy)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+            h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+        else:
+            h = Dense(32, kernel_initializer=self.init_w, use_bias=False)(xy)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+            h = Dense(16, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
@@ -106,16 +117,28 @@ class RCVAEMulti:
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
         zy = concatenate([z, y], axis=1)
-        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
-        h = BatchNormalization()(h)
-        h_mmd = LeakyReLU(name="mmd")(h)
-        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(h)
-        h = BatchNormalization(axis=1)(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+        if self.arch_style == 1:
+            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
+            h = BatchNormalization()(h)
+            h_mmd = LeakyReLU(name="mmd")(h)
+            h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+        else:
+            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
+            h = BatchNormalization()(h)
+            h_mmd = LeakyReLU(name="mmd")(h)
+            h = Dense(16, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dense(32, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization(axis=1)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
         h = Activation('relu', name="reconstruction_output")(h)
         model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
@@ -242,11 +265,28 @@ class RCVAEMulti:
             def mmd_loss(real_labels, y_pred):
                 with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
                     real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
-                    source_mmd, dest1_mmd, dest2_mmd = tf.dynamic_partition(y_pred, real_labels,
-                                                                            num_partitions=self.n_conditions)
-                    loss = self.compute_mmd(source_mmd, dest1_mmd, self.kernel_method)
-                    loss += self.compute_mmd(source_mmd, dest2_mmd, self.kernel_method)
-                    loss += self.compute_mmd(dest1_mmd, dest2_mmd, self.kernel_method)
+                    if self.n_conditions == 3:
+                        source_mmd, dest1_mmd, dest2_mmd = tf.dynamic_partition(y_pred, real_labels,
+                                                                                num_partitions=self.n_conditions)
+                        loss = self.compute_mmd(source_mmd, dest1_mmd, self.kernel_method)
+                        loss += self.compute_mmd(source_mmd, dest2_mmd, self.kernel_method)
+                        loss += self.compute_mmd(dest1_mmd, dest2_mmd, self.kernel_method)
+                    elif self.n_conditions == 4:
+                        source1_mmd, source2_mmd, source3_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels,
+                                                                                num_partitions=self.n_conditions)
+
+                        loss = self.compute_mmd(source1_mmd, source2_mmd, self.kernel_method)
+                        loss += self.compute_mmd(source1_mmd, source3_mmd, self.kernel_method)
+                        loss += self.compute_mmd(source1_mmd, dest_mmd, self.kernel_method)
+                        loss += self.compute_mmd(source2_mmd, source3_mmd, self.kernel_method)
+                        loss += self.compute_mmd(source2_mmd, dest_mmd, self.kernel_method)
+                        loss += self.compute_mmd(source3_mmd, dest_mmd, self.kernel_method)
+
+                    else:
+                        conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=self.n_conditions)
+                        loss = 0.0
+                        for i in range(len(conditions_mmd) - 1):
+                            loss += self.compute_mmd(conditions_mmd[i], conditions_mmd[i + 1], self.kernel_method)
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
@@ -254,11 +294,6 @@ class RCVAEMulti:
                                     loss=[kl_recon_loss, mmd_loss],
                                     metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
                                              self.cvae_model.outputs[1].name: mmd_loss})
-
-            # self.cvae_model.compile(optimizer=self.cvae_optimizer,
-            #                         loss=kl_recon_loss,
-            #                         metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
-            #                                  self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()
 
