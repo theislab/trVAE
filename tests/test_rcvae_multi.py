@@ -293,7 +293,7 @@ def visualize_multi_perturbation_between(network, adata,
     pred_adata.var_names = adata.var_names
 
     adata = adata.concatenate(adata, pred_adata)
-
+    print(adata.obs['condition'].unique().tolist())
     rcvae.plotting.reg_mean_plot(adata,
                                  top_100_genes=top_100_genes,
                                  gene_list=gene_list,
