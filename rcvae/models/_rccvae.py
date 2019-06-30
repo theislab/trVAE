@@ -232,7 +232,7 @@ class RCCVAE:
             model.summary()
             return h, h_mmd, model
         else:
-            encode_y = Dense(128, activation='relu')(self.decoder_labels)
+            encode_y = Dense(64, activation='relu')(self.decoder_labels)
             zy = concatenate([self.z, encode_y], axis=1)
             zy = Activation('relu')(zy)
 
