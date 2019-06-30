@@ -766,6 +766,7 @@ class RCCVAE:
                                                           use_multiprocessing=True,
                                                           epochs=n_epochs,
                                                           validation_data=valid_generator,
+                                                          validation_steps=5,
                                                           shuffle=shuffle,
                                                           callbacks=callbacks,
                                                           verbose=verbose,
