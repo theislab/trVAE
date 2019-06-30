@@ -676,8 +676,8 @@ class RCCVAE:
                 decoder_labels_test = np.concatenate([np.zeros(xA_test.shape[0]), np.ones(xA_test.shape[0]),
                                                       ])
 
-                x = [x_test, encoder_labels_test, decoder_labels_test]
-                y = [y_test, encoder_labels_test]
+                x_test = [x_test, encoder_labels_test, decoder_labels_test]
+                y_test = [y_test, encoder_labels_test]
             else:
                 x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
                 valid_labels, _ = label_encoder(valid_data)
