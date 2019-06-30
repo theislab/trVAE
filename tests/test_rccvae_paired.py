@@ -47,62 +47,12 @@ def train_network(data_dict=None,
                   preprocess=True,
                   learning_rate=0.001,
                   gpus=1,
-                  max_size=50000,
                   early_stopping_limit=50,
                   ):
     data_name = data_dict['name']
-    source_key = data_dict.get('source_key', None)
-    target_key = data_dict.get('target_key', None)
     img_width = data_dict.get("width", None)
     img_height = data_dict.get("height", None)
     n_channels = data_dict.get("n_channels", None)
-
-    data = rcvae.prepare_and_load_edge2shoe(file_path=f"../data/{data_name}/{data_name}.tar.gz",
-                                            restore=True, save=True,
-                                            img_width=img_width, img_height=img_height,
-                                            verbose=True)
-    if sparse.issparse(data.X):
-        data.X = data.X.A
-
-    source_images = data.copy()[data.obs['condition'] == source_key].X
-    target_images = data.copy()[data.obs['condition'] == target_key].X
-
-    source_images = np.reshape(source_images, (-1, img_width, img_height, n_channels))
-    target_images = np.reshape(target_images, (-1, img_width, img_height, n_channels))
-
-    if preprocess:
-        source_images /= 255.0
-        target_images /= 255.0
-
-    source_labels = np.zeros(shape=source_images.shape[0])
-    target_labels = np.ones(shape=target_images.shape[0])
-
-    source_images = np.reshape(source_images, (-1, np.prod(source_images.shape[1:])))
-    source_adata = anndata.AnnData(X=source_images)
-    source_adata.obs['condition'] = source_labels
-
-    target_images = np.reshape(target_images, (-1, np.prod(source_images.shape[1:])))
-    target_adata = anndata.AnnData(X=target_images)
-    target_adata.obs['condition'] = target_labels
-
-    train_size = int(source_adata.shape[0] * 0.85)
-    indices = np.arange(source_adata.shape[0])
-    np.random.shuffle(indices)
-    train_idx = indices[:train_size]
-    test_idx = indices[train_size:]
-
-    data_train_source = source_adata[train_idx, :]
-    data_train_target = target_adata[train_idx, :]
-
-    data_valid_source = source_adata[test_idx, :]
-    data_valid_target = target_adata[test_idx, :]
-
-    data_train = data_train_source.concatenate(data_train_target)
-    data_valid = data_valid_source.concatenate(data_valid_target)
-
-    train_data = data_train.copy()
-    valid_data = data_valid.copy()
-    print(train_data.shape, valid_data.shape)
 
     network = rcvae.RCCVAE(x_dimension=(img_width, img_height, n_channels),
                            z_dimension=z_dim,
@@ -118,16 +68,15 @@ def train_network(data_dict=None,
                            gpus=gpus,
                            dropout_rate=dropout_rate)
 
-    network.train(train_data,
-                  paired=True,
-                  use_validation=True,
-                  valid_data=valid_data,
-                  n_epochs=n_epochs,
-                  batch_size=batch_size,
-                  verbose=2,
-                  early_stop_limit=early_stopping_limit,
-                  shuffle=True,
-                  save=True)
+    network.train_paired(train_path=f"../data/{data_name}/{data_name}.tar.gz",
+                         use_validation=True,
+                         valid_path=f"../data/{data_name}/{data_name}.tar.gz",
+                         n_epochs=n_epochs,
+                         batch_size=batch_size,
+                         verbose=2,
+                         early_stop_limit=early_stopping_limit,
+                         shuffle=True,
+                         save=True)
 
     print("Model has been trained")
 
@@ -425,8 +374,6 @@ if __name__ == '__main__':
                                  help='Learning Rate for Optimizer')
     arguments_group.add_argument('-g', '--gpus', type=int, default=1, required=False,
                                  help='Learning Rate for Optimizer')
-    arguments_group.add_argument('-x', '--max_size', type=int, default=50000, required=False,
-                                 help='Max Size for CelebA')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='do train the network')
     arguments_group.add_argument('-y', '--early_stopping_limit', type=int, default=50, required=False,

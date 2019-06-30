@@ -18,6 +18,7 @@ from keras_vggface.vggface import VGGFace
 from scipy import sparse
 
 from .utils import label_encoder
+from ..data_loader import PairedDataSequence
 
 log = logging.getLogger(__file__)
 
@@ -584,7 +585,7 @@ class RCCVAE:
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
         self._loss_function(compile_gpu_model=False)
 
-    def train(self, train_data, paired=False, use_validation=False, valid_data=None, n_epochs=25, batch_size=32,
+    def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32,
               early_stop_limit=20,
               threshold=0.0025, initial_run=True,
               shuffle=True, verbose=2, save=True):  # TODO: Write minibatches for each source and destination
@@ -702,6 +703,79 @@ class RCCVAE:
                                                 callbacks=callbacks,
                                                 verbose=verbose,
                                                 )
+        if save:
+            os.makedirs(self.model_to_use, exist_ok=True)
+            self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
+            self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
+            self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
+            log.info(f"Model saved in file: {self.model_to_use}. Training finished")
+        return histories
+
+    def train_paired(self, train_path, use_validation=False, valid_path=None, n_epochs=25, batch_size=32,
+                     early_stop_limit=20,
+                     threshold=0.0025, initial_run=True,
+                     shuffle=True, verbose=2, save=True):
+
+        """
+                    Trains the network `n_epochs` times with given `train_data`
+                    and validates the model using validation_data if it was given
+                    in the constructor function. This function is using `early stopping`
+                    technique to prevent overfitting.
+                    # Parameters
+                        n_epochs: int
+                            number of epochs to iterate and optimize network weights
+                        early_stop_limit: int
+                            number of consecutive epochs in which network loss is not going lower.
+                            After this limit, the network will stop training.
+                        threshold: float
+                            Threshold for difference between consecutive validation loss values
+                            if the difference is upper than this `threshold`, this epoch will not
+                            considered as an epoch in early stopping.
+                        full_training: bool
+                            if `True`: Network will be trained with all batches of data in each epoch.
+                            if `False`: Network will be trained with a random batch of data in each epoch.
+                        initial_run: bool
+                            if `True`: The network will initiate training and log some useful initial messages.
+                            if `False`: Network will resume the training using `restore_model` function in order
+                                to restore last model which has been trained with some training dataset.
+                    # Returns
+                        Nothing will be returned
+                    # Example
+                    ```python
+                    import scanpy as sc
+                    import scgen
+                    train_data = sc.read(train_katrain_kang.h5ad           >>> validation_data = sc.read(valid_kang.h5ad)
+                    network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
+                    network.train(n_epochs=20)
+                    ```
+                """
+        if initial_run:
+            log.info("----Training----")
+
+        callbacks = [
+            History(),
+            EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
+            CSVLogger(filename="./csv_logger.log")
+        ]
+        train_generator = PairedDataSequence(train_path, batch_size=batch_size, training=True)
+        if use_validation:
+            valid_generator = PairedDataSequence(valid_path, batch_size=batch_size, training=False)
+            histories = self.gpu_cvae_model.fit_generator(generator=train_generator,
+                                                          epochs=n_epochs,
+                                                          batch_size=batch_size,
+                                                          validation_data=valid_generator,
+                                                          shuffle=shuffle,
+                                                          callbacks=callbacks,
+                                                          verbose=verbose,
+                                                          )
+        else:
+            histories = self.gpu_cvae_model.fit_generator(generator=train_generator,
+                                                          epochs=n_epochs,
+                                                          batch_size=batch_size,
+                                                          shuffle=shuffle,
+                                                          callbacks=callbacks,
+                                                          verbose=verbose,
+                                                          )
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
             self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)

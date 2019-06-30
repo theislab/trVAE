@@ -1,11 +1,10 @@
 import os
-import zipfile
 import tarfile
-from pathlib import Path
-from urllib.request import urlretrieve
+import zipfile
 
 import anndata
 import cv2
+import keras
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -21,7 +20,8 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
                             verbose=True):
     data_path = os.path.dirname(file_path)
     zip_filename = os.path.basename(file_path).split(".")[0]
-    if restore and os.path.exists(os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad")):
+    if restore and os.path.exists(
+            os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad")):
         return sc.read(os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad"))
 
     def load_attr_list(file_path):
@@ -114,7 +114,8 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
         print(data.shape, attr_df.shape)
         data.obs['labels'] = attr_df[gender].values
         data.obs['condition'] = attr_df[attribute].values
-        sc.write(filename=os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad"), adata=data)
+        sc.write(filename=os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad"),
+                 adata=data)
     return data
 
 
@@ -165,10 +166,52 @@ def prepare_and_load_edge2shoe(file_path,
     return data
 
 
-
 def resize_image(images, img_width, img_height):
     images_list = []
     for i in range(images.shape[0]):
         image = cv2.resize(images[i], (img_width, img_height), cv2.INTER_NEAREST)
         images_list.append(image)
     return np.array(images_list)
+
+
+class PairedDataSequence(keras.utils.Sequence):
+    def __init__(self, data_path, batch_size, training=True):
+        self.data_path = data_path
+        self.tar = tarfile.open(data_path)
+        self.batch_size = batch_size
+        self.training = training
+        self.image_members = []
+        for member in self.tar.getmembers():
+            if member.name.endswith(".jpg"):
+                if self.training and member.name.__contains__("train/"):
+                    self.image_members.append(member)
+                elif not self.training and member.name.__contains__("test/"):
+                    self.image_members.append(member)
+
+    def __len__(self):
+        return len(self.image_members)
+
+    def __getitem__(self, idx):
+        batch_members = self.image_members[idx * self.batch_size:(idx + 1) * self.batch_size]
+
+        batch_images = [Image.open(self.tar.extractfile(member)) for member in batch_members]
+        edges = [image.crop((0, 0, 256, 256)).resize((64, 64), Image.BICUBIC) for image in batch_images]
+        images = [image.crop((256, 0, 512, 256)).resize((64, 64), Image.NEAREST) for image in batch_images]
+
+        edges = np.array(edges)
+        images = np.array(images)
+
+        # Preprocessing
+        edges /= 255.0
+        images /= 255.0
+
+        x = np.concatenate([edges, edges, images, images], axis=0)
+        y = np.concatenate([edges, images, images, edges], axis=0)
+        encoder_labels_feed = np.concatenate([np.zeros(edges.shape[0]), np.zeros(edges.shape[0]),
+                                              np.ones(images.shape[0]), np.ones(images.shape[0])])
+
+        decoder_labels_feed = np.concatenate([np.zeros(edges.shape[0]), np.ones(edges.shape[0]),
+                                              np.ones(images.shape[0]), np.zeros(images.shape[0])])
+        x_feed = [x, encoder_labels_feed, decoder_labels_feed]
+        y_feed = [y, encoder_labels_feed]
+        return x_feed, y_feed
