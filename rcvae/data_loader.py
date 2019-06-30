@@ -1,5 +1,6 @@
 import os
 import zipfile
+import tarfile
 from pathlib import Path
 from urllib.request import urlretrieve
 
@@ -115,6 +116,54 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
         data.obs['condition'] = attr_df[attribute].values
         sc.write(filename=os.path.join(data_path, f"celeba_{attribute}_{img_width}x{img_height}_{max_n_images}.h5ad"), adata=data)
     return data
+
+
+def prepare_and_load_edge2shoe(file_path,
+                               restore=True, save=True,
+                               img_width=64, img_height=64,
+                               verbose=True):
+    data_path = os.path.dirname(file_path)
+    if restore and os.path.exists(os.path.join(data_path, f"edges2shoes_{img_width}x{img_height}.h5ad")):
+        return sc.read(os.path.join(data_path, f"edges2shoes_{img_width}x{img_height}.h5ad"))
+
+    tar = tarfile.open(file_path)
+    images, edges = [], []
+
+    counter = 0
+    for member in tar.getmembers():
+        if member.name.endswith(".jpg"):
+            f = tar.extractfile(member)
+            image = Image.open(f)
+
+            edge, image = image.crop((0, 0, 256, 256)), image.crop((256, 0, 512, 256))
+
+            edge = edge.resize((64, 64), Image.BICUBIC)
+            image = image.resize((64, 64), Image.NEAREST)
+
+            edge = np.array(edge)
+            image = np.array(image)
+
+            images.append(image)
+            edges.append(edge)
+
+            counter += 1
+            if verbose and counter % 1000 == 0:
+                print(counter)
+    images = np.array(images)
+    edges = np.array(edges)
+
+    images = images.reshape(-1, np.prod(images.shape[1:]))
+    edges = edges.reshape(-1, np.prod(edges.shape[1:]))
+
+    data = np.concatenate([images, edges], axis=0)
+
+    if save:
+        data = anndata.AnnData(X=data)
+        data.obs['id'] = np.concatenate([np.arange(images.shape[0]), np.arange(images.shape[0])])
+        data.obs['condition'] = ['shoe'] * images.shape[0] + ['edge'] * images.shape[0]
+        sc.write(filename=os.path.join(data_path, f"edges2shoes_{img_width}x{img_height}.h5ad"), adata=data)
+    return data
+
 
 
 def resize_image(images, img_width, img_height):

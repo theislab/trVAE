@@ -584,7 +584,8 @@ class RCCVAE:
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
         self._loss_function(compile_gpu_model=False)
 
-    def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
+    def train(self, train_data, paired=False, use_validation=False, valid_data=None, n_epochs=25, batch_size=32,
+              early_stop_limit=20,
               threshold=0.0025, initial_run=True,
               shuffle=True, verbose=2, save=True):  # TODO: Write minibatches for each source and destination
         """
@@ -636,21 +637,39 @@ class RCCVAE:
             EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
             CSVLogger(filename="./csv_logger.log")
         ]
+        if paired:
+            xA_train = train_data[train_data.obs['condition'] == 0].X
+            xB_train = train_data[train_data.obs['condition'] == 1].X
 
-        if self.train_with_fake_labels:
-            x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
-            x = [x_train, train_labels, pseudo_labels]
-            y = [x_train, train_labels]
+            xA_train = np.reshape(xA_train, newshape=(-1, *self.x_dim))
+            xB_train = np.reshape(xB_train, newshape=(-1, *self.x_dim))
+
+            x = [xA_train, train_labels, train_labels]
+            y = [xB_train, train_labels]
+
         else:
             x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
             x = [x_train, train_labels, train_labels]
             y = [x_train, train_labels]
 
         if use_validation:
-            x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
-            valid_labels, _ = label_encoder(valid_data)
-            x_test = [x_valid, valid_labels, valid_labels]
-            y_test = [x_valid, valid_labels]
+            if paired:
+                xA_test = valid_data[valid_data.obs['condition'] == 0].X
+                xB_test = valid_data[valid_data.obs['condition'] == 1].X
+
+                xA_test = np.reshape(xA_test, newshape=(-1, *self.x_dim))
+                xB_test = np.reshape(xB_test, newshape=(-1, *self.x_dim))
+
+                valid_labels, _ = label_encoder(valid_data)
+
+                x_test = [xA_test, valid_labels, valid_labels]
+                y_test = [xB_test, valid_labels]
+            else:
+                x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
+                valid_labels, _ = label_encoder(valid_data)
+                x_test = [x_valid, valid_labels, valid_labels]
+                y_test = [x_valid, valid_labels]
+
             histories = self.gpu_cvae_model.fit(
                 x=x,
                 y=y,
