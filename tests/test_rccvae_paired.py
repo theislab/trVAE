@@ -104,7 +104,7 @@ def train_network(data_dict=None,
     valid_data = data_valid.copy()
     print(train_data.shape, valid_data.shape)
 
-    network = rcvae.RCCVAE(x_dimension=source_images.shape[1:],
+    network = rcvae.RCCVAE(x_dimension=(img_width, img_height, n_channels),
                            z_dimension=z_dim,
                            mmd_dimension=mmd_dimension,
                            alpha=alpha,
