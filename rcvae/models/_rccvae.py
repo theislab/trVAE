@@ -643,13 +643,13 @@ class RCCVAE:
             xA_train = np.reshape(xA_train, newshape=(-1, *self.x_dim))
             xB_train = np.reshape(xB_train, newshape=(-1, *self.x_dim))
 
-            x_train = np.concatenate([xA_train, xA_train, xB_train, xB_train], axis=0)
-            y_train = np.concatenate([xA_train, xB_train, xB_train, xA_train], axis=0)
+            x_train = np.concatenate([xA_train, xA_train, xB_train], axis=0)
+            y_train = np.concatenate([xA_train, xB_train, xB_train], axis=0)
             encoder_labels_train = np.concatenate([np.zeros(xA_train.shape[0]), np.zeros(xA_train.shape[0]),
-                                                   np.ones(xB_train.shape[0]), np.ones(xB_train.shape[0])])
+                                                   np.ones(xB_train.shape[0])])
 
             decoder_labels_train = np.concatenate([np.zeros(xA_train.shape[0]), np.ones(xA_train.shape[0]),
-                                                   np.ones(xB_train.shape[0]), np.zeros(xB_train.shape[0])])
+                                                   np.ones(xB_train.shape[0])])
 
             x = [x_train, encoder_labels_train, decoder_labels_train]
             y = [y_train, encoder_labels_train]
@@ -667,14 +667,14 @@ class RCCVAE:
                 xA_test = np.reshape(xA_test, newshape=(-1, *self.x_dim))
                 xB_test = np.reshape(xB_test, newshape=(-1, *self.x_dim))
 
-                x_test = np.concatenate([xA_test, xA_test, xB_test, xB_test], axis=0)
-                y_test = np.concatenate([xA_test, xB_test, xB_test, xA_test], axis=0)
+                x_test = np.concatenate([xA_test, xA_test, xB_test, ], axis=0)
+                y_test = np.concatenate([xA_test, xB_test, xB_test, ], axis=0)
 
                 encoder_labels_test = np.concatenate([np.zeros(xA_test.shape[0]), np.zeros(xA_test.shape[0]),
-                                                      np.ones(xB_test.shape[0]), np.ones(xB_test.shape[0])])
+                                                      np.ones(xB_test.shape[0])])
 
                 decoder_labels_test = np.concatenate([np.zeros(xA_test.shape[0]), np.ones(xA_test.shape[0]),
-                                                      np.ones(xB_test.shape[0]), np.zeros(xB_test.shape[0])])
+                                                      np.ones(xB_test.shape[0])])
 
                 x = [x_test, encoder_labels_test, decoder_labels_test]
                 y = [y_test, encoder_labels_test]
