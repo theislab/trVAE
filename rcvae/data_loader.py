@@ -188,6 +188,7 @@ class PairedDataSequence(keras.utils.Sequence):
                 elif not self.training and member.name.__contains__("val/"):
                     self.image_members.append(member)
 
+
     def __len__(self):
         return len(self.image_members)
 
