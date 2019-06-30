@@ -624,7 +624,6 @@ class RCCVAE:
         if initial_run:
             log.info("----Training----")
         train_labels, _ = label_encoder(train_data)
-        pseudo_labels = np.ones(shape=train_labels.shape)
 
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
@@ -644,8 +643,16 @@ class RCCVAE:
             xA_train = np.reshape(xA_train, newshape=(-1, *self.x_dim))
             xB_train = np.reshape(xB_train, newshape=(-1, *self.x_dim))
 
-            x = [xA_train, train_labels, train_labels]
-            y = [xB_train, train_labels]
+            x_train = np.concatenate([xA_train, xA_train, xB_train, xB_train], axis=0)
+            y_train = np.concatenate([xA_train, xB_train, xB_train, xA_train], axis=0)
+            encoder_labels_train = np.concatenate([np.zeros(xA_train.shape[0]), np.zeros(xA_train.shape[0]),
+                                                   np.ones(xB_train.shape[0]), np.ones(xB_train.shape[0])])
+
+            decoder_labels_train = np.concatenate([np.zeros(xA_train.shape[0]), np.ones(xA_train.shape[0]),
+                                                   np.ones(xB_train.shape[0]), np.zeros(xB_train.shape[0])])
+
+            x = [x_train, encoder_labels_train, decoder_labels_train]
+            y = [y_train, encoder_labels_train]
 
         else:
             x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
@@ -660,36 +667,41 @@ class RCCVAE:
                 xA_test = np.reshape(xA_test, newshape=(-1, *self.x_dim))
                 xB_test = np.reshape(xB_test, newshape=(-1, *self.x_dim))
 
-                valid_labels, _ = label_encoder(valid_data)
+                x_test = np.concatenate([xA_test, xA_test, xB_test, xB_test], axis=0)
+                y_test = np.concatenate([xA_test, xB_test, xB_test, xA_test], axis=0)
 
-                x_test = [xA_test, valid_labels, valid_labels]
-                y_test = [xB_test, valid_labels]
+                encoder_labels_test = np.concatenate([np.zeros(xA_test.shape[0]), np.zeros(xA_test.shape[0]),
+                                                      np.ones(xB_test.shape[0]), np.ones(xB_test.shape[0])])
+
+                decoder_labels_test = np.concatenate([np.zeros(xA_test.shape[0]), np.ones(xA_test.shape[0]),
+                                                      np.ones(xB_test.shape[0]), np.zeros(xB_test.shape[0])])
+
+                x = [x_test, encoder_labels_test, decoder_labels_test]
+                y = [y_test, encoder_labels_test]
             else:
                 x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
                 valid_labels, _ = label_encoder(valid_data)
                 x_test = [x_valid, valid_labels, valid_labels]
                 y_test = [x_valid, valid_labels]
 
-            histories = self.gpu_cvae_model.fit(
-                x=x,
-                y=y,
-                epochs=n_epochs,
-                batch_size=batch_size,
-                validation_data=(x_test, y_test),
-                shuffle=shuffle,
-                callbacks=callbacks,
-                verbose=verbose,
-            )
+            histories = self.gpu_cvae_model.fit(x=x,
+                                                y=y,
+                                                epochs=n_epochs,
+                                                batch_size=batch_size,
+                                                validation_data=(x_test, y_test),
+                                                shuffle=shuffle,
+                                                callbacks=callbacks,
+                                                verbose=verbose,
+                                                )
         else:
-            histories = self.gpu_cvae_model.fit(
-                x=x,
-                y=y,
-                epochs=n_epochs,
-                batch_size=batch_size,
-                shuffle=shuffle,
-                callbacks=callbacks,
-                verbose=verbose,
-            )
+            histories = self.gpu_cvae_model.fit(x=x,
+                                                y=y,
+                                                epochs=n_epochs,
+                                                batch_size=batch_size,
+                                                shuffle=shuffle,
+                                                callbacks=callbacks,
+                                                verbose=verbose,
+                                                )
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
             self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
