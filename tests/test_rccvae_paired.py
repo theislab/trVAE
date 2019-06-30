@@ -393,9 +393,6 @@ if __name__ == '__main__':
     else:
         args['preprocess'] = True
 
-    if args['max_size'] == 0:
-        args['max_size'] = None
-
     del args['data']
     del args['width']
     del args['height']
