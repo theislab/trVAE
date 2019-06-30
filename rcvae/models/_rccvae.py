@@ -761,8 +761,10 @@ class RCCVAE:
         if use_validation:
             valid_generator = PairedDataSequence(valid_path, batch_size=batch_size, training=False)
             histories = self.gpu_cvae_model.fit_generator(generator=train_generator,
+                                                          steps_per_epoch=50,
+                                                          workers=8,
+                                                          use_multiprocessing=True,
                                                           epochs=n_epochs,
-                                                          batch_size=batch_size,
                                                           validation_data=valid_generator,
                                                           shuffle=shuffle,
                                                           callbacks=callbacks,
@@ -770,8 +772,10 @@ class RCCVAE:
                                                           )
         else:
             histories = self.gpu_cvae_model.fit_generator(generator=train_generator,
+                                                          steps_per_epoch=50,
+                                                          workers=8,
+                                                          use_multiprocessing=True,
                                                           epochs=n_epochs,
-                                                          batch_size=batch_size,
                                                           shuffle=shuffle,
                                                           callbacks=callbacks,
                                                           verbose=verbose,
