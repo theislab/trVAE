@@ -128,6 +128,8 @@ class RCVAEMulti:
             h = BatchNormalization(axis=1)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
+            h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
+            h = Activation('relu', name="reconstruction_output")(h)
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)
@@ -139,8 +141,9 @@ class RCVAEMulti:
             h = BatchNormalization(axis=1)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
-        h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-        h = Activation('relu', name="reconstruction_output")(h)
+            h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
+            h = LeakyReLU(name="reconstruction_output")(h)
+
         model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
         return h, h_mmd, model
 
