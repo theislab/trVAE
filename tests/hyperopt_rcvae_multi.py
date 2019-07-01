@@ -62,7 +62,7 @@ def create_model(train_data):
                   shuffle=True,
                   save=False)
 
-    source_adata = train_data.copy()[train_data.obs['condition'] == 'Basal_to_Bez']
+    source_adata = train_data.copy()[train_data.obs['condition'] == 'Bez']
 
     source_labels = np.zeros(source_adata.shape[0]) + 1
     target_labels = np.zeros(source_adata.shape[0]) + 3
