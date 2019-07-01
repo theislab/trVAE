@@ -196,6 +196,9 @@ class PairedDataSequence(keras.utils.Sequence):
         edges = np.array(edges)
         images = np.array(images)
 
+        edges = edges.astype(np.float32)
+        images = images.astype(np.float32)
+
         # Pre-processing
         edges /= 255.0
         images /= 255.0
