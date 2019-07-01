@@ -33,6 +33,9 @@ DATASETS = {
                                ('Basal_to_Bez', 'Das', '(Basal_to_Bez)_to_Das', 1, 2),
                                ('Basal_to_Das', 'Bez', '(Basal_to_Das)_to_Bez', 2, 1),
                                ('Basal_to_Bez', 'Bez+Das', '(Basal_to_Bez)_to_Bez+Das', 1, 3),
+                               ('Basal_to_Das', 'Bez+Das', '(Basal_to_Das)_to_Bez+Das', 2, 3),
+                               ('Bez', 'Bez+Das', 'Bez_to_Bez+Das', 1, 3),
+                               ('Das', 'Bez+Das', 'Das_to_Bez+Das', 2, 3),
                                ],
               'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Bez+Das': 3},
               'cell_type': 'cell_label'}
@@ -185,15 +188,15 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
                                        range(n_conditions)]
 
         if data_name in ["pbmc", 'cytof']:
-            sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=100, method="wilcoxon")
-            top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
-            gene_list = top_100_genes[:10]
+            sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=10, method="wilcoxon")
+            top_10_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
+            gene_list = top_10_genes[:10]
         else:
-            sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=100, method="wilcoxon")
-            top_50_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_keys[0]].tolist()
-            top_50_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
-            top_100_genes = top_50_up_genes + top_50_down_genes
-            gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
+            sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=10, method="wilcoxon")
+            top_5_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_keys[0]].tolist()
+            top_5_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
+            top_10_genes = top_5_up_genes + top_5_down_genes
+            gene_list = top_5_down_genes[:5] + top_5_up_genes[:5]
         perturbation_list = data_dict.get("perturbation", [])
         for source, dest, name, source_label, target_label in perturbation_list:
             print(source, dest, name)
@@ -202,7 +205,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
                                                                    name=name,
                                                                    source_label=source_label, target_label=target_label,
                                                                    cell_type=cell_type, data_name=data_name,
-                                                                   top_100_genes=top_100_genes, gene_list=gene_list,
+                                                                   top_100_genes=top_10_genes, gene_list=gene_list,
                                                                    path_to_save=path_to_save)
 
         import matplotlib as mpl
