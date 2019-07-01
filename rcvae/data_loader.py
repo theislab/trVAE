@@ -183,7 +183,7 @@ class PairedDataSequence(keras.utils.Sequence):
         return len(self.image_paths)
 
     def __getitem__(self, idx):
-        batch_image_paths = self.image_paths[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_image_paths = self.image_paths[idx:idx + self.batch_size]
 
         batch_images = [Image.open(image_path) for image_path in batch_image_paths]
         edges = [image.crop((0, 0, 256, 256)).resize((64, 64), Image.BICUBIC) for image in batch_images]
