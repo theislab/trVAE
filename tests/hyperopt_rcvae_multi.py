@@ -34,7 +34,7 @@ def data():
 
 def create_model(train_data):
     data_name = 'cytof'
-    target_keys = 'Bez+Das'
+    target_keys = ['Bez+Das']
     label_encoder = {'Basal': 0, 'Bez': 1, 'Das': 2, 'Bez+Das': 3}
 
     net_train_data = train_data.copy()[~(train_data.obs['condition'].isin(target_keys))]
