@@ -39,7 +39,7 @@ DATASETS = {
 
 def data():
     data_name = 'cytof'
-    train_data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+    train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
     return train_data
 
 
