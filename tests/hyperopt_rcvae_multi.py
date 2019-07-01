@@ -58,6 +58,7 @@ def create_model(train_data):
                   batch_size={{choice([16, 32, 64, 128, 256, 512, 1024, 2048])}},
                   verbose=2,
                   early_stop_limit=50,
+                  monitor='loss',
                   shuffle=True,
                   save=False)
 

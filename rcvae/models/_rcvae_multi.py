@@ -426,7 +426,7 @@ class RCVAEMulti:
         self._loss_function()
 
     def train(self, train_data, le=None, use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
-              threshold=0.0025, initial_run=True,
+              threshold=0.0025, initial_run=True, monitor='val_loss',
               shuffle=True, verbose=2, save=True):
         """
             Trains the network `n_epochs` times with given `train_data`
@@ -472,7 +472,7 @@ class RCVAEMulti:
 
         callbacks = [
             History(),
-            EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
+            EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold),
             CSVLogger(filename="./csv_logger.log")
         ]
 
