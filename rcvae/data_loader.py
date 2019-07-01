@@ -188,8 +188,10 @@ class PairedDataSequence(keras.utils.Sequence):
 
         for image_path in batch_image_paths:
             with Image.open(image_path) as image:
-                edges.append(image.crop((0, 0, 256, 256)).resize((64, 64), Image.BICUBIC))
-                images.append(image.crop((256, 0, 512, 256)).resize((64, 64), Image.NEAREST))
+                edge = np.array(image.crop((0, 0, 256, 256)).resize((64, 64), Image.BICUBIC))
+                image = np.array(image.crop((256, 0, 512, 256)).resize((64, 64), Image.NEAREST))
+                edges.append(edge)
+                images.append(image)
 
         edges = np.array(edges)
         images = np.array(images)
