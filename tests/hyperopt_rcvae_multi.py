@@ -72,7 +72,7 @@ def create_model(train_data):
                                   decoder_labels=target_labels)
 
     pred_adata = anndata.AnnData(X=pred_target)
-    pred_adata.obs['condition'] = ['(Basal_to_Bez)_to_Bez+Das'] * pred_target.shape[0]
+    pred_adata.obs['condition'] = ['Bez_to_Bez+Das'] * pred_target.shape[0]
     pred_adata.var_names = source_adata.var_names
 
     ctrl = pred_adata
