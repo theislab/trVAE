@@ -81,13 +81,17 @@ def create_model(train_data, valid_data):
     ctrl = pred_adata
     stim = train_data.copy()[train_data.obs['condition'] == 'Bez+Das']
 
-    x = np.var(ctrl.X, axis=0)
-    y = np.var(stim.X, axis=0)
-    m, b, r_value, p_value, std_err = stats.linregress(x, y)
+    x_var = np.var(ctrl.X, axis=0)
+    y_var = np.var(stim.X, axis=0)
+    m, b, r_value_var, p_value, std_err = stats.linregress(x_var, y_var)
 
-    best_reg_var = r_value
-    print('Best Reg Var of model:', best_reg_var)
-    return {'loss': -best_reg_var, 'status': STATUS_OK, 'model': network.cvae_model}
+    x_mean = np.mean(ctrl.X, axis=0)
+    y_mean = np.mean(stim.X, axis=0)
+    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean, y_mean)
+
+    best_reg = 1.5 * r_value_var + r_value_mean
+    print('Best Reg Var of model:', best_reg)
+    return {'loss': -best_reg, 'status': STATUS_OK, 'model': network.cvae_model}
 
 
 if __name__ == '__main__':
