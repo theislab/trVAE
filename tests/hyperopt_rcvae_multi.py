@@ -11,17 +11,6 @@ from scipy import stats
 import rcvae
 
 DATASETS = {
-    "HpolySal": {'name': 'Hpoly+Salmonella', 'need_merge': True,
-                 "name1": 'hpoly', 'name2': 'salmonella',
-                 'source_conditions': ['Control', 'Hpoly.Day10'],
-                 'target_conditions': ['Salmonella'],
-                 'preturbation': [('Control', 'Hpoly.Day10', 'ctrl_to_hpoly'),
-                                  ('Control', 'Salmonella', 'ctrl_to_sal'),
-                                  ('ctrl_to_hpoly', 'Salmonella', '(ctrl_to_hpoly)_to_sal'),
-                                  ('ctrl_to_sal', 'hpoly', '(ctrl_to_sal)_to_hpoly'),
-                                  ('Hpoly.Day10', 'Control', 'hpoly_to_ctrl')],
-                 "cell_type": "cell_label", 'spec_cell_types': ['Stem']},
-
     "Cytof": {'name': 'cytof', 'need_merge': False,
               'source_conditions': ['Basal', 'Bez', 'Das'],
               'target_conditions': ['Bez+Das'],
@@ -44,10 +33,9 @@ def data():
 
 
 def create_model(train_data):
-    data_dict = DATASETS['Cytof']
-    data_name = data_dict['name']
+    data_name = 'cytof'
     target_keys = 'Bez+Das'
-    label_encoder = data_dict['label_encoder']
+    label_encoder = {'Basal': 0, 'Bez': 1, 'Das': 2, 'Bez+Das': 3}
 
     net_train_data = train_data.copy()[~(train_data.obs['condition'].isin(target_keys))]
 
