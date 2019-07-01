@@ -29,15 +29,17 @@ DATASETS = {
 def data():
     data_name = 'cytof'
     train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
-    return train_data
+    valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+    return train_data, valid_data
 
 
-def create_model(train_data):
+def create_model(train_data, valid_data):
     data_name = 'cytof'
     target_keys = ['Bez+Das']
     label_encoder = {'Basal': 0, 'Bez': 1, 'Das': 2, 'Bez+Das': 3}
 
     net_train_data = train_data.copy()[~(train_data.obs['condition'].isin(target_keys))]
+    net_valid_data = valid_data.copy()[~(valid_data.obs['condition'].isin(target_keys))]
 
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension={{choice([2, 4, 6, 8, 10, 12])}},
@@ -53,12 +55,13 @@ def create_model(train_data):
 
     network.train(net_train_data,
                   label_encoder,
-                  use_validation=False,
+                  use_validation=True,
+                  valid_data=net_valid_data,
                   n_epochs=5000,
                   batch_size={{choice([16, 32, 64, 128, 256, 512, 1024, 2048])}},
                   verbose=2,
                   early_stop_limit=50,
-                  monitor='loss',
+                  monitor='val_loss',
                   shuffle=True,
                   save=False)
 
