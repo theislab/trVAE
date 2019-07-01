@@ -757,9 +757,12 @@ class RCCVAE:
             EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
             CSVLogger(filename="./csv_logger.log")
         ]
-        train_generator = PairedDataSequence(train_path, batch_size=batch_size, training=True)
+
+        train_image_filepaths = [filepath for filepath in os.listdir(train_path) if filepath.endswith('.jpg')]
+        train_generator = PairedDataSequence(train_image_filepaths, batch_size=batch_size)
         if use_validation:
-            valid_generator = PairedDataSequence(valid_path, batch_size=batch_size, training=False)
+            valid_image_filepaths = [filepath for filepath in os.listdir(valid_path) if filepath.endswith('.jpg')]
+            valid_generator = PairedDataSequence(valid_image_filepaths, batch_size=batch_size)
             histories = self.gpu_cvae_model.fit_generator(generator=train_generator,
                                                           steps_per_epoch=50,
                                                           workers=8,

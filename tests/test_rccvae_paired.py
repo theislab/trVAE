@@ -68,9 +68,9 @@ def train_network(data_dict=None,
                            gpus=gpus,
                            dropout_rate=dropout_rate)
 
-    network.train_paired(train_path=f"../data/{data_name}/{data_name}.tar.gz",
+    network.train_paired(train_path=f"../data/{data_name}/{data_name}/train/",
                          use_validation=True,
-                         valid_path=f"../data/{data_name}/{data_name}.tar.gz",
+                         valid_path=f"../data/{data_name}/{data_name}/val/",
                          n_epochs=n_epochs,
                          batch_size=batch_size,
                          verbose=2,

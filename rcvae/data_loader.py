@@ -175,34 +175,24 @@ def resize_image(images, img_width, img_height):
 
 
 class PairedDataSequence(keras.utils.Sequence):
-    def __init__(self, data_path, batch_size, training=True):
-        self.data_path = data_path
-        self.tar = tarfile.open(data_path)
+    def __init__(self, image_paths, batch_size):
+        self.image_paths = image_paths
         self.batch_size = batch_size
-        self.training = training
-        self.image_members = []
-        for member in self.tar.getmembers():
-            if member.name.endswith(".jpg"):
-                if self.training and member.name.__contains__("train/"):
-                    self.image_members.append(member)
-                elif not self.training and member.name.__contains__("val/"):
-                    self.image_members.append(member)
-
 
     def __len__(self):
-        return len(self.image_members)
+        return len(self.image_paths)
 
     def __getitem__(self, idx):
-        batch_members = self.image_members[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_image_paths = self.image_paths[idx * self.batch_size:(idx + 1) * self.batch_size]
 
-        batch_images = [Image.open(self.tar.extractfile(member)) for member in batch_members]
+        batch_images = [Image.open(image_path) for image_path in batch_image_paths]
         edges = [image.crop((0, 0, 256, 256)).resize((64, 64), Image.BICUBIC) for image in batch_images]
         images = [image.crop((256, 0, 512, 256)).resize((64, 64), Image.NEAREST) for image in batch_images]
 
         edges = np.array(edges)
         images = np.array(images)
 
-        # Preprocessing
+        # Pre-processing
         edges /= 255.0
         images /= 255.0
 
