@@ -1,1 +1,1 @@
-# RCVAE
+# trVAE
