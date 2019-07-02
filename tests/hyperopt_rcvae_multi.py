@@ -29,7 +29,7 @@ def create_model(train_data, valid_data):
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension={{choice([2, 4, 6, 8, 10, 12])}},
                                arch_style=2,
-                               n_conditions=3,
+                               n_conditions=4,
                                mmd_dimension={{choice([4, 6, 8, 10, 12, 14, 16])}},
                                alpha={{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}},
                                beta={{choice([50, 100, 200, 400, 600, 800, 1000])}},
