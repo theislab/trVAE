@@ -10,21 +10,6 @@ from scipy import stats
 
 import rcvae
 
-DATASETS = {
-    "Cytof": {'name': 'cytof', 'need_merge': False,
-              'source_conditions': ['Basal', 'Bez', 'Das'],
-              'target_conditions': ['Bez+Das'],
-              'perturbation': [('Basal', 'Bez', 'Basal_to_Bez', 0, 1),
-                               ('Basal', 'Das', 'Basal_to_Das', 0, 2),
-                               ('Basal_to_Bez', 'Das', '(Basal_to_Bez)_to_Das', 1, 2),
-                               ('Basal_to_Das', 'Bez', '(Basal_to_Das)_to_Bez', 2, 1),
-                               ('Basal_to_Bez', 'Bez+Das', '(Basal_to_Bez)_to_Bez+Das', 1, 3),
-                               ],
-              'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Bez+Das': 3},
-              'cell_type': 'cell_label'}
-
-}
-
 
 def data():
     data_name = 'cytof'
@@ -35,8 +20,8 @@ def data():
 
 def create_model(train_data, valid_data):
     data_name = 'cytof'
-    target_keys = ['Bez+Das']
-    label_encoder = {'Basal': 0, 'Bez': 1, 'Das': 2, 'Bez+Das': 3}
+    target_keys = ['Bez+Das', 'Bez+Tof']
+    label_encoder = {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5}
 
     net_train_data = train_data.copy()[~(train_data.obs['condition'].isin(target_keys))]
     net_valid_data = valid_data.copy()[~(valid_data.obs['condition'].isin(target_keys))]
