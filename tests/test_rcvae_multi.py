@@ -136,7 +136,7 @@ def train_network(data_dict=None,
             print(f"Model for {cell_type} has been trained")
 
 
-def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
+def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, arch_style=1):
     plt.close("all")
     data_name = data_dict['name']
     source_keys = data_dict.get("source_conditions")
@@ -167,9 +167,11 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1):
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
         network = rcvae.RCVAEMulti(x_dimension=data.shape[1],
                                    z_dimension=z_dim,
-                                   n_conditions=3,
+                                   n_conditions=len(source_keys),
+                                   mmd_dimension=mmd_dimension,
                                    arch_style=arch_style,
-                                   model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/", )
+                                   model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/",
+                                   )
 
         network.restore_model()
 
@@ -378,5 +380,6 @@ if __name__ == '__main__':
     if args['do_train'] == 1:
         del args['do_train']
         train_network(data_dict=data_dict, **args)
-    visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'])
+    visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'],
+                                      mmd_dimension=args['mmd_dimension'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
