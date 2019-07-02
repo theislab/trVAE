@@ -119,7 +119,7 @@ def reg_mean_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_m
             fontsize=kwargs.get("textsize", fontsize))
     if diff_genes is not None:
         ax.text(max(x) - max(x) * x_coeff, max(y) - (y_coeff + 0.15) * max(y),
-                r'$\mathrm{R^2_{\mathrm{\mathsf{top\ 100\ DEGs}}}}$= ' + f"{r_value_diff ** 2:.2f}",
+                r'$\mathrm{R^2_{\mathrm{\mathsf{top\ ' + str(len(top_100_genes)) + '\ DEGs}}}}$= ' + f"{r_value_diff ** 2:.2f}",
                 fontsize=kwargs.get("textsize", fontsize))
     pyplot.savefig(f"{path_to_save}", bbox_inches='tight', dpi=100)
     if show:
@@ -228,7 +228,7 @@ def reg_var_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_va
             fontsize=kwargs.get("textsize", fontsize))
     if diff_genes is not None:
         ax.text(max(x) - max(x) * x_coeff, max(y) - (y_coeff + 0.15) * max(y),
-                r'$\mathrm{R^2_{\mathrm{\mathsf{top\ 100\ DEGs}}}}$= ' + f"{r_value_diff ** 2:.2f}",
+                r'$\mathrm{R^2_{\mathrm{\mathsf{top\ ' + str(len(top_100_genes)) + '\ DEGs}}}}$= ' + f"{r_value_diff ** 2:.2f}",
                 fontsize=kwargs.get("textsize", fontsize))
     pyplot.savefig(f"{path_to_save}", bbox_inches='tight', dpi=100)
     if show:
