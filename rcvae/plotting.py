@@ -168,12 +168,11 @@ def reg_var_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_va
         ```
 
         """
-    import seaborn as sns;
+    import seaborn as sns
     sns.set()
     sns.set(color_codes=True)
     if sparse.issparse(adata.X):
         adata.X = adata.X.A
-    sc.tl.rank_genes_groups(adata, groupby=condition_key, n_genes=100, method="wilcoxon")
     diff_genes = top_100_genes
     stim = adata[adata.obs[condition_key] == axis_keys["y"]]
     ctrl = adata[adata.obs[condition_key] == axis_keys["x"]]
