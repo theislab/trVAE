@@ -145,6 +145,7 @@ def train_network(data_dict=None,
 
             network.train(net_train_data,
                           label_encoder,
+                          condition_key,
                           use_validation=True,
                           valid_data=net_valid_data,
                           n_epochs=n_epochs,

@@ -5,7 +5,7 @@ from scipy import sparse
 from sklearn import preprocessing
 
 
-def label_encoder(adata, label_encoder=None):
+def label_encoder(adata, label_encoder=None, condition_key='condition'):
     """
         Encode labels of Annotated `adata` matrix using sklearn.preprocessing.LabelEncoder class.
         Parameters
@@ -25,12 +25,12 @@ def label_encoder(adata, label_encoder=None):
     """
     if label_encoder is None:
         le = preprocessing.LabelEncoder()
-        labels = le.fit_transform(adata.obs["condition"].tolist())
+        labels = le.fit_transform(adata.obs[condition_key].tolist())
     else:
         le = None
         labels = np.zeros(adata.shape[0])
         for condition, label in label_encoder.items():
-            labels[adata.obs['condition'] == condition] = label
+            labels[adata.obs[condition_key] == condition] = label
     return labels.reshape(-1, 1), le
 
 
