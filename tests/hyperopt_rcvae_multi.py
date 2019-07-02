@@ -36,7 +36,7 @@ def create_model(train_data, valid_data):
                                kernel='rbf',
                                learning_rate={{choice([0.01, 0.001, 0.0001, 0.00001])}},
                                model_path=f"../models/RCVAEMulti/{data_name}/hyperopt/",
-                               dropout_rate={{choice([10, 20, 50, 75, 100])}})
+                               dropout_rate={{choice([0.1, 0.2, 0.5, 0.75])}})
 
     network.train(net_train_data,
                   label_encoder,
