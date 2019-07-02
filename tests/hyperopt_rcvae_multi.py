@@ -83,7 +83,7 @@ if __name__ == '__main__':
     best_run, best_model = optim.minimize(model=create_model,
                                           data=data,
                                           algo=tpe.suggest,
-                                          max_evals=100,
+                                          max_evals=2,
                                           trials=Trials())
     print("Best performing model chosen hyper-parameters:")
     print(best_run)
