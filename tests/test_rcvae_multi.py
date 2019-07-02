@@ -129,10 +129,10 @@ def train_network(data_dict=None,
                                                  (train_data.obs[condition_key].isin(target_keys)))]
             net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
                                                  (valid_data.obs[condition_key].isin(target_keys)))]
-
+            n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
             network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                        z_dimension=z_dim,
-                                       n_conditions=len(source_keys),
+                                       n_conditions=n_conditions,
                                        mmd_dimension=mmd_dimension,
                                        alpha=alpha,
                                        arch_style=arch_style,
