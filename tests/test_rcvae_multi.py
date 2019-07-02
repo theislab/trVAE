@@ -312,7 +312,6 @@ def visualize_multi_perturbation_between(network, adata,
                                  legend=False,
                                  fontsize=20,
                                  textsize=14,
-                                 title=cell_type,
                                  path_to_save=os.path.join(path_to_save,
                                                            f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
 
@@ -326,7 +325,6 @@ def visualize_multi_perturbation_between(network, adata,
                                 legend=False,
                                 fontsize=20,
                                 textsize=14,
-                                title=cell_type,
                                 path_to_save=os.path.join(path_to_save,
                                                           f'rcvae_reg_var_{data_name}_{source_condition} to {target_condition}.pdf'))
 
