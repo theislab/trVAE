@@ -43,7 +43,27 @@ DATASETS = {
                                ('Basal_to_Das', 'Bez+Das', '(Basal_to_Das)_to_Bez+Das', 2, 4),
                                ],
               'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
-              'cell_type': 'cell_label'}
+              'cell_type': 'cell_label'},
+
+    "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
+                 'source_conditions': ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', ],
+                 'target_conditions': ['GLP1-E', 'GLP1-E + PEG-insulin'],
+                 'perturbation': [('Ctrl', 'GLP1', 'Ctrl_to_GLP1', 0, 1),
+                                  ('Ctrl', 'Estrogen', 'Ctrl_to_Estrogen', 0, 2),
+                                  ('Ctrl', 'PEG-insulin', 'Ctrl_to_PEG-insulin', 0, 3),
+                                  ('GLP1', 'GLP1-E', 'GLP1_to_GLP1-E', 1, 5),
+                                  ('GLP1', 'GLP1-E + PEG-insulin', 'GLP1_to_GLP1-E + PEG-insulin', 1, 6),
+                                  ('Estrogen', 'GLP1-E', 'Estrogen_to_GLP1-E', 2, 5),
+                                  ('Estrogen', 'GLP1-E + PEG-insulin', 'Estrogen_to_GLP1-E + PEG-insulin', 2, 6),
+                                  ('PEG-insulin', 'GLP1-E + PEG-insulin', 'PEG-insulin_to_GLP1-E + PEG-insulin', 3, 6),
+                                  ('Estrogen_to_GLP1-E', 'GLP1-E + PEG-insulin', '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
+                                  ('GLP1_to_GLP1-E', 'GLP1-E + PEG-insulin', '(GLP1_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
+                                  ],
+                 'label_encoder': {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4, 'GLP1-E': 5,
+                                   'GLP1-E + PEG-insulin': 6},
+                 'spec_cell_types': ['beta'],
+                 'condition': 'treatment',
+                 'cell_type': 'groups_named_broad'},
 
 }
 
@@ -90,6 +110,7 @@ def train_network(data_dict=None,
     cell_type_key = data_dict.get("cell_type", None)
     need_merge = data_dict.get('need_merge', False)
     label_encoder = data_dict.get('label_encoder', None)
+    condition_key = data_dict.get('condition', 'condition')
 
     if need_merge:
         train_data, valid_data = merge_data(data_dict)
@@ -105,9 +126,9 @@ def train_network(data_dict=None,
 
         for cell_type in cell_types:
             net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
-                                                 (train_data.obs['condition'].isin(target_keys)))]
+                                                 (train_data.obs[condition_key].isin(target_keys)))]
             net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
-                                                 (valid_data.obs['condition'].isin(target_keys)))]
+                                                 (valid_data.obs[condition_key].isin(target_keys)))]
 
             network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                        z_dimension=z_dim,
@@ -144,6 +165,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
     cell_type_key = data_dict.get("cell_type", None)
     need_merge = data_dict.get('need_merge', False)
     label_encoder = data_dict.get('label_encoder', None)
+    condition_key = data_dict.get('condition', 'condition')
 
     if need_merge:
         data, _ = merge_data(data_dict)
@@ -162,7 +184,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
         sc.settings.figdir = os.path.abspath(path_to_save)
 
         train_data = data.copy()[
-            ~((data.obs['condition'].isin(target_keys)) & (data.obs[cell_type_key] == cell_type))]
+            ~((data.obs[condition_key].isin(target_keys)) & (data.obs[cell_type_key] == cell_type))]
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
         network = rcvae.RCVAEMulti(x_dimension=data.shape[1],
@@ -195,15 +217,15 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
                                        range(n_conditions)]
 
         if data_name in ["pbmc", 'cytof']:
-            sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=10, method="wilcoxon")
-            top_10_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
-            gene_list = top_10_genes[:10]
+            sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
+            top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
+            gene_list = top_100_genes[:10]
         else:
-            sc.tl.rank_genes_groups(cell_type_adata, groupby="condition", n_genes=10, method="wilcoxon")
-            top_5_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_keys[0]].tolist()
-            top_5_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
-            top_10_genes = top_5_up_genes + top_5_down_genes
-            gene_list = top_5_down_genes[:5] + top_5_up_genes[:5]
+            sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
+            top_50_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_keys[0]].tolist()
+            top_50_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
+            top_100_genes = top_50_up_genes + top_50_down_genes
+            gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
         perturbation_list = data_dict.get("perturbation", [])
         for source, dest, name, source_label, target_label in perturbation_list:
             print(source, dest, name)
@@ -212,24 +234,25 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
                                                                    name=name,
                                                                    source_label=source_label, target_label=target_label,
                                                                    cell_type=cell_type, data_name=data_name,
-                                                                   top_100_genes=top_10_genes, gene_list=gene_list,
-                                                                   path_to_save=path_to_save)
+                                                                   top_100_genes=top_100_genes, gene_list=gene_list,
+                                                                   path_to_save=path_to_save,
+                                                                   condition_key=condition_key)
 
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)
 
         if data_name == "cytof":
-            color = ['condition']
+            color = [condition_key]
         else:
-            color = ['condition', cell_type_key]
+            color = [condition_key, cell_type_key]
 
         latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
-        latent_with_true_labels.obs['condition'] = data.obs['condition'].values
+        latent_with_true_labels.obs[condition_key] = data.obs[condition_key].values
         latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
 
         latent_with_fake_labels = [sc.AnnData(X=latent_with_fake_labels[i]) for i in range(n_conditions)]
         for i in range(n_conditions):
-            latent_with_fake_labels[i].obs['condition'] = data.obs['condition'].values
+            latent_with_fake_labels[i].obs[condition_key] = data.obs[condition_key].values
             latent_with_fake_labels[i].obs[cell_type_key] = data.obs[cell_type_key].values
 
             sc.pp.neighbors(latent_with_fake_labels[i])
@@ -241,12 +264,12 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
                        frameon=False)
 
         mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
-        mmd_latent_with_true_labels.obs['condition'] = data.obs['condition'].values
+        mmd_latent_with_true_labels.obs[condition_key] = data.obs[condition_key].values
         mmd_latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
 
         mmd_latent_with_fake_labels = [sc.AnnData(X=mmd_latent_with_fake_labels[i]) for i in range(n_conditions)]
         for i in range(n_conditions):
-            mmd_latent_with_fake_labels[i].obs['condition'] = data.obs['condition'].values
+            mmd_latent_with_fake_labels[i].obs[condition_key] = data.obs[condition_key].values
             mmd_latent_with_fake_labels[i].obs[cell_type_key] = data.obs[cell_type_key].values
 
             sc.pp.neighbors(mmd_latent_with_fake_labels[i])
@@ -281,11 +304,11 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
                    wspace=0.15,
                    frameon=False)
 
-        # sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby='condition',
-        #              save=f"_{data_name}_{cell_type}_{top_100_genes[0]}",
-        #              show=False,
-        #              wspace=0.15,
-        #              frameon=False)
+        sc.pl.violin(cell_type_adata, keys=top_100_genes[0], groupby=condition_key,
+                     save=f"_{data_name}_{cell_type}_{top_100_genes[0]}",
+                     show=False,
+                     wspace=0.15,
+                     frameon=False)
 
         plt.close("all")
 
@@ -293,8 +316,9 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
 def visualize_multi_perturbation_between(network, adata,
                                          source_condition, target_condition, source_label, target_label, name,
                                          cell_type='', data_name="", top_100_genes=None, gene_list=None,
-                                         path_to_save='./'):
-    adata_source = adata.copy()[adata.obs['condition'] == source_condition]
+                                         path_to_save='./',
+                                         condition_key='condition'):
+    adata_source = adata.copy()[adata.obs[condition_key] == source_condition]
 
     source_labels = np.zeros(adata_source.shape[0]) + source_label
     target_labels = np.zeros(adata_source.shape[0]) + target_label
@@ -304,15 +328,15 @@ def visualize_multi_perturbation_between(network, adata,
                                   decoder_labels=target_labels)
 
     pred_adata = anndata.AnnData(X=pred_target)
-    pred_adata.obs['condition'] = [name] * pred_target.shape[0]
+    pred_adata.obs[condition_key] = [name] * pred_target.shape[0]
     pred_adata.var_names = adata.var_names
 
     adata = adata.concatenate(adata, pred_adata)
-    print(adata.obs['condition'].unique().tolist())
+    print(adata.obs[condition_key].unique().tolist())
     rcvae.plotting.reg_mean_plot(adata,
                                  top_100_genes=top_100_genes,
-                                 gene_list=gene_list + ['p4EBP1'] + ['pSTAT5'],
-                                 condition_key='condition',
+                                 gene_list=gene_list,
+                                 condition_key=condition_key,
                                  axis_keys={"x": f'{name}', 'y': target_condition},
                                  labels={'x': f'{source_condition} to {target_condition}',
                                          'y': f'real {target_condition}'},
@@ -324,8 +348,8 @@ def visualize_multi_perturbation_between(network, adata,
 
     rcvae.plotting.reg_var_plot(adata,
                                 top_100_genes=top_100_genes,
-                                gene_list=gene_list + ['p4EBP1'] + ['pSTAT5'],
-                                condition_key='condition',
+                                gene_list=gene_list,
+                                condition_key=condition_key,
                                 axis_keys={"x": f'{name}', 'y': target_condition},
                                 labels={'x': f'{source_condition} to {target_condition}',
                                         'y': f'real {target_condition}'},
@@ -335,10 +359,10 @@ def visualize_multi_perturbation_between(network, adata,
                                 path_to_save=os.path.join(path_to_save,
                                                           f'rcvae_reg_var_{data_name}_{source_condition} to {target_condition}.pdf'))
 
-    adata_scatter = adata.copy()[adata.obs['condition'].isin([name, target_condition, 'Bez', 'Das', 'Bez+Das'])]
-    sc.pl.scatter(adata_scatter, x='p4EBP1', y='pSTAT5', color="condition",
-                  save=f'_rcvae_{data_name}_{source_condition} to {target_condition}.png',
-                  )
+    # adata_scatter = adata.copy()[adata.obs[condition_key].isin([name, target_condition, 'Bez', 'Das', 'Bez+Das'])]
+    # sc.pl.scatter(adata_scatter, x='p4EBP1', y='pSTAT5', color="condition",
+    #               save=f'_rcvae_{data_name}_{source_condition} to {target_condition}.png',
+    #               )
 
     return adata
 
