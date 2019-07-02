@@ -203,7 +203,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
 
         feed_data = data.X
 
-        train_labels, _ = rcvae.label_encoder(data, label_encoder)
+        train_labels, _ = rcvae.label_encoder(data, label_encoder, condition_key)
         fake_labels = []
 
         n_conditions = len(source_keys) + len(target_keys)
