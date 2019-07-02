@@ -492,7 +492,7 @@ class RCVAEMulti:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
 
-            valid_labels, _ = label_encoder(valid_data, le)
+            valid_labels, _ = label_encoder(valid_data, le, condition_key)
 
             if shuffle:
                 valid_data, valid_labels = shuffle_data(valid_data, valid_labels)
