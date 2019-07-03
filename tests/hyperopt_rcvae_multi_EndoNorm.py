@@ -51,6 +51,7 @@ def create_model(train_data, valid_data):
 
     network.train(net_train_data,
                   label_encoder,
+                  condition_key,
                   use_validation=True,
                   valid_data=net_valid_data,
                   n_epochs=5000,
