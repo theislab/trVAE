@@ -333,9 +333,12 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
                                          path_to_save='./',
                                          condition_key='condition'):
     adata_source = adata.copy()[adata.obs[condition_key] == source_condition]
+    adata_target = adata.copy()[adata.obs[condition_key] == target_condition]
 
     if adata_source.shape[0] == 0:
         adata_source = pred_adatas.copy()[pred_adatas.obs[condition_key] == source_condition]
+        adata_target = pred_adatas.copy()[pred_adatas.obs[condition_key] == target_condition]
+
 
     source_labels = np.zeros(adata_source.shape[0]) + source_label
     target_labels = np.zeros(adata_source.shape[0]) + target_label
@@ -354,7 +357,7 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
     if sparse.issparse(pred_adata.X):
         pred_adata.X = pred_adata.X.A
 
-    adata_to_plot = pred_adata.concatenate(adata_source)
+    adata_to_plot = pred_adata.concatenate(adata_target)
 
     rcvae.plotting.reg_mean_plot(adata_to_plot,
                                  top_100_genes=top_100_genes,
