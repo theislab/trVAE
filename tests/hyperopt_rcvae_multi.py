@@ -10,7 +10,7 @@ from hyperas import optim
 from hyperas.distributions import choice
 from hyperopt import Trials, STATUS_OK, tpe
 from scipy import stats, sparse
-
+from matplotlib import pyplot as plt
 import rcvae
 
 
