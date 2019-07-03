@@ -56,8 +56,10 @@ DATASETS = {
                                   ('Estrogen', 'GLP1-E', 'Estrogen_to_GLP1-E', 2, 5),
                                   ('Estrogen', 'GLP1-E + PEG-insulin', 'Estrogen_to_GLP1-E + PEG-insulin', 2, 6),
                                   ('PEG-insulin', 'GLP1-E + PEG-insulin', 'PEG-insulin_to_GLP1-E + PEG-insulin', 3, 6),
-                                  ('Estrogen_to_GLP1-E', 'GLP1-E + PEG-insulin', '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
-                                  ('GLP1_to_GLP1-E', 'GLP1-E + PEG-insulin', '(GLP1_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
+                                  ('Estrogen_to_GLP1-E', 'GLP1-E + PEG-insulin',
+                                   '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
+                                  ('GLP1_to_GLP1-E', 'GLP1-E + PEG-insulin', '(GLP1_to_GLP1-E)_to_GLP1-E + PEG-insulin',
+                                   5, 6),
                                   ],
                  'label_encoder': {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4, 'GLP1-E': 5,
                                    'GLP1-E + PEG-insulin': 6},
@@ -228,16 +230,23 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
             top_100_genes = top_50_up_genes + top_50_down_genes
             gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
         perturbation_list = data_dict.get("perturbation", [])
+        pred_adatas = None
         for source, dest, name, source_label, target_label in perturbation_list:
             print(source, dest, name)
-            cell_type_adata = visualize_multi_perturbation_between(network, cell_type_adata,
-                                                                   source_condition=source, target_condition=dest,
-                                                                   name=name,
-                                                                   source_label=source_label, target_label=target_label,
-                                                                   cell_type=cell_type, data_name=data_name,
-                                                                   top_100_genes=top_100_genes, gene_list=gene_list,
-                                                                   path_to_save=path_to_save,
-                                                                   condition_key=condition_key)
+            pred_adata = visualize_multi_perturbation_between(network, cell_type_adata, pred_adatas,
+                                                              source_condition=source, target_condition=dest,
+                                                              name=name,
+                                                              source_label=source_label, target_label=target_label,
+                                                              cell_type=cell_type, data_name=data_name,
+                                                              top_100_genes=top_100_genes, gene_list=gene_list,
+                                                              path_to_save=path_to_save,
+                                                              condition_key=condition_key)
+            if pred_adatas is None:
+                pred_adatas = pred_adata
+            else:
+                pred_adatas = pred_adatas.concatenate(pred_adata)
+
+        pred_adatas.write_h5ad(filename=f"../data/reconstructed/RCVAEMulti/{data_name}.h5ad")
 
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)
@@ -314,12 +323,15 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
         plt.close("all")
 
 
-def visualize_multi_perturbation_between(network, adata,
+def visualize_multi_perturbation_between(network, adata, pred_adatas,
                                          source_condition, target_condition, source_label, target_label, name,
                                          cell_type='', data_name="", top_100_genes=None, gene_list=None,
                                          path_to_save='./',
                                          condition_key='condition'):
     adata_source = adata.copy()[adata.obs[condition_key] == source_condition]
+
+    if adata_source.shape[0] == 0:
+        adata_source = pred_adatas.copy()[pred_adatas.obs[condition_key] == source_condition]
 
     source_labels = np.zeros(adata_source.shape[0]) + source_label
     target_labels = np.zeros(adata_source.shape[0]) + target_label
@@ -332,8 +344,6 @@ def visualize_multi_perturbation_between(network, adata,
     pred_adata.obs[condition_key] = [name] * pred_target.shape[0]
     pred_adata.var_names = adata.var_names
 
-    adata = adata.concatenate(adata, pred_adata)
-    print(adata.obs[condition_key].unique().tolist())
     rcvae.plotting.reg_mean_plot(adata,
                                  top_100_genes=top_100_genes,
                                  gene_list=gene_list,
@@ -365,7 +375,7 @@ def visualize_multi_perturbation_between(network, adata,
     #               save=f'_rcvae_{data_name}_{source_condition} to {target_condition}.png',
     #               )
 
-    return adata
+    return pred_adata
 
 
 if __name__ == '__main__':
