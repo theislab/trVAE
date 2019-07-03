@@ -41,18 +41,45 @@ def data(data_key):
                      'cell_type': 'groups_named_broad'},
 
     }
-    data_dict = DATASETS[data_key]
-    data_name = data_dict['name']
+    data_name = DATASETS[data_key]['name']
     train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
     valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
 
-    def inner_data(data_dict=DATASETS[data_key]):
-        return train_data, valid_data, data_dict
+    def inner_data():
+        return train_data, valid_data, data_key
 
     return inner_data
 
 
-def create_model(train_data, valid_data, data_dict):
+def create_model(train_data, valid_data, data_key):
+    DATASETS = {
+        "HpolySal": {'name': 'Hpoly+Salmonella', 'need_merge': True,
+                     "name1": 'hpoly', 'name2': 'salmonella',
+                     'source_conditions': ['Control', 'Hpoly.Day10'],
+                     'target_conditions': ['Salmonella'],
+                     'transition': ('ctrl_to_hpoly', 'Salmonella', '(ctrl_to_hpoly)_to_sal'),
+                     "cell_type": "cell_label", 'spec_cell_types': ['Stem']},
+
+        "Cytof": {'name': 'cytof', 'need_merge': False,
+                  'source_conditions': ['Basal', 'Bez', 'Das', 'Tof'],
+                  'target_conditions': ['Bez+Das', 'Bez+Tof'],
+                  'transition': ('Basal_to_Bez', 'Bez+Tof', '(Basal_to_Bez)_to_Bez+Tof', 1, 5),
+                  'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
+                  'cell_type': 'cell_label'},
+
+        "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
+                     'source_conditions': ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', ],
+                     'target_conditions': ['GLP1-E', 'GLP1-E + PEG-insulin'],
+                     'transition': ('Estrogen', 'GLP1-E', 'Estrogen_to_GLP1-E', 2, 5),
+                     'label_encoder': {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4,
+                                       'GLP1-E': 5,
+                                       'GLP1-E + PEG-insulin': 6},
+                     'spec_cell_types': ['beta'],
+                     'condition': 'treatment',
+                     'cell_type': 'groups_named_broad'},
+
+    }
+    data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
