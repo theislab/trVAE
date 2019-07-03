@@ -322,6 +322,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
                          save=f"_{data_name}_{cell_type}_{gene}.pdf",
                          show=False,
                          wspace=0.2,
+                         rotation=90,
                          frameon=False)
 
         plt.close("all")
