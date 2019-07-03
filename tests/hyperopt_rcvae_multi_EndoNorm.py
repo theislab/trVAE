@@ -23,12 +23,12 @@ def data():
 
 def create_model(train_data, valid_data):
     data_name = 'endo_norm'
-    source_keys = ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', ]
     target_keys = ['GLP1-E', 'GLP1-E + PEG-insulin']
     label_encoder = {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4, 'GLP1-E': 5,
                      'GLP1-E + PEG-insulin': 6}
     condition_key = 'treatment'
     cell_type_key = 'groups_named_broad'
+    cell_type = 'beta'
 
     net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
                                          (train_data.obs[condition_key].isin(target_keys)))]
@@ -61,7 +61,8 @@ def create_model(train_data, valid_data):
                   shuffle=True,
                   save=False)
 
-    source_adata = train_data.copy()[train_data.obs[condition_key] == 'GLP1']
+    cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
+    source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == 'GLP1']
 
     source_labels = np.zeros(source_adata.shape[0]) + 1
     target_labels = np.zeros(source_adata.shape[0]) + 5
@@ -75,7 +76,7 @@ def create_model(train_data, valid_data):
     pred_adata.var_names = source_adata.var_names
 
     pred_target = pred_adata
-    real_target = train_data.copy()[train_data.obs['condition'] == 'GLP1-E']
+    real_target = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == 'GLP1-E']
 
     x_var = np.var(pred_target.X, axis=0)
     y_var = np.var(real_target.X, axis=0)
