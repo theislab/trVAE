@@ -100,10 +100,8 @@ def create_model(train_data, valid_data,
                   save=False)
 
     cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
-
     sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100, method="wilcoxon")
     top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_condition].tolist()
-    cell_type_adata = cell_type_adata[:, top_100_genes]
 
     source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == source_condition]
 
@@ -119,6 +117,9 @@ def create_model(train_data, valid_data,
 
     pred_target = pred_adata.copy()
     real_target = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == target_condition]
+
+    pred_target = pred_target.copy()[:, top_100_genes]
+    real_target = real_target.copy()[:, top_100_genes]
 
     if sparse.issparse(pred_target.X):
         pred_target.X = pred_target.X.A
