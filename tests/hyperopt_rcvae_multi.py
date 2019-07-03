@@ -21,8 +21,7 @@ args = vars(parser.parse_args())
 data_key = args['data']
 
 
-def data():
-    global data_key
+def data(data_key):
     DATASETS = {
         "HpolySal": {'name': 'Hpoly+Salmonella', 'need_merge': True,
                      "name1": 'hpoly', 'name2': 'salmonella',
@@ -50,13 +49,14 @@ def data():
                      'cell_type': 'groups_named_broad'},
 
     }
+    def inner_data():
+        data_dict = DATASETS[data_key]
+        data_name = data_dict['name']
 
-    data_dict = DATASETS[data_key]
-    data_name = data_dict['name']
-
-    train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
-    valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
-    return train_data, valid_data, data_dict
+        train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
+        valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+        return train_data, valid_data, data_dict
+    return inner_data()
 
 
 def create_model(train_data, valid_data, data_dict):
@@ -126,8 +126,9 @@ def create_model(train_data, valid_data, data_dict):
 
 
 if __name__ == '__main__':
+    global data_key
     best_run, best_model = optim.minimize(model=create_model,
-                                          data=data,
+                                          data=data(data_key),
                                           algo=tpe.suggest,
                                           max_evals=2,
                                           trials=Trials())
