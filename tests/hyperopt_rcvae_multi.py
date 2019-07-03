@@ -87,7 +87,7 @@ def create_model(train_data, valid_data,
                   condition_key,
                   use_validation=True,
                   valid_data=net_valid_data,
-                  n_epochs=5000,
+                  n_epochs=5,
                   batch_size={{choice([32, 64, 128, 256, 512, 1024, 2048])}},
                   verbose=2,
                   early_stop_limit=50,
@@ -296,7 +296,7 @@ if __name__ == '__main__':
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
-    train_labels, _ = rcvae.label_encoder(data, label_encoder, condition_key)
+    train_labels, _ = rcvae.label_encoder(train_data, label_encoder, condition_key)
     fake_labels = []
     for i in range(n_conditions):
         fake_labels.append(np.zeros(train_labels.shape) + i)
