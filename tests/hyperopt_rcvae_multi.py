@@ -9,8 +9,9 @@ import scanpy as sc
 from hyperas import optim
 from hyperas.distributions import choice
 from hyperopt import Trials, STATUS_OK, tpe
-from scipy import stats, sparse
 from matplotlib import pyplot as plt
+from scipy import stats, sparse
+
 import rcvae
 
 
@@ -46,6 +47,8 @@ def data():
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
+    cell_type_key = data_dict['cell_type']
+    cell_type = data_dict['spec_cell_types'][0]
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
 
@@ -61,12 +64,13 @@ def data():
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
-    return train_data, valid_data, net_train_data, net_valid_data, condition_key, n_conditions, label_encoder, arch_style, data_name, source_condition, target_condition, source_label, target_label
+    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type, n_conditions, label_encoder, arch_style, data_name, source_condition, target_condition, source_label, target_label
 
 
 def create_model(train_data, valid_data,
                  net_train_data, net_valid_data,
-                 condition_key, n_conditions,
+                 condition_key, cell_type_key,
+                 cell_type, n_conditions,
                  label_encoder,
                  arch_style, data_name,
                  source_condition, target_condition, source_label, target_label):
@@ -95,7 +99,13 @@ def create_model(train_data, valid_data,
                   shuffle=True,
                   save=False)
 
-    source_adata = train_data.copy()[train_data.obs[condition_key] == source_condition]
+    cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
+
+    sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100, method="wilcoxon")
+    top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_condition].tolist()
+    cell_type_adata = cell_type_adata[:, top_100_genes]
+
+    source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == source_condition]
 
     source_labels = np.zeros(source_adata.shape[0]) + source_label
     target_labels = np.zeros(source_adata.shape[0]) + target_label
@@ -108,7 +118,7 @@ def create_model(train_data, valid_data,
     pred_adata.var_names = source_adata.var_names
 
     pred_target = pred_adata.copy()
-    real_target = train_data.copy()[train_data.obs[condition_key] == target_condition]
+    real_target = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == target_condition]
 
     if sparse.issparse(pred_target.X):
         pred_target.X = pred_target.X.A
@@ -422,6 +432,9 @@ if __name__ == '__main__':
                      frameon=False)
 
     plt.close("all")
+
+    print("All Done!")
+    print(best_run)
 
 """
     best run for MMD-CVAE:
