@@ -104,6 +104,7 @@ def train_network(data_dict=None,
                   dropout_rate=0.2,
                   learning_rate=0.001,
                   arch_style=1,
+                  n_gpus=1,
                   ):
     data_name = data_dict['name']
     source_keys = data_dict.get("source_conditions")
@@ -140,8 +141,8 @@ def train_network(data_dict=None,
                                        beta=beta,
                                        kernel=kernel,
                                        learning_rate=learning_rate,
-                                       train_with_fake_labels=False,
                                        model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}-{arch_style}/",
+                                       n_gpus=n_gpus,
                                        dropout_rate=dropout_rate)
 
             network.train(net_train_data,
@@ -427,6 +428,8 @@ if __name__ == '__main__':
                                  help='Architecture Style')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='Learning rate of optimizer')
+    arguments_group.add_argument('-g', '--n_gpus', type=int, default=1, required=False,
+                                 help='Number of GPUs')
 
     args = vars(parser.parse_args())
 

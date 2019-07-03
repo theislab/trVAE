@@ -54,7 +54,7 @@ class RCVAEMulti:
         self.train_with_fake_labels = kwargs.get("train_with_fake_labels", False)
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.arch_style = kwargs.get("arch_style", 1)
-        self.n_gpus = kwargs.get("gpus", 1)
+        self.n_gpus = kwargs.get("n_gpus", 1)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
