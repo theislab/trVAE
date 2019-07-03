@@ -339,7 +339,6 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
         adata_source = pred_adatas.copy()[pred_adatas.obs[condition_key] == source_condition]
         adata_target = pred_adatas.copy()[pred_adatas.obs[condition_key] == target_condition]
 
-
     source_labels = np.zeros(adata_source.shape[0]) + source_label
     target_labels = np.zeros(adata_source.shape[0]) + target_label
 
