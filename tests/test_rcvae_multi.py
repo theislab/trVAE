@@ -352,6 +352,7 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
 
     if sparse.issparse(adata_source.X):
         adata_source.X = adata_source.X.A
+        adata_target.X = adata_target.X.A
 
     if sparse.issparse(pred_adata.X):
         pred_adata.X = pred_adata.X.A
