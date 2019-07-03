@@ -43,10 +43,10 @@ def data(data_key):
     }
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
+    train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
+    valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
 
     def inner_data():
-        train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
-        valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
         return train_data, valid_data, data_dict
 
     return inner_data
