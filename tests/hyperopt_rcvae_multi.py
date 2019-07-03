@@ -193,6 +193,8 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='name of dataset you want to train')
+    arguments_group.add_argument('-n', '--max_evals', type=str, required=True,
+                                 help='name of dataset you want to train')
 
     args = vars(parser.parse_args())
     data_key = args['data']
@@ -200,7 +202,7 @@ if __name__ == '__main__':
     best_run, best_network = optim.minimize(model=create_model,
                                             data=data,
                                             algo=tpe.suggest,
-                                            max_evals=2,
+                                            max_evals=args['max_evals'],
                                             trials=Trials())
     # print("Best performing model chosen hyper-parameters:")
     # print(best_run)
