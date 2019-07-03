@@ -9,6 +9,7 @@ from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
+from keras.utils import multi_gpu_model
 from scipy import sparse
 
 from rcvae.models.utils import label_encoder, shuffle_data
@@ -53,6 +54,7 @@ class RCVAEMulti:
         self.train_with_fake_labels = kwargs.get("train_with_fake_labels", False)
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.arch_style = kwargs.get("arch_style", 1)
+        self.n_gpus = kwargs.get("gpus", 1)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
@@ -187,6 +189,19 @@ class RCVAEMulti:
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
+        if self.n_gpus > 1:
+            self.gpu_cvae_model = multi_gpu_model(self.cvae_model,
+                                                  gpus=self.n_gpus)
+            self.gpu_encoder_model = multi_gpu_model(self.encoder_model,
+                                                     gpus=self.n_gpus)
+            self.gpu_decoder_model = multi_gpu_model(self.decoder_model,
+                                                     gpus=self.n_gpus)
+        else:
+            self.gpu_cvae_model = self.cvae_model
+            self.gpu_encoder_model = self.encoder_model
+            self.gpu_decoder_model = self.decoder_model
+
+
 
     @staticmethod
     def compute_kernel(x, y, kernel='rbf', **kwargs):
@@ -247,7 +262,7 @@ class RCVAEMulti:
         xy_kernel = RCVAEMulti.compute_kernel(x, y, kernel=kernel, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
-    def _loss_function(self):
+    def _loss_function(self, compile_gpu_model=False):
         """
             Defines the loss function of C-VAE network after constructing the whole
             network. This will define the KL Divergence and Reconstruction loss for
@@ -293,7 +308,8 @@ class RCVAEMulti:
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
-            self.cvae_model.compile(optimizer=self.cvae_optimizer,
+
+            self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
                                     loss=[kl_recon_loss, mmd_loss],
                                     metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
                                              self.cvae_model.outputs[1].name: mmd_loss})
@@ -423,6 +439,7 @@ class RCVAEMulti:
         self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False)
         self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
+        self.gpu_cvae_model = self.cvae_model
         self._loss_function()
 
     def train(self, train_data, le=None, condition_key='condition', use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
@@ -499,7 +516,7 @@ class RCVAEMulti:
 
             x_valid = [valid_data.X, valid_labels, valid_labels]
             y_valid = [valid_data.X, valid_labels]
-            histories = self.cvae_model.fit(
+            histories = self.gpu_cvae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
@@ -509,7 +526,7 @@ class RCVAEMulti:
                 callbacks=callbacks,
                 verbose=verbose)
         else:
-            histories = self.cvae_model.fit(
+            histories = self.gpu_cvae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
