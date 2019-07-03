@@ -13,7 +13,6 @@ from scipy import stats
 import rcvae
 
 
-
 def data(data_key):
     DATASETS = {
         "HpolySal": {'name': 'Hpoly+Salmonella', 'need_merge': True,
@@ -42,6 +41,7 @@ def data(data_key):
                      'cell_type': 'groups_named_broad'},
 
     }
+
     def inner_data():
         data_dict = DATASETS[data_key]
         data_name = data_dict['name']
@@ -49,7 +49,8 @@ def data(data_key):
         train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
         valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
         return train_data, valid_data, data_dict
-    return inner_data()
+
+    return inner_data
 
 
 def create_model(train_data, valid_data, data_dict):
