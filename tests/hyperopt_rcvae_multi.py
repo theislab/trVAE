@@ -13,7 +13,7 @@ from scipy import stats
 import rcvae
 
 
-def data(data_key='EndoNorm'):
+def data():
     DATASETS = {
         "HpolySal": {'name': 'Hpoly+Salmonella', 'need_merge': True,
                      "name1": 'hpoly', 'name2': 'salmonella',
@@ -41,7 +41,7 @@ def data(data_key='EndoNorm'):
                      'cell_type': 'groups_named_broad'},
 
     }
-
+    data_key = "EndoNorm"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -61,7 +61,6 @@ def data(data_key='EndoNorm'):
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
     return train_data, valid_data, net_train_data, net_valid_data, condition_key, n_conditions, label_encoder, arch_style, data_name, source_condition, target_condition, source_label, target_label
-
 
 
 def create_model(train_data, valid_data,
