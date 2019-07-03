@@ -12,13 +12,6 @@ from scipy import stats
 
 import rcvae
 
-parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')
-arguments_group = parser.add_argument_group("Parameters")
-arguments_group.add_argument('-d', '--data', type=str, required=True,
-                             help='name of dataset you want to train')
-
-args = vars(parser.parse_args())
-data_key = args['data']
 
 
 def data(data_key):
@@ -126,7 +119,14 @@ def create_model(train_data, valid_data, data_dict):
 
 
 if __name__ == '__main__':
-    global data_key
+    parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')
+    arguments_group = parser.add_argument_group("Parameters")
+    arguments_group.add_argument('-d', '--data', type=str, required=True,
+                                 help='name of dataset you want to train')
+
+    args = vars(parser.parse_args())
+    data_key = args['data']
+
     best_run, best_model = optim.minimize(model=create_model,
                                           data=data(data_key),
                                           algo=tpe.suggest,
