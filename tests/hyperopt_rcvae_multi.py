@@ -13,7 +13,7 @@ from scipy import stats
 import rcvae
 
 
-def data(data_key):
+def data(data_key='EndoNorm'):
     DATASETS = {
         "HpolySal": {'name': 'Hpoly+Salmonella', 'need_merge': True,
                      "name1": 'hpoly', 'name2': 'salmonella',
@@ -60,10 +60,8 @@ def data(data_key):
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
-    def inner_data():
-        return train_data, valid_data, net_train_data, net_valid_data, condition_key, n_conditions, label_encoder, arch_style, data_name, source_condition, target_condition, source_label, target_label
+    return train_data, valid_data, net_train_data, net_valid_data, condition_key, n_conditions, label_encoder, arch_style, data_name, source_condition, target_condition, source_label, target_label
 
-    return inner_data
 
 
 def create_model(train_data, valid_data,
@@ -135,7 +133,7 @@ if __name__ == '__main__':
     data_key = args['data']
 
     best_run, best_model = optim.minimize(model=create_model,
-                                          data=data(data_key),
+                                          data=data,
                                           algo=tpe.suggest,
                                           max_evals=2,
                                           trials=Trials())
