@@ -318,7 +318,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
                    frameon=False)
 
         for gene in top_100_genes[:3]:
-            sc.pl.violin(cell_type_adata, keys=gene, groupby=condition_key,
+            sc.pl.violin(pred_adatas, keys=gene, groupby=condition_key,
                          save=f"_{data_name}_{cell_type}_{gene}.pdf",
                          show=False,
                          wspace=0.2,
