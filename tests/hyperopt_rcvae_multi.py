@@ -58,13 +58,20 @@ def data(data_key):
 
     arch_style = 2 if data_name == 'cytof' else 1
 
+    source_condition, target_condition, _, source_label, target_label = data_dict['transition']
+
     def inner_data():
-        return train_data, valid_data, net_train_data, net_valid_data, condition_key, n_conditions, label_encoder, arch_style, data_name
+        return train_data, valid_data, net_train_data, net_valid_data, condition_key, n_conditions, label_encoder, arch_style, data_name, source_condition, target_condition, source_label, target_label
 
     return inner_data
 
 
-def create_model(train_data, valid_data, net_train_data, net_valid_data, condition_key, n_conditions, label_encoder, arch_style, data_name):
+def create_model(train_data, valid_data,
+                 net_train_data, net_valid_data,
+                 condition_key, n_conditions,
+                 label_encoder,
+                 arch_style, data_name,
+                 source_condition, target_condition, source_label, target_label):
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension={{choice([20, 40, 50, 60, 80, 100, 200])}},
                                arch_style=arch_style,
@@ -90,7 +97,6 @@ def create_model(train_data, valid_data, net_train_data, net_valid_data, conditi
                   shuffle=True,
                   save=False)
 
-    source_condition, target_condition, _, source_label, target_label = data_dict['transition']
     source_adata = train_data.copy()[train_data.obs[condition_key] == source_condition]
 
     source_labels = np.zeros(source_adata.shape[0]) + source_label
