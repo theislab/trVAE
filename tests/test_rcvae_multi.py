@@ -219,7 +219,11 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
         mmd_latent_with_fake_labels = [network.to_mmd_layer(network, feed_data, train_labels, feed_fake=i) for i in
                                        range(n_conditions)]
 
-        if data_name in ["pbmc", 'cytof']:
+        if data_name in ["pbmc", 'endo_norm']:
+            sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100, method="wilcoxon")
+            top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
+            gene_list = top_100_genes[:10]
+        elif data_name in ['cytof']:
             sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
             top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
             gene_list = top_100_genes[:10]
