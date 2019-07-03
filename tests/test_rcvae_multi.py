@@ -344,6 +344,12 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
     pred_adata.obs[condition_key] = [name] * pred_target.shape[0]
     pred_adata.var_names = adata.var_names
 
+    if sparse.issparse(adata_source.X):
+        adata_source.X = adata_source.X.A
+
+    if sparse.issparse(pred_adata.X):
+        pred_adata.X = pred_adata.X.A
+
     adata_to_plot = pred_adata.concatenate(adata_source)
 
     rcvae.plotting.reg_mean_plot(adata_to_plot,
