@@ -344,7 +344,9 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
     pred_adata.obs[condition_key] = [name] * pred_target.shape[0]
     pred_adata.var_names = adata.var_names
 
-    rcvae.plotting.reg_mean_plot(adata,
+    adata_to_plot = pred_adata.concatenate(adata_source)
+
+    rcvae.plotting.reg_mean_plot(adata_to_plot,
                                  top_100_genes=top_100_genes,
                                  gene_list=gene_list,
                                  condition_key=condition_key,
@@ -357,7 +359,7 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
                                  path_to_save=os.path.join(path_to_save,
                                                            f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
 
-    rcvae.plotting.reg_var_plot(adata,
+    rcvae.plotting.reg_var_plot(adata_to_plot,
                                 top_100_genes=top_100_genes,
                                 gene_list=gene_list,
                                 condition_key=condition_key,
