@@ -193,7 +193,7 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='name of dataset you want to train')
-    arguments_group.add_argument('-n', '--max_evals', type=str, required=True,
+    arguments_group.add_argument('-n', '--max_evals', type=int, required=True,
                                  help='name of dataset you want to train')
 
     args = vars(parser.parse_args())
