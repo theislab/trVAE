@@ -56,8 +56,7 @@ DATASETS = {
                                   ('Estrogen', 'GLP1-E', 'Estrogen_to_GLP1-E', 2, 5),
                                   ('Estrogen', 'GLP1-E + PEG-insulin', 'Estrogen_to_GLP1-E + PEG-insulin', 2, 6),
                                   ('PEG-insulin', 'GLP1-E + PEG-insulin', 'PEG-insulin_to_GLP1-E + PEG-insulin', 3, 6),
-                                  ('Estrogen_to_GLP1-E', 'GLP1-E + PEG-insulin',
-                                   '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
+                                  ('Estrogen_to_GLP1-E', 'GLP1-E + PEG-insulin', '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
                                   ('GLP1_to_GLP1-E', 'GLP1-E + PEG-insulin', '(GLP1_to_GLP1-E)_to_GLP1-E + PEG-insulin',
                                    5, 6),
                                   ],
@@ -354,6 +353,8 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
 
     if sparse.issparse(adata_source.X):
         adata_source.X = adata_source.X.A
+
+    if sparse.issparse(adata_target.X):
         adata_target.X = adata_target.X.A
 
     if sparse.issparse(pred_adata.X):
