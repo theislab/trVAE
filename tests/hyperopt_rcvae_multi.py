@@ -27,8 +27,9 @@ def data():
         "Cytof": {'name': 'cytof', 'need_merge': False,
                   'source_conditions': ['Basal', 'Bez', 'Das', 'Tof'],
                   'target_conditions': ['Bez+Das', 'Bez+Tof'],
-                  'transition': ('Basal_to_Bez', 'Bez+Tof', '(Basal_to_Bez)_to_Bez+Tof', 1, 5),
+                  'transition': ('Bez', 'Bez+Tof', 'Bez_to_Bez+Tof', 1, 5),
                   'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
+                  'condition': 'condition',
                   'cell_type': 'cell_label'},
 
         "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
