@@ -201,8 +201,6 @@ class RCVAEMulti:
             self.gpu_encoder_model = self.encoder_model
             self.gpu_decoder_model = self.decoder_model
 
-
-
     @staticmethod
     def compute_kernel(x, y, kernel='rbf', **kwargs):
         """
@@ -291,7 +289,7 @@ class RCVAEMulti:
                         loss += self.compute_mmd(dest1_mmd, dest2_mmd, self.kernel_method)
                     elif self.n_conditions == 4:
                         source1_mmd, source2_mmd, source3_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels,
-                                                                                num_partitions=self.n_conditions)
+                                                                                               num_partitions=self.n_conditions)
 
                         loss = self.compute_mmd(source1_mmd, source2_mmd, self.kernel_method)
                         loss += self.compute_mmd(source1_mmd, source3_mmd, self.kernel_method)
@@ -303,16 +301,18 @@ class RCVAEMulti:
                     else:
                         conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=self.n_conditions)
                         loss = 0.0
-                        for i in range(len(conditions_mmd) - 1):
-                            loss += self.compute_mmd(conditions_mmd[i], conditions_mmd[i + 1], self.kernel_method)
+
+                        for i in range(len(conditions_mmd)):
+                            for j in range(i):
+                                loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
 
             self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
-                                    loss=[kl_recon_loss, mmd_loss],
-                                    metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
-                                             self.cvae_model.outputs[1].name: mmd_loss})
+                                        loss=[kl_recon_loss, mmd_loss],
+                                        metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
+                                                 self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()
 
@@ -442,7 +442,8 @@ class RCVAEMulti:
         self.gpu_cvae_model = self.cvae_model
         self._loss_function()
 
-    def train(self, train_data, le=None, condition_key='condition', use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
+    def train(self, train_data, le=None, condition_key='condition', use_validation=False, valid_data=None, n_epochs=25,
+              batch_size=32, early_stop_limit=20,
               threshold=0.0025, initial_run=True, monitor='val_loss',
               shuffle=True, verbose=2, save=True):
         """
