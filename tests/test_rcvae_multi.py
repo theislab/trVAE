@@ -227,6 +227,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
             sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
             top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
             gene_list = top_100_genes[:10]
+            top_100_genes = None
         else:
             sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
             top_50_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_keys[0]].tolist()
@@ -321,7 +322,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
         for target_condition in target_keys:
             pred_adata = pred_adatas[pred_adatas.obs[condition_key].str.endswith(target_condition)]
             violin_adata = cell_type_adata.concatenate(pred_adata)
-            for gene in top_100_genes[:3]:
+            for gene in gene_list[:3]:
                 sc.pl.violin(violin_adata, keys=gene, groupby=condition_key,
                              save=f"_{data_name}_{cell_type}_{gene}_{target_condition}.pdf",
                              show=False,

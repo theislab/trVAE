@@ -448,7 +448,7 @@ if __name__ == '__main__':
     for target_condition in target_keys:
         pred_adata = pred_adatas[pred_adatas.obs[condition_key].str.endswith(target_condition)]
         violin_adata = cell_type_adata.concatenate(pred_adata)
-        for gene in top_100_genes[:3]:
+        for gene in gene_list[:3]:
             sc.pl.violin(violin_adata, keys=gene, groupby=condition_key,
                          save=f"_{data_name}_{cell_type}_{gene}_{target_condition}.pdf",
                          show=False,
