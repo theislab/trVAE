@@ -30,6 +30,7 @@ def data():
                   'transition': ('Bez', 'Bez+Tof', 'Bez_to_Bez+Tof', 1, 5),
                   'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
                   'condition': 'condition',
+                  'spec_cell_types': ['None'],
                   'cell_type': 'cell_label'},
 
         "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
