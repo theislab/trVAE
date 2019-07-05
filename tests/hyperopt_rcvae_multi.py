@@ -350,7 +350,7 @@ if __name__ == '__main__':
         gene_list = top_100_genes[:10]
     elif data_name in ['cytof']:
         sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
-        top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
+        top_100_genes = None
         gene_list = top_100_genes[:10]
     else:
         sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
