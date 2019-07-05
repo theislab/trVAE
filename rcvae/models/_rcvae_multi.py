@@ -10,6 +10,7 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
+import tensorflow as tf
 from scipy import sparse
 
 from rcvae.models.utils import label_encoder, shuffle_data
@@ -40,6 +41,7 @@ class RCVAEMulti:
     """
 
     def __init__(self, x_dimension, z_dimension=100, n_conditions=3, **kwargs):
+        tf.reset_default_graph()
         self.x_dim = x_dimension
         self.z_dim = z_dimension
         self.mmd_dim = kwargs.get('mmd_dimension', 128)

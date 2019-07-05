@@ -44,7 +44,7 @@ def data():
                      'cell_type': 'groups_named_broad'},
 
     }
-    data_key = "EndoNorm"
+    data_key = "Cytof"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -56,8 +56,10 @@ def data():
     train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
     valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
 
-    net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
-    net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
+    net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
+                                         (train_data.obs[condition_key].isin(target_keys)))]
+    net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
+                                         (valid_data.obs[condition_key].isin(target_keys)))]
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
@@ -238,9 +240,6 @@ if __name__ == '__main__':
                                             algo=tpe.suggest,
                                             max_evals=args['max_evals'],
                                             trials=Trials())
-    # print("Best performing model chosen hyper-parameters:")
-    # print(best_run)
-    # print(best_model)
     DATASETS = {
         "HpolySal": {'name': 'Hpoly+Salmonella', 'need_merge': True,
                      "name1": 'hpoly', 'name2': 'salmonella',
