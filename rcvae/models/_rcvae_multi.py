@@ -41,7 +41,6 @@ class RCVAEMulti:
     """
 
     def __init__(self, x_dimension, z_dimension=100, n_conditions=3, **kwargs):
-        tf.reset_default_graph()
         self.x_dim = x_dimension
         self.z_dim = z_dimension
         self.mmd_dim = kwargs.get('mmd_dimension', 128)
