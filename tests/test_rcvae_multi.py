@@ -318,13 +318,16 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
                    wspace=0.15,
                    frameon=False)
 
-        for gene in top_100_genes[:3]:
-            sc.pl.violin(pred_adatas, keys=gene, groupby=condition_key,
-                         save=f"_{data_name}_{cell_type}_{gene}.pdf",
-                         show=False,
-                         wspace=0.2,
-                         rotation=90,
-                         frameon=False)
+        for target_condition in target_keys:
+            pred_adata = pred_adatas[pred_adatas.obs[condition_key].str.endswith(target_condition)]
+            violin_adata = cell_type_adata.concatenate(pred_adata)
+            for gene in top_100_genes[:3]:
+                sc.pl.violin(violin_adata, keys=gene, groupby=condition_key,
+                             save=f"_{data_name}_{cell_type}_{gene}_{target_condition}.pdf",
+                             show=False,
+                             wspace=0.2,
+                             rotation=90,
+                             frameon=False)
 
         plt.close("all")
 

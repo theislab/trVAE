@@ -75,25 +75,41 @@ def create_model(train_data, valid_data,
                  label_encoder,
                  arch_style, data_name,
                  source_condition, target_condition, source_label, target_label):
+    if n_conditions == 4:
+        z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
+        mmd_dim_choices = {{choice([64, 128, 256])}}
+        alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
+        beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000])}}
+        dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
+        batch_size_choices = {{choice([128, 256, 512, 1024, 2048])}}
+    else:
+        z_dim_choices = {{choice([2, 4, 6, 8, 10, 12])}}
+        mmd_dim_choices = {{choice([4, 8, 10, 12, 14, 16])}}
+        alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
+        beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000])}}
+        dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
+        batch_size_choices = {{choice([128, 256, 512, 1024, 2048])}}
+
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
-                               z_dimension={{choice([20, 40, 50, 60, 80, 100, 200])}},
+                               z_dimension=z_dim_choices,
                                arch_style=arch_style,
                                n_conditions=n_conditions,
-                               mmd_dimension={{choice([32, 64, 80, 128, 256])}},
-                               alpha={{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}},
-                               beta={{choice([50, 100, 200, 400, 600, 800, 1000])}},
+                               mmd_dimension=mmd_dim_choices,
+                               alpha=alpha_choices,
+                               beta=beta_choices,
                                kernel='rbf',
-                               learning_rate={{choice([0.001, 0.0001, 0.00001])}},
+                               learning_rate=0.001,
                                model_path=f"../models/RCVAEMulti/{data_name}/hyperopt/",
-                               dropout_rate={{choice([0.1, 0.2, 0.5, 0.75])}})
+                               dropout_rate=dropout_rate_choices
+                               )
 
     network.train(net_train_data,
                   label_encoder,
                   condition_key,
                   use_validation=True,
                   valid_data=net_valid_data,
-                  n_epochs=5000,
-                  batch_size={{choice([32, 64, 128, 256, 512, 1024, 2048])}},
+                  n_epochs=10000,
+                  batch_size=batch_size_choices,
                   verbose=2,
                   early_stop_limit=50,
                   monitor='val_loss',
@@ -302,7 +318,7 @@ if __name__ == '__main__':
 
     arch_style = 2 if data_name == 'cytof' else 1
 
-    path_to_save = f"../results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
+    path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
     sc.settings.figdir = os.path.abspath(path_to_save)
 
@@ -425,13 +441,16 @@ if __name__ == '__main__':
                wspace=0.15,
                frameon=False)
 
-    for gene in top_100_genes[:3]:
-        sc.pl.violin(pred_adatas, keys=gene, groupby=condition_key,
-                     save=f"_{data_name}_{cell_type}_{gene}.pdf",
-                     show=False,
-                     wspace=0.2,
-                     rotation=90,
-                     frameon=False)
+    for target_condition in target_keys:
+        pred_adata = pred_adatas[pred_adatas.obs[condition_key].str.endswith(target_condition)]
+        violin_adata = cell_type_adata.concatenate(pred_adata)
+        for gene in top_100_genes[:3]:
+            sc.pl.violin(violin_adata, keys=gene, groupby=condition_key,
+                         save=f"_{data_name}_{cell_type}_{gene}_{target_condition}.pdf",
+                         show=False,
+                         wspace=0.2,
+                         rotation=90,
+                         frameon=False)
 
     plt.close("all")
 
