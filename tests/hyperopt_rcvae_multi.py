@@ -251,6 +251,7 @@ if __name__ == '__main__':
                                       ('ctrl_to_hpoly', 'Salmonella', '(ctrl_to_hpoly)_to_sal'),
                                       ('ctrl_to_sal', 'hpoly', '(ctrl_to_sal)_to_hpoly'),
                                       ('Hpoly.Day10', 'Control', 'hpoly_to_ctrl')],
+                     'condition': 'condition',
                      "cell_type": "cell_label", 'spec_cell_types': ['Stem']},
 
         "Cytof": {'name': 'cytof', 'need_merge': False,
@@ -271,6 +272,8 @@ if __name__ == '__main__':
                                    ('Basal_to_Das', 'Bez+Das', '(Basal_to_Das)_to_Bez+Das', 2, 4),
                                    ],
                   'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
+                  'spec_cell_types': ['None'],
+                  'condition': 'condition',
                   'cell_type': 'cell_label'},
 
         "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
