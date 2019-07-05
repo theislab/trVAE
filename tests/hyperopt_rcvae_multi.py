@@ -376,7 +376,7 @@ if __name__ == '__main__':
         else:
             pred_adatas = pred_adatas.concatenate(pred_adata)
 
-    pred_adatas.write_h5ad(filename=f"../data/reconstructed/RCVAEMulti/{data_name}.h5ad")
+    pred_adatas.write_h5ad(filename=f"./data/reconstructed/RCVAEMulti/{data_name}.h5ad")
 
     import matplotlib as mpl
 
