@@ -54,7 +54,7 @@ def data():
                 'cell_type': 'cell_type'},
 
     }
-    data_key = "Cytof"
+    data_key = "ILC"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
