@@ -10,7 +10,6 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
-import tensorflow as tf
 from scipy import sparse
 
 from rcvae.models.utils import label_encoder, shuffle_data
@@ -442,6 +441,13 @@ class RCVAEMulti:
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
         self.gpu_cvae_model = self.cvae_model
         self._loss_function()
+
+    def save_model(self):
+        os.makedirs(self.model_to_use, exist_ok=True)
+        self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
+        self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
+        self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
+        log.info(f"Model saved in file: {self.model_to_use}. Training finished")
 
     def train(self, train_data, le=None, condition_key='condition', use_validation=False, valid_data=None, n_epochs=25,
               batch_size=32, early_stop_limit=20,

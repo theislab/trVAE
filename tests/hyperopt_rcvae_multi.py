@@ -364,7 +364,7 @@ if __name__ == '__main__':
     cell_type_adata = train_data[train_data.obs[cell_type_key] == cell_type]
 
     if data_name in ["pbmc", 'endo_norm']:
-        sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100, method="wilcoxon")
+        sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, reference=source_keys[0], n_genes=100, method="wilcoxon")
         top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
         gene_list = top_100_genes[:10]
     elif data_name in ['cytof']:
@@ -465,8 +465,9 @@ if __name__ == '__main__':
                frameon=False)
 
     for target_condition in target_keys:
-        pred_adata = pred_adatas[pred_adatas.obs[condition_key].str.endswith(target_condition)]
-        violin_adata = cell_type_adata.concatenate(pred_adata)
+        pred_adata = pred_adatas.copy()[pred_adatas.obs[condition_key].str.endswith(target_condition)]
+        real_data = cell_type_adata.copy()[cell_type_adata.obs[condition_key].isin([source_keys[0], target_condition])]
+        violin_adata = real_data.concatenate(pred_adata)
         for gene in gene_list[:3]:
             sc.pl.violin(violin_adata, keys=gene, groupby=condition_key,
                          save=f"_{data_name}_{cell_type}_{gene}_{target_condition}.pdf",
@@ -476,7 +477,7 @@ if __name__ == '__main__':
                          frameon=False)
 
     plt.close("all")
-
+    best_network.save_model()
     print("All Done!")
     print(best_run)
 
