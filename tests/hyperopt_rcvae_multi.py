@@ -364,7 +364,8 @@ if __name__ == '__main__':
     cell_type_adata = train_data[train_data.obs[cell_type_key] == cell_type]
 
     if data_name in ["pbmc", 'endo_norm']:
-        sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, reference=source_keys[0], n_genes=100, method="wilcoxon")
+        sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, groups=source_keys[1:] + target_keys,
+                                reference=source_keys[0], n_genes=100, method="wilcoxon")
         top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
         gene_list = top_100_genes[:10]
     elif data_name in ['cytof']:
