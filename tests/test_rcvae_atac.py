@@ -62,6 +62,9 @@ def train_network(data_dict=None,
                               dropout_rate=dropout_rate)
 
     network.train(net_train_data,
+                  condition_key,
+                  cell_type_key,
+                  source_key,
                   use_validation=True,
                   valid_data=net_valid_data,
                   n_epochs=n_epochs,
