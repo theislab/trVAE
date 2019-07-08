@@ -121,7 +121,7 @@ class RCVAEATAC:
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-        h = Activation('linear', name="reconstruction_output")(h)
+        h = LeakyReLU(name="reconstruction_output")(h)
 
         h_class = Dense(32, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
         h_class = BatchNormalization()(h_class)
@@ -467,9 +467,14 @@ class RCVAEATAC:
         n_batches = train_data.shape[0] // batch_size
 
         def print_message(epoch, cvae_loss, cvae_mmd_loss, cvae_kl_recon_loss,
-                          class_cce_loss, class_accuracy):
-
-            message = f"Epoch {epoch}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}][MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]\r"
+                          class_cce_loss, class_accuracy, next_is_valid=False, valid=False):
+            if not valid:
+                if not next_is_valid:
+                    message = f"Epoch {epoch}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}][MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]\r"
+                else:
+                    message = f"Epoch {epoch}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}][MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]"
+            else:
+                message = f'[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}][MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: {class_accuracy_valid}]\r'
 
             sys.stdout.write(message)
             sys.stdout.flush()
@@ -503,10 +508,11 @@ class RCVAEATAC:
                 class_accuracy += class_accuracy_batch / n_batches
 
                 print_message(i, cvae_loss_batch, cvae_mmd_loss_batch, cvae_kl_recon_loss_batch, class_cce_loss_batch,
-                              class_accuracy_batch)
+                              class_accuracy_batch, next_is_valid=False, valid=False)
             # print(f"Epoch {i}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
             #       f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]", end='')
-
+            print_message(i, cvae_loss, cvae_mmd_loss, cvae_kl_recon_loss, class_cce_loss,
+                          class_accuracy, next_is_valid=True, valid=False)
             if use_validation:
                 if sparse.issparse(valid_data.X):
                     valid_data.X = valid_data.X.A
@@ -527,9 +533,11 @@ class RCVAEATAC:
                     x=[source_data.X, np.zeros(source_data.shape[0]), np.zeros(source_data.shape[0], )],
                     y=source_labels, verbose=0)
 
-                print(f"[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
-                      f"[MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: "
-                      f"{class_accuracy_valid}]")
+                # print(f"[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
+                #       f"[MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: "
+                #       f"{class_accuracy_valid}]")
+                print_message(i, cvae_loss_valid, cvae_mmd_loss_valid, class_cce_loss_valid, class_accuracy_valid,
+                              next_is_valid=False, valid=True)
             else:
                 print()
 
