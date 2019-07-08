@@ -22,6 +22,7 @@ def data():
                      'source_conditions': ['Control', 'Hpoly.Day10'],
                      'target_conditions': ['Salmonella'],
                      'transition': ('ctrl_to_hpoly', 'Salmonella', '(ctrl_to_hpoly)_to_sal'),
+                     'violin_genes': [],
                      "cell_type": "cell_label", 'spec_cell_types': ['Stem']},
 
         "Cytof": {'name': 'cytof', 'need_merge': False,
@@ -30,6 +31,7 @@ def data():
                   'transition': ('Bez', 'Bez+Tof', 'Bez_to_Bez+Tof', 1, 5),
                   'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
                   'condition': 'condition',
+                  'violin_genes': ['p4EBp1'],
                   'spec_cell_types': ['None'],
                   'cell_type': 'cell_label'},
 
@@ -40,6 +42,7 @@ def data():
                      'label_encoder': {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4,
                                        'GLP1-E': 5,
                                        'GLP1-E + PEG-insulin': 6},
+                     'violin_genes': [],
                      'spec_cell_types': ['beta'],
                      'condition': 'treatment',
                      'cell_type': 'groups_named_broad'},
@@ -50,6 +53,7 @@ def data():
                 'transition': ('IL25', 'NMU_IL25', 'IL25_to_NMU_IL25', 2, 4),
                 'label_encoder': {'control': 0, 'IL33': 1, 'IL25': 2, 'NMU': 3, 'NMU_IL25': 4},
                 'spec_cell_types': ['None'],
+                'violin_genes': ['Eef1a1'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
 
