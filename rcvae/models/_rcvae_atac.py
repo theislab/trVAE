@@ -488,8 +488,8 @@ class RCVAEATAC:
                 class_train_data_batch = source_data.X[batch_idx * batch_size: (batch_idx + 1) * batch_size]
                 class_train_labels_batch = source_labels[batch_idx * batch_size: (batch_idx + 1) * batch_size]
                 class_cce_loss_batch, class_accuracy_batch = self.classifier_model.train_on_batch(
-                    x=[class_train_data_batch, np.zeros(class_train_data_batch.shape),
-                       np.zeros(class_train_data_batch.shape)],
+                    x=[class_train_data_batch, np.zeros(class_train_data_batch.shape[0]),
+                       np.zeros(class_train_data_batch.shape[0])],
                     y=class_train_labels_batch)
 
                 cvae_loss += cvae_loss_batch
