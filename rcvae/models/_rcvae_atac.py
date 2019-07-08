@@ -13,7 +13,7 @@ from keras.utils import to_categorical, plot_model
 from scipy import sparse
 from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
-from utils import label_encoder, shuffle_data
+from .utils import label_encoder, shuffle_data
 
 log = logging.getLogger(__file__)
 
