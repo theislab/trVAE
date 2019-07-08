@@ -536,8 +536,8 @@ class RCVAEATAC:
                 # print(f"[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
                 #       f"[MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: "
                 #       f"{class_accuracy_valid}]")
-                print_message(i, cvae_loss_valid, cvae_mmd_loss_valid, class_cce_loss_valid, class_accuracy_valid,
-                              next_is_valid=False, valid=True)
+                print_message(i, cvae_loss_valid, cvae_mmd_loss_valid, cvae_kl_recon_loss_valid, class_cce_loss_valid,
+                              class_accuracy_valid, next_is_valid=False, valid=True)
             else:
                 print()
 
