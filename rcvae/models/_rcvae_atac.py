@@ -507,7 +507,7 @@ class RCVAEATAC:
             class_accuracy /= n_batches
 
             print(f"Epoch {i}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
-                  f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]", end='\t')
+                  f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]", end='')
 
             if use_validation:
                 if sparse.issparse(valid_data.X):
