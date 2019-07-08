@@ -1,19 +1,19 @@
 import logging
 import os
+import sys
 
 import keras
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from keras.callbacks import CSVLogger, History, EarlyStopping
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
-from keras.utils import to_categorical, plot_model
+from keras.utils import to_categorical
 from scipy import sparse
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import LabelEncoder
 
-from .utils import label_encoder, shuffle_data
+from .utils import label_encoder
 
 log = logging.getLogger(__file__)
 
@@ -471,6 +471,14 @@ class RCVAEATAC:
 
         n_batches = train_data.shape[0] // batch_size
 
+        def print_message(epoch, cvae_loss, cvae_mmd_loss, cvae_kl_recon_loss,
+                          class_cce_loss, class_accuracy):
+
+            message = f"Epoch {epoch}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}][MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]\r"
+
+            sys.stdout.write(message)
+            sys.stdout.flush()
+
         for i in range(n_epochs):
             cvae_loss = 0.0
             cvae_mmd_loss = 0.0
@@ -499,8 +507,10 @@ class RCVAEATAC:
                 class_cce_loss += class_cce_loss_batch / n_batches
                 class_accuracy += class_accuracy_batch / n_batches
 
-            print(f"Epoch {i}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
-                  f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]", end='')
+                print_message(i, cvae_loss_batch, cvae_mmd_loss_batch, cvae_kl_recon_loss_batch, class_cce_loss_batch,
+                              class_accuracy_batch)
+            # print(f"Epoch {i}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
+            #       f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]", end='')
 
             if use_validation:
                 if sparse.issparse(valid_data.X):
