@@ -476,7 +476,7 @@ class RCVAEATAC:
                 sys.stdout.write(message)
                 sys.stdout.flush()
             else:
-                message = f'[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}][MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: {class_accuracy_valid}]\r'
+                message = f'[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}][MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: {class_accuracy_valid}]\n'
                 sys.stdout.write(message)
 
         for i in range(n_epochs):
