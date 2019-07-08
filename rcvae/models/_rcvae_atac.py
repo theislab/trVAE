@@ -492,19 +492,12 @@ class RCVAEATAC:
                        np.zeros(class_train_data_batch.shape[0])],
                     y=class_train_labels_batch)
 
-                cvae_loss += cvae_loss_batch
-                cvae_kl_recon_loss += cvae_kl_recon_loss_batch
-                cvae_mmd_loss += cvae_mmd_loss_batch
+                cvae_loss += cvae_loss_batch / n_batches
+                cvae_kl_recon_loss += cvae_kl_recon_loss_batch / n_batches
+                cvae_mmd_loss += cvae_mmd_loss_batch / n_batches
 
-                class_cce_loss += class_cce_loss_batch
-                class_accuracy += class_accuracy_batch
-
-            cvae_loss /= n_batches
-            cvae_kl_recon_loss /= n_batches
-            cvae_mmd_loss /= n_batches
-
-            class_cce_loss /= n_batches
-            class_accuracy /= n_batches
+                class_cce_loss += class_cce_loss_batch / n_batches
+                class_accuracy += class_accuracy_batch / n_batches
 
             print(f"Epoch {i}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
                   f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]", end='')
