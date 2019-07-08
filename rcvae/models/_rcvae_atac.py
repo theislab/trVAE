@@ -473,11 +473,11 @@ class RCVAEATAC:
                     message = f"Epoch {epoch}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}][MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]\r"
                 else:
                     message = f"Epoch {epoch}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}][MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]"
+                sys.stdout.write(message)
+                sys.stdout.flush()
             else:
                 message = f'[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}][MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: {class_accuracy_valid}]\r'
-
-            sys.stdout.write(message)
-            sys.stdout.flush()
+                sys.stdout.write(message)
 
         for i in range(n_epochs):
             cvae_loss = 0.0
