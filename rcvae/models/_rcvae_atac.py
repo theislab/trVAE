@@ -6,7 +6,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
@@ -70,9 +70,6 @@ class RCVAEATAC:
         self.cvae_model.summary()
         self.classifier_model.summary()
 
-        print(self.cvae_model.metrics_names)
-        print(self.classifier_model.metrics_names)
-
     def _encoder(self, x, y, name="encoder"):
         """
             Constructs the encoder sub-network of C-VAE. This function implements the
@@ -124,7 +121,7 @@ class RCVAEATAC:
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-        h = LeakyReLU(name="reconstruction_output")(h)
+        h = Activation('linear', name="reconstruction_output")(h)
 
         h_class = Dense(32, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
         h_class = BatchNormalization()(h_class)
@@ -267,8 +264,6 @@ class RCVAEATAC:
                     return self.beta * loss
 
             def cce_loss(real_classes, pred_classes):
-                real_labels = K.reshape(K.cast(real_classes, 'int32'), (-1,))
-                source_mmd, dest_mmd = tf.dynamic_partition(pred_classes, real_labels, num_partitions=2)
                 return self.gamma * K.categorical_crossentropy(real_classes, pred_classes)
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
