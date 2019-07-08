@@ -124,7 +124,7 @@ class RCVAEATAC:
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-        h = LeakyReLU('relu', name="reconstruction_output")(h)
+        h = LeakyReLU(name="reconstruction_output")(h)
 
         h_class = Dense(32, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
         h_class = BatchNormalization()(h_class)
