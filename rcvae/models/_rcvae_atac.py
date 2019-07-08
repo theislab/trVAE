@@ -522,7 +522,7 @@ class RCVAEATAC:
                 source_labels = to_categorical(source_labels, num_classes=self.n_classes)
 
                 cvae_loss_valid, cvae_kl_recon_loss_valid, cvae_mmd_loss_valid = self.cvae_model.evaluate(
-                    x=[valid_data.X.valid_labels, valid_labels],
+                    x=[valid_data.X, valid_labels, valid_labels],
                     y=[valid_data.X, valid_labels], verbose=0)
 
                 class_cce_loss_valid, class_accuracy_valid = self.classifier_model.evaluate(
