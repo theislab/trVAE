@@ -203,7 +203,7 @@ class RCVAEATAC:
             sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
 
             beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = RCVAEATACk.squared_distance(x, y)
+            distances = RCVAEATAC.squared_distance(x, y)
             s = K.dot(beta, K.reshape(distances, (1, -1)))
 
             return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
