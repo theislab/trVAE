@@ -26,6 +26,7 @@ def train_network(data_dict=None,
                   mmd_dimension=256,
                   alpha=0.001,
                   beta=100,
+                  gamma=0.1,
                   kernel='multi-scale-rbf',
                   n_epochs=500,
                   batch_size=512,
@@ -54,6 +55,7 @@ def train_network(data_dict=None,
                               mmd_dimension=mmd_dimension,
                               alpha=alpha,
                               beta=beta,
+                              gamma=gamma,
                               kernel=kernel,
                               learning_rate=learning_rate,
                               model_path=f"../models/RCVAEATAC/{data_name}/{z_dim}/",
@@ -163,6 +165,8 @@ if __name__ == '__main__':
                                  help='Alpha coeff in loss term')
     arguments_group.add_argument('-b', '--beta', type=float, default=100, required=False,
                                  help='Beta coeff in loss term')
+    arguments_group.add_argument('-g', '--gamma', type=float, default=100, required=False,
+                                 help='Gamma coeff in loss term')
     arguments_group.add_argument('-k', '--kernel', type=str, default='multi-scale-rbf', required=False,
                                  help='Kernel type')
     arguments_group.add_argument('-n', '--n_epochs', type=int, default=5000, required=False,
