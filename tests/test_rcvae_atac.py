@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 
 DATASETS = {
     "multimodal": {"name": 'multimodal', "source_key": "RNA-seq", "target_key": 'ATAC-seq',
-                   "cell_type": "modality", 'condition_key': 'condition'},
+                   "cell_type": "modality", 'condition': 'condition'},
 
 }
 
