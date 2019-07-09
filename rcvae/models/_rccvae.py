@@ -588,7 +588,7 @@ class RCCVAE:
     def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32,
               early_stop_limit=20,
               threshold=0.0025, initial_run=True,
-              shuffle=True, verbose=2, save=True):  # TODO: Write minibatches for each source and destination
+              shuffle=True, verbose=2, save=True, paired=False):  # TODO: Write minibatches for each source and destination
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
