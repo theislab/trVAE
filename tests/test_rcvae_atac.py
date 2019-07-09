@@ -194,5 +194,5 @@ if __name__ == '__main__':
     if args['do_train'] == 1:
         del args['do_train']
         train_network(data_dict=data_dict, **args)
-        visualize_trained_network_results_multimodal(data_dict=data_dict, z_dim=args['z_dim'])
+        # visualize_trained_network_results_multimodal(data_dict=data_dict, z_dim=args['z_dim'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
