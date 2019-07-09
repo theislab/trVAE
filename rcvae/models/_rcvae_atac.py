@@ -4,6 +4,7 @@ import sys
 
 import keras
 import numpy as np
+import scanpy as sc
 import tensorflow as tf
 from keras import backend as K
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
@@ -12,6 +13,7 @@ from keras.models import Model, load_model
 from keras.utils import to_categorical
 from scipy import sparse
 from sklearn.preprocessing import LabelEncoder
+from matplotlib import pyplot as plt
 
 from .utils import label_encoder
 
@@ -639,7 +641,8 @@ class RCVAEATAC:
                 source_classes_valid = label_enc.fit_transform(source_classes_valid)
                 source_classes_valid = to_categorical(source_classes_valid, num_classes=self.n_classes)
 
-                x_valid = [source_data_valid.X, np.zeros(source_data_valid.shape[0]), np.zeros(source_data_valid.shape[0], )]
+                x_valid = [source_data_valid.X, np.zeros(source_data_valid.shape[0]),
+                           np.zeros(source_data_valid.shape[0], )]
                 y_valid = source_classes_valid
                 class_history = self.classifier_model.fit(
                     x=x_train,
@@ -670,14 +673,70 @@ class RCVAEATAC:
 
             class_cce_loss_valid = class_history.history['val_loss']
             class_accuracy_valid = class_history.history['val_acc']
-            print(f"Epoch {i+1}/{n_epochs}:")
+            print(f"Epoch {i + 1}/{n_epochs}:")
             print(f"[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
                   f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]")
             print(f"[val_CVAE_loss: {cvae_loss_valid}][val_KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
                   f"[val_MMD_loss: {cvae_mmd_loss_valid}][val_CCE_Loss: {class_cce_loss_valid}]"
                   f"[val_CCE_Acc: {class_accuracy_valid}]")
 
+            if i % 5 == 0:
+                path_to_save = f"../results/RCVAEATAC/{self.z_dim}/Visualizations/"
+                os.makedirs(path_to_save, exist_ok=True)
+                sc.settings.figdir = os.path.abspath(path_to_save)
+                feed_data = train_data.X
+                train_labels, _ = label_encoder(train_data, label_encoder=le, condition_key=condition_key)
+                fake_labels = np.ones(train_labels.shape)
+                latent_with_true_labels = self.to_latent(feed_data, train_labels)
+                latent_with_fake_labels = self.to_latent(feed_data, fake_labels)
+                mmd_latent_with_true_labels = self.to_mmd_layer(self, feed_data, train_labels, feed_fake=False)
+                mmd_latent_with_fake_labels = self.to_mmd_layer(self, feed_data, train_labels, feed_fake=True)
 
+                import matplotlib as mpl
+                mpl.rcParams.update(mpl.rcParamsDefault)
+
+                latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
+                latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
+                # latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
+
+                latent_with_fake_labels = sc.AnnData(X=latent_with_fake_labels)
+                latent_with_fake_labels.obs[condition_key] = train_data.obs[condition_key].values
+                # latent_with_fake_labels.obs[cell_type_key] = data.obs[cell_type_key].values
+
+                mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
+                mmd_latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
+                # mmd_latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
+
+                mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
+                mmd_latent_with_fake_labels.obs[condition_key] = train_data.obs[condition_key].values
+                # mmd_latent_with_fake_labels.obs[cell_type_key] = data.obs[cell_type_key].values
+
+                color = [condition_key]
+
+                sc.pp.neighbors(latent_with_true_labels)
+                sc.tl.umap(latent_with_true_labels)
+                sc.pl.umap(latent_with_true_labels, color=color,
+                           save=f"_latent_with_true_labels_at_{i}",
+                           show=False)
+
+                sc.pp.neighbors(latent_with_fake_labels)
+                sc.tl.umap(latent_with_fake_labels)
+                sc.pl.umap(latent_with_fake_labels, color=color,
+                           save=f"_latent_with_fake_labels_at_{i}",
+                           show=False)
+
+                sc.pp.neighbors(mmd_latent_with_true_labels)
+                sc.tl.umap(mmd_latent_with_true_labels)
+                sc.pl.umap(mmd_latent_with_true_labels, color=color,
+                           save=f"_mmd_latent_with_true_labels_at_{i}",
+                           show=False)
+
+                sc.pp.neighbors(mmd_latent_with_fake_labels)
+                sc.tl.umap(mmd_latent_with_fake_labels)
+                sc.pl.umap(mmd_latent_with_fake_labels, color=color,
+                           save=f"_mmd_latent_with_fake_labels_at_{i}",
+                           show=False)
+                plt.close("all")
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
             self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)

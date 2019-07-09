@@ -85,11 +85,11 @@ def visualize_trained_network_results_multimodal(data_dict, z_dim=100):
     target_key = data_dict.get('target_key', None)
 
     data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
-    path_to_save = f"../results/RCVAE/{data_name}/{z_dim}/{source_key} to {target_key}/Visualizations/"
+    path_to_save = f"../results/RCVAE/{data_name}/{z_dim}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
     sc.settings.figdir = os.path.abspath(path_to_save)
 
-    network = rcvae.RCVAE(x_dimension=data.shape[1],
+    network = rcvae.RCVAEATAC(x_dimension=data.shape[1],
                           z_dimension=z_dim,
                           model_path=f"../models/RCVAE/{data_name}/{z_dim}/", )
     network.restore_model()
