@@ -657,19 +657,19 @@ class RCVAEATAC:
                     batch_size=batch_size,
                     verbose=verbose,
                 )
-            cvae_loss = cvae_history['loss']
-            cvae_kl_recon_loss = cvae_history['kl_reconstruction_loss']
-            cvae_mmd_loss = cvae_history['mmd_loss']
+            cvae_loss = cvae_history.history['loss']
+            cvae_kl_recon_loss = cvae_history.history['kl_reconstruction_loss']
+            cvae_mmd_loss = cvae_history.history['mmd_loss']
 
-            cvae_loss_valid = cvae_history['val_loss']
-            cvae_kl_recon_loss_valid = cvae_history['val_kl_reconstruction_loss']
-            cvae_mmd_loss_valid = cvae_history['val_mmd_loss']
+            cvae_loss_valid = cvae_history.history['val_loss']
+            cvae_kl_recon_loss_valid = cvae_history.history['val_kl_reconstruction_loss']
+            cvae_mmd_loss_valid = cvae_history.history['val_mmd_loss']
 
-            class_cce_loss = class_history['loss']
-            class_accuracy = class_history['acc']
+            class_cce_loss = class_history.history['loss']
+            class_accuracy = class_history.history['acc']
 
-            class_cce_loss_valid = class_history['val_loss']
-            class_accuracy_valid = class_history['val_acc']
+            class_cce_loss_valid = class_history.history['val_loss']
+            class_accuracy_valid = class_history.history['val_acc']
 
             print(f"Epoch {i+1}/{n_epochs}:[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
                   f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]"
