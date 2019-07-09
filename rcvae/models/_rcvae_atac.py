@@ -670,12 +670,13 @@ class RCVAEATAC:
 
             class_cce_loss_valid = class_history.history['val_loss']
             class_accuracy_valid = class_history.history['val_acc']
-
-            print(f"Epoch {i+1}/{n_epochs}:[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
-                  f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]"
-                  f"[val_CVAE_loss: {cvae_loss_valid}][val_KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
+            print(f"Epoch {i+1}/{n_epochs}:")
+            print(f"[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
+                  f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]")
+            print(f"[val_CVAE_loss: {cvae_loss_valid}][val_KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
                   f"[val_MMD_loss: {cvae_mmd_loss_valid}][val_CCE_Loss: {class_cce_loss_valid}]"
                   f"[val_CCE_Acc: {class_accuracy_valid}]")
+
 
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
