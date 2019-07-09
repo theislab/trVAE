@@ -746,7 +746,7 @@ class RCVAEATAC:
                            wspace=0.4,
                            show=False)
                 plt.close("all")
-            if cvae_loss_valid > best_val_loss:
+            if cvae_loss_valid[0] > best_val_loss:
                 patience += 1
                 if patience > early_stop_limit:
                     break
