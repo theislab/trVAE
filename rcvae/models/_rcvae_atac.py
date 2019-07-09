@@ -688,7 +688,7 @@ class RCVAEATAC:
                 train_labels, _ = label_encoder(train_data, label_encoder=le, condition_key=condition_key)
                 fake_labels = np.ones(train_labels.shape)
 
-                train_data.obs['class'] = train_data.obs[cell_type_key].values
+                train_data.obs['class'] = train_data.obs[cell_type_key].values.tolist()
                 train_data.obs.loc[train_data.obs[condition_key] != source_key, 'class'] = 'ATAC-unknown'
 
                 latent_with_true_labels = self.to_latent(feed_data, train_labels)
