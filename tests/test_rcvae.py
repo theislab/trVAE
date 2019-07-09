@@ -97,6 +97,7 @@ def train_network_multi(data_dict=None,
                         kernel='multi-scale-rbf',
                         n_epochs=500,
                         batch_size=512,
+                        early_stop_limit=50,
                         dropout_rate=0.2,
                         learning_rate=0.001,
                         ):
@@ -124,7 +125,7 @@ def train_network_multi(data_dict=None,
                   n_epochs=n_epochs,
                   batch_size=batch_size,
                   verbose=2,
-                  early_stop_limit=600,
+                  early_stop_limit=early_stop_limit,
                   shuffle=False,
                   save=True)
 
