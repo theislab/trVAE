@@ -413,10 +413,10 @@ class RCVAEATAC:
         self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
         log.info(f"Model saved in file: {self.model_to_use}. Training finished")
 
-    def train(self, train_data, condition_key, cell_type_key, source_key, use_validation=False, valid_data=None,
-              n_epochs=25, batch_size=32, early_stop_limit=20,
-              threshold=0.0025, initial_run=True,
-              shuffle=True, verbose=2, save=True):
+    def train_batch(self, train_data, condition_key, cell_type_key, source_key, use_validation=False, valid_data=None,
+                    n_epochs=25, batch_size=32, early_stop_limit=20,
+                    threshold=0.0025, initial_run=True,
+                    shuffle=True, verbose=2, save=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -540,6 +540,123 @@ class RCVAEATAC:
                               class_accuracy_valid, next_is_valid=False, valid=True)
             else:
                 print()
+
+        if save:
+            os.makedirs(self.model_to_use, exist_ok=True)
+            self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
+            self.classifier_model.save(os.path.join(self.model_to_use, "classifier.h5"), overwrite=True)
+            self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
+            self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
+            log.info(f"Model saved in file: {self.model_to_use}. Training finished")
+
+    def train(self, train_data, condition_key, cell_type_key, source_key, le, use_validation=False, valid_data=None,
+              n_epochs=25, batch_size=32, early_stop_limit=20,
+              threshold=0.0025, initial_run=True,
+              shuffle=True, verbose=2, save=True):
+        """
+            Trains the network `n_epochs` times with given `train_data`
+            and validates the model using validation_data if it was given
+            in the constructor function. This function is using `early stopping`
+            technique to prevent overfitting.
+            # Parameters
+                n_epochs: int
+                    number of epochs to iterate and optimize network weights
+                early_stop_limit: int
+                    number of consecutive epochs in which network loss is not going lower.
+                    After this limit, the network will stop training.
+                threshold: float
+                    Threshold for difference between consecutive validation loss values
+                    if the difference is upper than this `threshold`, this epoch will not
+                    considered as an epoch in early stopping.
+                full_training: bool
+                    if `True`: Network will be trained with all batches of data in each epoch.
+                    if `False`: Network will be trained with a random batch of data in each epoch.
+                initial_run: bool
+                    if `True`: The network will initiate training and log some useful initial messages.
+                    if `False`: Network will resume the training using `restore_model` function in order
+                        to restore last model which has been trained with some training dataset.
+            # Returns
+                Nothing will be returned
+            # Example
+            ```python
+            import scanpy as sc
+            import scgen
+            train_data = sc.read(train_katrain_kang.h5ad           >>> validation_data = sc.read(valid_kang.h5ad)
+            network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
+            network.train(n_epochs=20)
+            ```
+        """
+        if initial_run:
+            log.info("----Training----")
+
+        train_labels, _ = label_encoder(train_data, label_encoder=le, condition_key=condition_key)
+
+        if use_validation and valid_data is None:
+            raise Exception("valid_data is None but use_validation is True.")
+
+        source_data_train = train_data.copy()[train_data.obs[condition_key] == source_key]
+        source_classes_train = source_data_train.obs[cell_type_key].values
+        le = LabelEncoder()
+        source_classes_train = le.fit_transform(source_classes_train)
+        source_classes_train = to_categorical(source_classes_train, num_classes=self.n_classes)
+
+        if use_validation:
+            if sparse.issparse(valid_data.X):
+                valid_data.X = valid_data.X.A
+
+            valid_labels, _ = label_encoder(valid_data, label_encoder=le, condition_key=condition_key)
+
+        for i in range(n_epochs):
+            x_train = [train_data.X, train_labels, train_labels]
+            y_train = [train_data.X, train_labels]
+            if use_validation:
+                x_valid = [valid_data.X, valid_labels, valid_labels]
+                y_valid = [valid_data.X, valid_labels]
+                self.cvae_model.fit(
+                    x=x_train,
+                    y=y_train,
+                    epochs=1,
+                    batch_size=batch_size,
+                    validation_data=(x_valid, y_valid),
+                    verbose=verbose,
+                )
+            else:
+                self.cvae_model.fit(
+                    x=x_train,
+                    y=y_train,
+                    epochs=1,
+                    batch_size=batch_size,
+                    verbose=verbose,
+                )
+
+            x_train = [source_data_train.X, np.zeros(source_data_train.shape[0]), np.zeros(source_data_train.shape[0])]
+            y_train = source_classes_train
+
+            if use_validation:
+                source_data_valid = valid_data.copy()[valid_data.obs[condition_key] == source_key]
+                source_classes_valid = source_data_valid.obs[cell_type_key].values
+                le = LabelEncoder()
+                source_classes_valid = le.fit_transform(source_classes_valid)
+                source_classes_valid = to_categorical(source_classes_valid, num_classes=self.n_classes)
+
+                x_valid = [source_data_valid.X, np.zeros(source_data_valid.shape[0]), np.zeros(source_data_valid.shape[0], )]
+                y_valid = source_classes_valid
+                self.classifier_model.fit(
+                    x=x_train,
+                    y=y_train,
+                    epochs=1,
+                    batch_size=batch_size,
+                    validation_data=(x_valid, y_valid),
+                    verbose=verbose,
+                )
+            else:
+                self.classifier_model.fit(
+                    x=x_train,
+                    y=y_train,
+                    epochs=1,
+                    batch_size=batch_size,
+                    verbose=verbose,
+                )
 
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)

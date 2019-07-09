@@ -1,9 +1,7 @@
 import argparse
 import os
 
-import anndata
 import numpy as np
-import pandas as pd
 import scanpy as sc
 from scipy import sparse
 
@@ -16,7 +14,8 @@ from matplotlib import pyplot as plt
 
 DATASETS = {
     "multimodal": {"name": 'multimodal', "source_key": "RNA-seq", "target_key": 'ATAC-seq',
-                   "condition": "modality", 'cell_type': 'cell_type'},
+                   "condition": "modality", 'cell_type': 'cell_type',
+                   'label_encoder': {'RNA-seq': 0, 'ATAC-seq': 1}},
 
 }
 
@@ -39,6 +38,7 @@ def train_network(data_dict=None,
     target_key = data_dict.get('target_key', None)
     cell_type_key = data_dict.get("cell_type", None)
     condition_key = data_dict.get("condition", None)
+    label_encoder = data_dict.get("label_encoder", None)
 
     train_data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
     valid_data = sc.read(f"../data/{data_name}/valid_{data_name}.h5ad")
@@ -65,6 +65,7 @@ def train_network(data_dict=None,
                   condition_key,
                   cell_type_key,
                   source_key,
+                  label_encoder,
                   use_validation=True,
                   valid_data=net_valid_data,
                   n_epochs=n_epochs,
@@ -75,6 +76,7 @@ def train_network(data_dict=None,
                   save=True)
 
     print(f"Model for has been trained")
+
 
 def visualize_trained_network_results_multimodal(data_dict, z_dim=100):
     plt.close("all")
