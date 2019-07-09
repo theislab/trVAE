@@ -612,21 +612,21 @@ class RCVAEATAC:
             if use_validation:
                 x_valid = [valid_data.X, valid_labels, valid_labels]
                 y_valid = [valid_data.X, valid_labels]
-                self.cvae_model.fit(
+                cvae_history = self.cvae_model.fit(
                     x=x_train,
                     y=y_train,
                     epochs=1,
                     batch_size=batch_size,
                     validation_data=(x_valid, y_valid),
-                    verbose=verbose,
+                    verbose=0,
                 )
             else:
-                self.cvae_model.fit(
+                cvae_history = self.cvae_model.fit(
                     x=x_train,
                     y=y_train,
                     epochs=1,
                     batch_size=batch_size,
-                    verbose=verbose,
+                    verbose=0,
                 )
 
             x_train = [source_data_train.X, np.zeros(source_data_train.shape[0]), np.zeros(source_data_train.shape[0])]
@@ -641,7 +641,7 @@ class RCVAEATAC:
 
                 x_valid = [source_data_valid.X, np.zeros(source_data_valid.shape[0]), np.zeros(source_data_valid.shape[0], )]
                 y_valid = source_classes_valid
-                self.classifier_model.fit(
+                class_history = self.classifier_model.fit(
                     x=x_train,
                     y=y_train,
                     epochs=1,
@@ -650,13 +650,32 @@ class RCVAEATAC:
                     verbose=verbose,
                 )
             else:
-                self.classifier_model.fit(
+                class_history = self.classifier_model.fit(
                     x=x_train,
                     y=y_train,
                     epochs=1,
                     batch_size=batch_size,
                     verbose=verbose,
                 )
+            cvae_loss = cvae_history['loss']
+            cvae_kl_recon_loss = cvae_history['kl_reconstruction_loss']
+            cvae_mmd_loss = cvae_history['mmd_loss']
+
+            cvae_loss_valid = cvae_history['val_loss']
+            cvae_kl_recon_loss_valid = cvae_history['val_kl_reconstruction_loss']
+            cvae_mmd_loss_valid = cvae_history['val_mmd_loss']
+
+            class_cce_loss = class_history['loss']
+            class_accuracy = class_history['acc']
+
+            class_cce_loss_valid = class_history['val_loss']
+            class_accuracy_valid = class_history['val_acc']
+
+            print(f"Epoch {i+1}/{n_epochs}:[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
+                  f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]"
+                  f"[val_CVAE_loss: {cvae_loss_valid}][val_KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
+                  f"[val_MMD_loss: {cvae_mmd_loss_valid}][val_CCE_Loss: {class_cce_loss_valid}]"
+                  f"[val_CCE_Acc: {class_accuracy_valid}]")
 
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
