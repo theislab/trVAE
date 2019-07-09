@@ -607,7 +607,8 @@ class RCVAEATAC:
                 valid_data.X = valid_data.X.A
 
             valid_labels, _ = label_encoder(valid_data, label_encoder=le, condition_key=condition_key)
-        best_val_loss = 0.0
+        best_val_loss = 100000.0
+        patience = 0
         for i in range(n_epochs):
             x_train = [train_data.X, train_labels, train_labels]
             y_train = [train_data.X, train_labels]
@@ -745,6 +746,13 @@ class RCVAEATAC:
                            wspace=0.4,
                            show=False)
                 plt.close("all")
+            if cvae_loss_valid > best_val_loss:
+                patience += 1
+                if patience > early_stop_limit:
+                    break
+            else:
+                best_val_loss = cvae_loss_valid
+                patience = 0
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
             self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
