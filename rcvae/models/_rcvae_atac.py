@@ -647,7 +647,7 @@ class RCVAEATAC:
                     epochs=1,
                     batch_size=batch_size,
                     validation_data=(x_valid, y_valid),
-                    verbose=verbose,
+                    verbose=0,
                 )
             else:
                 class_history = self.classifier_model.fit(
@@ -655,7 +655,7 @@ class RCVAEATAC:
                     y=y_train,
                     epochs=1,
                     batch_size=batch_size,
-                    verbose=verbose,
+                    verbose=0,
                 )
             cvae_loss = cvae_history.history['loss']
             cvae_kl_recon_loss = cvae_history.history['kl_reconstruction_loss']
