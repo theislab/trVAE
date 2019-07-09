@@ -596,8 +596,8 @@ class RCVAEATAC:
 
         source_data_train = train_data.copy()[train_data.obs[condition_key] == source_key]
         source_classes_train = source_data_train.obs[cell_type_key].values
-        le = LabelEncoder()
-        source_classes_train = le.fit_transform(source_classes_train)
+        label_enc = LabelEncoder()
+        source_classes_train = label_enc.fit_transform(source_classes_train)
         source_classes_train = to_categorical(source_classes_train, num_classes=self.n_classes)
 
         if use_validation:
@@ -635,8 +635,8 @@ class RCVAEATAC:
             if use_validation:
                 source_data_valid = valid_data.copy()[valid_data.obs[condition_key] == source_key]
                 source_classes_valid = source_data_valid.obs[cell_type_key].values
-                le = LabelEncoder()
-                source_classes_valid = le.fit_transform(source_classes_valid)
+                label_enc = LabelEncoder()
+                source_classes_valid = label_enc.fit_transform(source_classes_valid)
                 source_classes_valid = to_categorical(source_classes_valid, num_classes=self.n_classes)
 
                 x_valid = [source_data_valid.X, np.zeros(source_data_valid.shape[0]), np.zeros(source_data_valid.shape[0], )]
