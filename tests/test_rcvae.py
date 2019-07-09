@@ -665,13 +665,14 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
 
     data_dict = DATASETS[args['data']]
-    del args['data']
     if args['do_train'] == 1:
         del args['do_train']
         if args['data'] == 'multimodal':
+            del args['data']
             train_network_multi(data_dict=data_dict, **args)
             visualize_trained_network_results_multimodal(data_dict=data_dict, z_dim=args['z_dim'])
         else:
+            del args['data']
             train_network(data_dict=data_dict, **args)
             visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'])
     # reconstruct_whole_data(data_dict=data_dict, z_dim=args['z_dim'])
