@@ -74,7 +74,7 @@ DATASETS = {
                                   ('Muraro', 'Segerstolpe', 'Muraro_to_Segerstolpe', 1, 3),
                                   ('Wang', 'Segerstolpe', 'Wang_to_Segerstolpe', 2, 3),
                                   ],
-                 'spec_cell_types': ['beta'],
+                 'spec_cell_types': ['alpha'],
                  'cell_type': 'cell_type',
                  'condition': 'sample'},
 
@@ -144,6 +144,10 @@ def train_network(data_dict=None,
             net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
                                                  (valid_data.obs[condition_key].isin(target_keys)))]
             n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
+            if data_name == 'pancreas':
+                use_leaky_relu = True
+            else:
+                use_leaky_relu = False
             network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                        z_dimension=z_dim,
                                        n_conditions=n_conditions,
@@ -155,7 +159,8 @@ def train_network(data_dict=None,
                                        learning_rate=learning_rate,
                                        model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}-{arch_style}/",
                                        n_gpus=n_gpus,
-                                       dropout_rate=dropout_rate)
+                                       dropout_rate=dropout_rate,
+                                       use_leaky_relu=use_leaky_relu)
 
             network.train(net_train_data,
                           label_encoder,
