@@ -361,7 +361,7 @@ if __name__ == '__main__':
     net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
     net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
 
-    arch_style = 2 if data_name == 'cytof' else 1
+    arch_style = 1
 
     path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
