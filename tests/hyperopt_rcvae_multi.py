@@ -491,18 +491,18 @@ if __name__ == '__main__':
                show=False,
                wspace=0.15,
                frameon=False)
-
-    for target_condition in target_keys:
-        pred_adata = pred_adatas.copy()[pred_adatas.obs[condition_key].str.endswith(target_condition)]
-        real_data = cell_type_adata.copy()[cell_type_adata.obs[condition_key].isin([source_keys[0], target_condition])]
-        violin_adata = real_data.concatenate(pred_adata)
-        for gene in gene_list[:3]:
-            sc.pl.violin(violin_adata, keys=gene, groupby=condition_key,
-                         save=f"_{data_name}_{cell_type}_{gene}_{target_condition}.pdf",
-                         show=False,
-                         wspace=0.2,
-                         rotation=90,
-                         frameon=False)
+    if gene_list is not None:
+        for target_condition in target_keys:
+            pred_adata = pred_adatas.copy()[pred_adatas.obs[condition_key].str.endswith(target_condition)]
+            real_data = cell_type_adata.copy()[cell_type_adata.obs[condition_key].isin([source_keys[0], target_condition])]
+            violin_adata = real_data.concatenate(pred_adata)
+            for gene in gene_list[:3]:
+                sc.pl.violin(violin_adata, keys=gene, groupby=condition_key,
+                             save=f"_{data_name}_{cell_type}_{gene}_{target_condition}.pdf",
+                             show=False,
+                             wspace=0.2,
+                             rotation=90,
+                             frameon=False)
 
     plt.close("all")
     best_network.save_model()
