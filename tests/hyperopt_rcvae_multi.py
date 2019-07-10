@@ -85,7 +85,7 @@ def data():
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
-    arch_style = 2 if data_name == 'cytof' else 1
+    arch_style = 1
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
