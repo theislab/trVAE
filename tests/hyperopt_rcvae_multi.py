@@ -99,12 +99,12 @@ def create_model(train_data, valid_data,
                  label_encoder,
                  arch_style, data_name,
                  source_condition, target_condition, source_label, target_label):
-    if n_conditions == 7:
-        z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
-        mmd_dim_choices = {{choice([64, 128, 256])}}
-    else:
-        z_dim_choices = {{choice([2, 4, 6, 8, 10, 12])}}
-        mmd_dim_choices = {{choice([4, 8, 10, 12, 14, 16])}}
+    # if n_conditions == 7:
+    z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
+    mmd_dim_choices = {{choice([64, 128, 256])}}
+    # else:
+    #     z_dim_choices = {{choice([2, 4, 6, 8, 10, 12])}}
+    #     mmd_dim_choices = {{choice([4, 8, 10, 12, 14, 16])}}
 
     alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000])}}
