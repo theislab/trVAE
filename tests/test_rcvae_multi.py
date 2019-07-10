@@ -498,7 +498,7 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
                    frameon=False)
 
         mmd_latent_with_true_labels.obs['mmd'] = 'others'
-        mmd_latent_with_true_labels.obs['mmd'].astype('object')
+        mmd_latent_with_true_labels.obs['mmd'] = mmd_latent_with_true_labels.obs['mmd'].astype('object')
         # mmd_latent_with_true_labels.obs['mmd'].cat.add_categories([f'alpha-{target_keys[0]}', 'alpha-others'],
         #                                                           inplace=True)
         mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] == target_keys[0]) &
