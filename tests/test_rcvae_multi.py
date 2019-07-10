@@ -472,6 +472,8 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
 
         mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=0)
 
+        latent_with_true_labels = network.to_latent(network, feed_data, train_labels)
+
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)
 
@@ -480,6 +482,10 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
         mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
         mmd_latent_with_true_labels.obs[condition_key] = data.obs[condition_key].values
         mmd_latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
+
+        latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
+        latent_with_true_labels.obs[condition_key] = data.obs[condition_key].values
+        latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
 
         sc.pp.neighbors(train_data)
         sc.tl.umap(train_data)
@@ -492,6 +498,14 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
         sc.pp.neighbors(mmd_latent_with_true_labels)
         sc.tl.umap(mmd_latent_with_true_labels)
         sc.pl.umap(mmd_latent_with_true_labels, color=color,
+                   save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
+                   show=False,
+                   wspace=0.15,
+                   frameon=False)
+
+        sc.pp.neighbors(latent_with_true_labels)
+        sc.tl.umap(latent_with_true_labels)
+        sc.pl.umap(latent_with_true_labels, color=color,
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
                    show=False,
                    wspace=0.15,
@@ -515,6 +529,7 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
         #            wspace=0.15,
         #            frameon=False)
         mmd_latent_with_true_labels.write_h5ad('../data/mmd.h5ad')
+        latent_with_true_labels.write_h5ad('../data/latent.h5ad')
 
 
 if __name__ == '__main__':
