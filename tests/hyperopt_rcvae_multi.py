@@ -56,6 +56,15 @@ def data():
                 'violin_genes': ['Eef1a1'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
+        "Pancreas": {"name": 'pancreas', 'need_merge': False,
+                     'source_conditions': ['Baron', 'Muraro', 'Wang'],
+                     'target_conditions': ['Segerstolpe'],
+                     'label_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
+                     'perturbation': [('Baron', 'Segerstolpe', 'Baron_to_Segerstolpe', 0, 3),
+                                      ],
+                     'spec_cell_types': ['beta'],
+                     'cell_type': 'cell_type',
+                     'condition': 'sample'},
 
     }
     data_key = "EndoNorm"
@@ -323,6 +332,17 @@ if __name__ == '__main__':
                 'spec_cell_types': ['None'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
+        "Pancreas": {"name": 'pancreas', 'need_merge': False,
+                     'source_conditions': ['Baron', 'Muraro', 'Wang'],
+                     'target_conditions': ['Segerstolpe'],
+                     'label_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
+                     'perturbation': [('Baron', 'Segerstolpe', 'Baron_to_Segerstolpe', 0, 3),
+                                      ('Muraro', 'Segerstolpe', 'Muraro_to_Segerstolpe', 1, 3),
+                                      ('Wang', 'Segerstolpe', 'Wang_to_Segerstolpe', 2, 3),
+                                      ],
+                     'spec_cell_types': ['beta'],
+                     'cell_type': 'cell_type',
+                     'condition': 'sample'},
 
     }
 

@@ -56,7 +56,8 @@ DATASETS = {
                                   ('Estrogen', 'GLP1-E', 'Estrogen_to_GLP1-E', 2, 5),
                                   ('Estrogen', 'GLP1-E + PEG-insulin', 'Estrogen_to_GLP1-E + PEG-insulin', 2, 6),
                                   ('PEG-insulin', 'GLP1-E + PEG-insulin', 'PEG-insulin_to_GLP1-E + PEG-insulin', 3, 6),
-                                  ('Estrogen_to_GLP1-E', 'GLP1-E + PEG-insulin', '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
+                                  ('Estrogen_to_GLP1-E', 'GLP1-E + PEG-insulin',
+                                   '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
                                   ('GLP1_to_GLP1-E', 'GLP1-E + PEG-insulin', '(GLP1_to_GLP1-E)_to_GLP1-E + PEG-insulin',
                                    5, 6),
                                   ],
@@ -65,6 +66,17 @@ DATASETS = {
                  'spec_cell_types': ['beta'],
                  'condition': 'treatment',
                  'cell_type': 'groups_named_broad'},
+    "Pancreas": {"name": 'pancreas', 'need_merge': False,
+                 'source_conditions': ['Baron', 'Muraro', 'Wang'],
+                 'target_conditions': ['Segerstolpe'],
+                 'label_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
+                 'perturbation': [('Baron', 'Segerstolpe', 'Baron_to_Segerstolpe', 0, 3),
+                                  ('Muraro', 'Segerstolpe', 'Muraro_to_Segerstolpe', 1, 3),
+                                  ('Wang', 'Segerstolpe', 'Wang_to_Segerstolpe', 2, 3),
+                                  ],
+                 'spec_cell_types': ['beta'],
+                 'cell_type': 'cell_type',
+                 'condition': 'sample'},
 
 }
 
