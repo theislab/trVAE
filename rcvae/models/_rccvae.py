@@ -179,9 +179,9 @@ class RCCVAE:
 
             z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
             model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
-            if self.x_dim[0] > 48:
-                for layer_name in self.vggface_layers[1:]:
-                    model.get_layer(layer_name).set_weights(self.vggface.get_layer(layer_name).get_weights())
+            # if self.x_dim[0] > 48:
+            #     for layer_name in self.vggface_layers[1:]:
+            #         model.get_layer(layer_name).set_weights(self.vggface.get_layer(layer_name).get_weights())
             model.summary()
             return mean, log_var, model
 
