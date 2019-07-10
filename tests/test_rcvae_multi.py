@@ -245,8 +245,11 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
             top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
             gene_list = top_100_genes[:10]
             top_100_genes = None
+        elif data_name in ['pancreas']:
+            gene_list = None
+            top_100_genes = None
         else:
-            sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
+            sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100, method="wilcoxon")
             top_50_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_keys[0]].tolist()
             top_50_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
             top_100_genes = top_50_up_genes + top_50_down_genes
