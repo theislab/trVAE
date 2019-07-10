@@ -422,9 +422,94 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
 
     return pred_adata
 
-def visualize_batch_correction():
-    pass
 
+def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_style=1):
+    plt.close("all")
+    data_name = data_dict['name']
+    source_keys = data_dict.get("source_conditions")
+    target_keys = data_dict.get("target_conditions")
+    cell_type_key = data_dict.get("cell_type", None)
+    need_merge = data_dict.get('need_merge', False)
+    label_encoder = data_dict.get('label_encoder', None)
+    condition_key = data_dict.get('condition', 'condition')
+
+    if need_merge:
+        data, _ = merge_data(data_dict)
+    else:
+        data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+
+    cell_types = data.obs[cell_type_key].unique().tolist()
+
+    spec_cell_type = data_dict.get("spec_cell_types", None)
+    if spec_cell_type:
+        cell_types = spec_cell_type
+
+    for cell_type in cell_types:
+        path_to_save = f"../results/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/Visualizations/"
+        os.makedirs(path_to_save, exist_ok=True)
+        sc.settings.figdir = os.path.abspath(path_to_save)
+
+        train_data = data.copy()[
+            ~((data.obs[condition_key].isin(target_keys)) & (data.obs[cell_type_key] == cell_type))]
+
+        cell_type_adata = data[data.obs[cell_type_key] == cell_type]
+        network = rcvae.RCVAEMulti(x_dimension=data.shape[1],
+                                   z_dimension=z_dim,
+                                   n_conditions=len(source_keys),
+                                   mmd_dimension=mmd_dimension,
+                                   arch_style=arch_style,
+                                   model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}-{arch_style}/",
+                                   )
+
+        network.restore_model()
+
+        if sparse.issparse(data.X):
+            data.X = data.X.A
+
+        feed_data = data.X
+
+        train_labels, _ = rcvae.label_encoder(data, label_encoder, condition_key)
+
+        mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=0)
+
+        import matplotlib as mpl
+        mpl.rcParams.update(mpl.rcParamsDefault)
+
+        color = [condition_key]
+
+        mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
+        mmd_latent_with_true_labels.obs[condition_key] = data.obs[condition_key].values
+        mmd_latent_with_true_labels.obs[cell_type_key] = data.obs[cell_type_key].values
+
+        sc.pp.neighbors(train_data)
+        sc.tl.umap(train_data)
+        sc.pl.umap(train_data, color=color,
+                   save=f'_{data_name}_{cell_type}_train_data',
+                   show=False,
+                   wspace=0.15,
+                   frameon=False)
+
+        sc.pp.neighbors(mmd_latent_with_true_labels)
+        sc.tl.umap(mmd_latent_with_true_labels)
+        sc.pl.umap(mmd_latent_with_true_labels, color=color,
+                   save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
+                   show=False,
+                   wspace=0.15,
+                   frameon=False)
+
+        mmd_latent_with_true_labels.obs['mmd'] = 'Others'
+        mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] == target_keys[0]) &
+                                             mmd_latent_with_true_labels.obs[
+                                                 cell_type_key] == cell_type), 'mmd'] = f'alpha-{target_keys[0]}'
+        mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] != target_keys[0]) &
+                                             mmd_latent_with_true_labels.obs[
+                                                 cell_type_key] == cell_type), 'mmd'] = f'alpha-Others'
+
+        sc.pl.umap(mmd_latent_with_true_labels, color='mmd',
+                   save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels_cell_comparison",
+                   show=False,
+                   wspace=0.15,
+                   frameon=False)
 
 
 if __name__ == '__main__':
@@ -466,6 +551,10 @@ if __name__ == '__main__':
     if args['do_train'] == 1:
         del args['do_train']
         train_network(data_dict=data_dict, **args)
-    visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'],
-                                      mmd_dimension=args['mmd_dimension'])
+    if data_dict['name'] == 'pancreas':
+        visualize_batch_correction(data_dict=data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'],
+                                   mmd_dimension=args['mmd_dimension'])
+    else:
+        visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'],
+                                          mmd_dimension=args['mmd_dimension'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
