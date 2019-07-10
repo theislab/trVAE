@@ -497,23 +497,24 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
                    wspace=0.15,
                    frameon=False)
 
-        mmd_latent_with_true_labels.obs['mmd'] = 'others'
-        mmd_latent_with_true_labels.obs['mmd'] = mmd_latent_with_true_labels.obs.mmd.astype(str)
+        # mmd_latent_with_true_labels.obs['mmd'] = 'others'
+        # mmd_latent_with_true_labels.obs['mmd'] = mmd_latent_with_true_labels.obs.mmd.astype(str)
         # mmd_latent_with_true_labels.obs['mmd'].cat.add_categories([f'alpha-{target_keys[0]}'], inplace=True)
         # mmd_latent_with_true_labels.obs['mmd'].cat.add_categories([f'alpha-others'], inplace=True)
         # print(mmd_latent_with_true_labels.obs['mmd'].cat.categories)
-        mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] == target_keys[0]) &
-                                             mmd_latent_with_true_labels.obs[
-                                                 cell_type_key] == cell_type), 'mmd'] = f'alpha-{target_keys[0]}'
-        mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] != target_keys[0]) &
-                                             mmd_latent_with_true_labels.obs[
-                                                 cell_type_key] == cell_type), 'mmd'] = f'alpha-others'
-
-        sc.pl.umap(mmd_latent_with_true_labels, color='mmd',
-                   save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels_cell_comparison",
-                   show=False,
-                   wspace=0.15,
-                   frameon=False)
+        # mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] == target_keys[0]) &
+        #                                      mmd_latent_with_true_labels.obs[
+        #                                          cell_type_key] == cell_type), 'mmd'] = f'alpha-{target_keys[0]}'
+        # mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] != target_keys[0]) &
+        #                                      mmd_latent_with_true_labels.obs[
+        #                                          cell_type_key] == cell_type), 'mmd'] = f'alpha-others'
+        #
+        # sc.pl.umap(mmd_latent_with_true_labels, color='mmd',
+        #            save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels_cell_comparison",
+        #            show=False,
+        #            wspace=0.15,
+        #            frameon=False)
+        mmd_latent_with_true_labels.write_h5ad('../data/mmd.h5ad')
 
 
 if __name__ == '__main__':
