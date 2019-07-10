@@ -472,7 +472,7 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
 
         mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=0)
 
-        latent_with_true_labels = network.to_latent(network, feed_data, train_labels)
+        latent_with_true_labels = network.to_latent(feed_data, train_labels)
 
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)
