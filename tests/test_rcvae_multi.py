@@ -504,10 +504,12 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
         print(mmd_latent_with_true_labels.obs['mmd'].cat.categories)
         mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] == target_keys[0]) &
                                              mmd_latent_with_true_labels.obs[
-                                                 cell_type_key] == cell_type), 'mmd'] = f'alpha-{target_keys[0]}'
+                                                 cell_type_key] == cell_type), 'mmd'] = \
+        mmd_latent_with_true_labels.obs['mmd'].cat.categories.tolist()[1]
         mmd_latent_with_true_labels.obs.loc[((mmd_latent_with_true_labels.obs[condition_key] != target_keys[0]) &
                                              mmd_latent_with_true_labels.obs[
-                                                 cell_type_key] == cell_type), 'mmd'] = f'alpha-others'
+                                                 cell_type_key] == cell_type), 'mmd'] = \
+        mmd_latent_with_true_labels.obs['mmd'].cat.categories.tolist()[2]
 
         sc.pl.umap(mmd_latent_with_true_labels, color='mmd',
                    save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels_cell_comparison",
