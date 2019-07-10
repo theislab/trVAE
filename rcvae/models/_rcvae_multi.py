@@ -55,6 +55,7 @@ class RCVAEMulti:
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.arch_style = kwargs.get("arch_style", 1)
         self.n_gpus = kwargs.get("n_gpus", 1)
+        self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
@@ -131,7 +132,10 @@ class RCVAEMulti:
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
             h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-            h = Activation('relu', name="reconstruction_output")(h)
+            if self.use_leaky_relu:
+                h = LeakyReLU(name='reconstruction_output')(h)
+            else:
+                h = Activation('relu', name="reconstruction_output")(h)
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)

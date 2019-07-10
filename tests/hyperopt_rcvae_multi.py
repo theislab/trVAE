@@ -107,7 +107,7 @@ def create_model(train_data, valid_data,
     #     mmd_dim_choices = {{choice([4, 8, 10, 12, 14, 16])}}
 
     alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
-    beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000])}}
+    beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000, 2000, 3000])}}
     batch_size_choices = {{choice([128, 256, 512, 1024, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
@@ -120,7 +120,8 @@ def create_model(train_data, valid_data,
                                kernel='rbf',
                                learning_rate=0.001,
                                model_path=f"../models/RCVAEMulti/{data_name}/hyperopt/",
-                               dropout_rate=dropout_rate_choices
+                               dropout_rate=dropout_rate_choices,
+                               use_leaky_relu=True,
                                )
 
     network.train(net_train_data,
@@ -131,7 +132,7 @@ def create_model(train_data, valid_data,
                   n_epochs=10000,
                   batch_size=batch_size_choices,
                   verbose=2,
-                  early_stop_limit=50,
+                  early_stop_limit=25,
                   monitor='val_loss',
                   shuffle=True,
                   save=False)
