@@ -735,7 +735,7 @@ class RCVAEATAC:
                 sc.pp.neighbors(mmd_latent_with_true_labels)
                 sc.tl.umap(mmd_latent_with_true_labels)
                 sc.pl.umap(mmd_latent_with_true_labels, color=color,
-                           save=f"_mmd_latent_with_true_labels_at_{i}",
+                           save=f"_mmd_latent_with_true_labels_at_{i}.png",
                            wspace=0.4,
                            show=False)
 
