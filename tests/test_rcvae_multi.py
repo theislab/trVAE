@@ -422,6 +422,10 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
 
     return pred_adata
 
+def visualize_batch_correction():
+    pass
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')

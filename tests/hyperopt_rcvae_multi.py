@@ -28,7 +28,7 @@ def data():
         "Cytof": {'name': 'cytof', 'need_merge': False,
                   'source_conditions': ['Basal', 'Bez', 'Das', 'Tof'],
                   'target_conditions': ['Bez+Das', 'Bez+Tof'],
-                  'transition': ('Bez', 'Bez+Tof', 'Bez_to_Bez+Tof', 1, 5),
+                  'transition': ('Bez', 'Bez+Tof', 'Bez_to_Bez+Tof', 1, 3),
                   'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
                   'condition': 'condition',
                   'violin_genes': ['p4EBp1'],
@@ -50,23 +50,14 @@ def data():
         "ILC": {'name': 'nmuil', 'need_merge': False,
                 'source_conditions': ['control', 'IL33', 'IL25', 'NMU'],
                 'target_conditions': ['NMU_IL25'],
-                'transition': ('IL25', 'NMU_IL25', 'IL25_to_NMU_IL25', 2, 4),
+                'transition': ('IL25', 'NMU_IL25', 'IL25_to_NMU_IL25', 2, 3),
                 'label_encoder': {'control': 0, 'IL33': 1, 'IL25': 2, 'NMU': 3, 'NMU_IL25': 4},
                 'spec_cell_types': ['None'],
                 'violin_genes': ['Eef1a1'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
-        "Pancreas": {"name": 'pancreas', 'need_merge': False,
-                     'source_conditions': ['Baron', 'Muraro', 'Wang'],
-                     'target_conditions': ['Segerstolpe'],
-                     'label_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
-                     'transition': ('Baron', 'Segerstolpe', 'Baron_to_Segerstolpe', 0, 3),
-                     'spec_cell_types': ['alpha'],
-                     'cell_type': 'cell_type',
-                     'condition': 'sample'},
-
     }
-    data_key = "Pancreas"
+    data_key = "Cytof"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -85,7 +76,10 @@ def data():
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
-    arch_style = 1
+    if data_name == 'cytof':
+        arch_style = 2
+    else:
+        arch_style = 1
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
@@ -99,12 +93,12 @@ def create_model(train_data, valid_data,
                  label_encoder,
                  arch_style, data_name,
                  source_condition, target_condition, source_label, target_label):
-    # if n_conditions == 7:
-    z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
-    mmd_dim_choices = {{choice([64, 128, 256])}}
-    # else:
-    #     z_dim_choices = {{choice([2, 4, 6, 8, 10, 12])}}
-    #     mmd_dim_choices = {{choice([4, 8, 10, 12, 14, 16])}}
+    if data_name == 'cytof':
+        z_dim_choices = {{choice([2, 4, 6, 8, 10, 12])}}
+        mmd_dim_choices = {{choice([4, 8, 10, 12, 14, 16])}}
+    else:
+        z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
+        mmd_dim_choices = {{choice([64, 128, 256])}}
 
     alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000, 2000, 3000])}}
@@ -277,17 +271,14 @@ if __name__ == '__main__':
                   'target_conditions': ['Bez+Das', 'Bez+Tof'],
                   'perturbation': [('Basal', 'Bez', 'Basal_to_Bez', 0, 1),
                                    ('Basal', 'Das', 'Basal_to_Das', 0, 2),
-                                   ('Basal', 'Tof', 'Basal_to_Das', 0, 3),
-                                   ('Basal', 'Bez+Das', 'Basal_to_Bez+Das', 0, 4),
-                                   ('Basal', 'Bez+Tof', 'Basal_to_Bez+Tof', 0, 5),
-                                   ('Bez', 'Bez+Das', 'Bez_to_Bez+Das', 1, 4),
-                                   ('Bez', 'Bez+Tof', 'Bez_to_Bez+Tof', 1, 5),
-                                   ('Bez', 'Basal', 'Bez_to_Basal', 1, 0),
-                                   ('Das', 'Bez+Das', 'Das_to_Bez+Das', 2, 4),
-                                   ('Das', 'Basal', 'Das_to_Basal', 2, 0),
-                                   ('Basal_to_Bez', 'Bez+Das', '(Basal_to_Bez)_to_Bez+Das', 1, 4),
-                                   ('Basal_to_Bez', 'Bez+Tof', '(Basal_to_Bez)_to_Bez+Tof', 1, 5),
-                                   ('Basal_to_Das', 'Bez+Das', '(Basal_to_Das)_to_Bez+Das', 2, 4),
+                                   ('Basal', 'Tof', 'Basal_to_Tof', 0, 3),
+                                   ('Bez', 'Bez+Das', 'Bez_to_Bez+Das', 1, 2),
+                                   ('Bez', 'Bez+Tof', 'Bez_to_Bez+Tof', 1, 3),
+                                   ('Das', 'Bez+Das', 'Das_to_Bez+Das', 2, 1),
+                                   ('Basal_to_Bez', 'Bez+Das', '(Basal_to_Bez)_to_Bez+Das', 1, 2),
+                                   ('Basal_to_Bez', 'Bez+Tof', '(Basal_to_Bez)_to_Bez+Tof', 1, 3),
+                                   ('Basal_to_Tof', 'Bez+Tof', '(Basal_to_Bez)_to_Bez+Tof', 3, 1),
+                                   ('Basal_to_Das', 'Bez+Das', '(Basal_to_Das)_to_Bez+Das', 2, 3),
                                    ],
                   'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
                   'spec_cell_types': ['None'],
@@ -324,26 +315,13 @@ if __name__ == '__main__':
                 'perturbation': [('control', 'IL33', 'control_to_IL33', 0, 1),
                                  ('control', 'IL25', 'control_to_IL25', 0, 2),
                                  ('control', 'NMU', 'control_to_NMU', 0, 3),
-                                 ('control', 'NMU_IL25', 'control_to_NMU_IL25', 0, 4),
-                                 ('IL25', 'NMU_IL25', 'IL25_to_NMU_IL25', 2, 4),
-                                 ('NMU', 'NMU_IL25', 'NMU_to_NMU_IL25', 3, 4),
+                                 ('IL25', 'NMU_IL25', 'IL25_to_NMU_IL25', 2, 3),
+                                 ('NMU', 'NMU_IL25', 'NMU_to_NMU_IL25', 3, 2),
                                  ],
                 'label_encoder': {'control': 0, 'IL33': 1, 'IL25': 2, 'NMU': 3, 'NMU_IL25': 4},
                 'spec_cell_types': ['None'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
-        "Pancreas": {"name": 'pancreas', 'need_merge': False,
-                     'source_conditions': ['Baron', 'Muraro', 'Wang'],
-                     'target_conditions': ['Segerstolpe'],
-                     'label_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
-                     'perturbation': [('Baron', 'Segerstolpe', 'Baron_to_Segerstolpe', 0, 3),
-                                      ('Muraro', 'Segerstolpe', 'Muraro_to_Segerstolpe', 1, 3),
-                                      ('Wang', 'Segerstolpe', 'Wang_to_Segerstolpe', 2, 3),
-                                      ],
-                     'spec_cell_types': ['alpha'],
-                     'cell_type': 'cell_type',
-                     'condition': 'sample'},
-
     }
 
     data_dict = DATASETS[data_key]
@@ -362,7 +340,10 @@ if __name__ == '__main__':
     net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
     net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
 
-    arch_style = 1
+    if data_name == 'cytof':
+        arch_style = 2
+    else:
+        arch_style = 1
 
     path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
