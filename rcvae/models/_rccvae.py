@@ -14,7 +14,7 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
-from keras_vggface.vggface import VGGFace
+# from keras_vggface.vggface import VGGFace
 from scipy import sparse
 
 from .utils import label_encoder
@@ -69,13 +69,13 @@ class RCCVAE:
         self.decoder_labels = Input(shape=(1,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
-        if self.x_dim[0] > 48:
-            self.vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
-            self.vggface_layers = ["conv1_1", 'conv1_2',
-                                   'conv2_1', 'conv2_2',
-                                   'conv3_1', 'conv3_2', 'conv3_3',
-                                   'conv4_1', 'conv4_2', 'conv4_3',
-                                   'conv5_1', 'conv5_2', 'conv5_3']
+        # if self.x_dim[0] > 48:
+            # self.vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
+            # self.vggface_layers = ["conv1_1", 'conv1_2',
+            #                        'conv2_1', 'conv2_2',
+            #                        'conv3_1', 'conv3_2', 'conv3_3',
+            #                        'conv4_1', 'conv4_2', 'conv4_3',
+            #                        'conv5_1', 'conv5_2', 'conv5_3']
 
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
@@ -404,35 +404,35 @@ class RCCVAE:
         """
 
         def batch_loss():
-            def perceptual_loss(input_image, reconstructed_image):
-                vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
-                vgg_layers = ['conv1_1']
-                outputs = [vggface.get_layer(l).output for l in vgg_layers]
-                model = Model(inputs=vggface.input, outputs=outputs)
-
-                for layer in model.layers:
-                    layer.trainable = False
-
-                input_image *= 255.0
-                reconstructed_image *= 255.0
-
-                input_image = preprocess_input(input_image, mode='tf', data_format='channels_last')
-                reconstructed_image = preprocess_input(reconstructed_image, mode='tf', data_format='channels_last')
-
-                h1_list = model(input_image)
-                h2_list = model(reconstructed_image)
-
-                if not isinstance(h1_list, list):
-                    h1_list = [h1_list]
-                    h2_list = [h2_list]
-
-                p_loss = 0.0
-                for h1, h2 in zip(h1_list, h2_list):
-                    h1 = K.batch_flatten(h1)
-                    h2 = K.batch_flatten(h2)
-                    p_loss += K.mean(K.square(h1 - h2), axis=-1)
-
-                return p_loss
+            # def perceptual_loss(input_image, reconstructed_image):
+            #     vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
+            #     vgg_layers = ['conv1_1']
+            #     outputs = [vggface.get_layer(l).output for l in vgg_layers]
+            #     model = Model(inputs=vggface.input, outputs=outputs)
+            #
+            #     for layer in model.layers:
+            #         layer.trainable = False
+            #
+            #     input_image *= 255.0
+            #     reconstructed_image *= 255.0
+            #
+            #     input_image = preprocess_input(input_image, mode='tf', data_format='channels_last')
+            #     reconstructed_image = preprocess_input(reconstructed_image, mode='tf', data_format='channels_last')
+            #
+            #     h1_list = model(input_image)
+            #     h2_list = model(reconstructed_image)
+            #
+            #     if not isinstance(h1_list, list):
+            #         h1_list = [h1_list]
+            #         h2_list = [h2_list]
+            #
+            #     p_loss = 0.0
+            #     for h1, h2 in zip(h1_list, h2_list):
+            #         h1 = K.batch_flatten(h1)
+            #         h2 = K.batch_flatten(h2)
+            #         p_loss += K.mean(K.square(h1 - h2), axis=-1)
+            #
+            #     return p_loss
 
             def kl_recon_loss(y_true, y_pred):
                 y_pred = K.reshape(y_pred, (-1, *self.x_dim))
