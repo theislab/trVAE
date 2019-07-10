@@ -61,7 +61,7 @@ def data():
                      'target_conditions': ['Segerstolpe'],
                      'label_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
                      'transition': ('Baron', 'Segerstolpe', 'Baron_to_Segerstolpe', 0, 3),
-                     'spec_cell_types': ['beta'],
+                     'spec_cell_types': ['alpha'],
                      'cell_type': 'cell_type',
                      'condition': 'sample'},
 
@@ -339,7 +339,7 @@ if __name__ == '__main__':
                                       ('Muraro', 'Segerstolpe', 'Muraro_to_Segerstolpe', 1, 3),
                                       ('Wang', 'Segerstolpe', 'Wang_to_Segerstolpe', 2, 3),
                                       ],
-                     'spec_cell_types': ['beta'],
+                     'spec_cell_types': ['alpha'],
                      'cell_type': 'cell_type',
                      'condition': 'sample'},
 

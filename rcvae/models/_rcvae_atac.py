@@ -687,50 +687,50 @@ class RCVAEATAC:
                 sc.settings.figdir = os.path.abspath(path_to_save)
                 feed_data = train_data.X
                 train_labels, _ = label_encoder(train_data, label_encoder=le, condition_key=condition_key)
-                fake_labels = np.ones(train_labels.shape)
+                # fake_labels = np.ones(train_labels.shape)
 
                 # train_data.obs['class'] = train_data.obs[cell_type_key].values.tolist()
                 # train_data.obs.loc[train_data.obs[condition_key] != source_key, 'class'] = 'ATAC-unknown'
 
-                latent_with_true_labels = self.to_latent(feed_data, train_labels)
-                latent_with_fake_labels = self.to_latent(feed_data, fake_labels)
+                # latent_with_true_labels = self.to_latent(feed_data, train_labels)
+                # latent_with_fake_labels = self.to_latent(feed_data, fake_labels)
                 mmd_latent_with_true_labels = self.to_mmd_layer(self, feed_data, train_labels, feed_fake=False)
-                mmd_latent_with_fake_labels = self.to_mmd_layer(self, feed_data, train_labels, feed_fake=True)
+                # mmd_latent_with_fake_labels = self.to_mmd_layer(self, feed_data, train_labels, feed_fake=True)
 
                 import matplotlib as mpl
                 mpl.rcParams.update(mpl.rcParamsDefault)
 
-                latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
-                latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
+                # latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
+                # latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
                 # latent_with_true_labels.obs['class'] = train_data.obs['class'].values
 
-                latent_with_fake_labels = sc.AnnData(X=latent_with_fake_labels)
-                latent_with_fake_labels.obs[condition_key] = train_data.obs[condition_key].values
+                # latent_with_fake_labels = sc.AnnData(X=latent_with_fake_labels)
+                # latent_with_fake_labels.obs[condition_key] = train_data.obs[condition_key].values
                 # latent_with_fake_labels.obs['class'] = train_data.obs['class'].values
 
                 mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
                 mmd_latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
                 # mmd_latent_with_true_labels.obs['class'] = train_data.obs['class'].values
 
-                mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
-                mmd_latent_with_fake_labels.obs[condition_key] = train_data.obs[condition_key].values
+                # mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
+                # mmd_latent_with_fake_labels.obs[condition_key] = train_data.obs[condition_key].values
                 # mmd_latent_with_fake_labels.obs['class'] = train_data.obs['class'].values
 
                 color = [condition_key]
 
-                sc.pp.neighbors(latent_with_true_labels)
-                sc.tl.umap(latent_with_true_labels)
-                sc.pl.umap(latent_with_true_labels, color=color,
-                           save=f"_latent_with_true_labels_at_{i}",
-                           wspace=0.4,
-                           show=False)
+                # sc.pp.neighbors(latent_with_true_labels)
+                # sc.tl.umap(latent_with_true_labels)
+                # sc.pl.umap(latent_with_true_labels, color=color,
+                #            save=f"_latent_with_true_labels_at_{i}",
+                #            wspace=0.4,
+                #            show=False)
 
-                sc.pp.neighbors(latent_with_fake_labels)
-                sc.tl.umap(latent_with_fake_labels)
-                sc.pl.umap(latent_with_fake_labels, color=color,
-                           save=f"_latent_with_fake_labels_at_{i}",
-                           wspace=0.4,
-                           show=False)
+                # sc.pp.neighbors(latent_with_fake_labels)
+                # sc.tl.umap(latent_with_fake_labels)
+                # sc.pl.umap(latent_with_fake_labels, color=color,
+                #            save=f"_latent_with_fake_labels_at_{i}",
+                #            wspace=0.4,
+                #            show=False)
 
                 sc.pp.neighbors(mmd_latent_with_true_labels)
                 sc.tl.umap(mmd_latent_with_true_labels)
@@ -739,12 +739,12 @@ class RCVAEATAC:
                            wspace=0.4,
                            show=False)
 
-                sc.pp.neighbors(mmd_latent_with_fake_labels)
-                sc.tl.umap(mmd_latent_with_fake_labels)
-                sc.pl.umap(mmd_latent_with_fake_labels, color=color,
-                           save=f"_mmd_latent_with_fake_labels_at_{i}",
-                           wspace=0.4,
-                           show=False)
+                # sc.pp.neighbors(mmd_latent_with_fake_labels)
+                # sc.tl.umap(mmd_latent_with_fake_labels)
+                # sc.pl.umap(mmd_latent_with_fake_labels, color=color,
+                #            save=f"_mmd_latent_with_fake_labels_at_{i}",
+                #            wspace=0.4,
+                #            show=False)
                 plt.close("all")
             if cvae_mmd_loss_valid[0] > best_val_mmd_loss:
                 patience += 1
