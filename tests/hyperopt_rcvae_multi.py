@@ -60,7 +60,7 @@ def data():
                      'source_conditions': ['Baron', 'Muraro', 'Wang'],
                      'target_conditions': ['Segerstolpe'],
                      'label_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
-                     'perturbation': [('Baron', 'Segerstolpe', 'Baron_to_Segerstolpe', 0, 3),
+                     'transition': [('Baron', 'Segerstolpe', 'Baron_to_Segerstolpe', 0, 3),
                                       ],
                      'spec_cell_types': ['beta'],
                      'cell_type': 'cell_type',
