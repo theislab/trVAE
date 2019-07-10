@@ -119,7 +119,7 @@ def create_model(train_data, valid_data,
                                beta=beta_choices,
                                kernel='rbf',
                                learning_rate=0.001,
-                               model_path=f"../models/RCVAEMulti/{data_name}/hyperopt/",
+                               model_path=f"./models/RCVAEMulti/{data_name}/hyperopt/",
                                dropout_rate=dropout_rate_choices,
                                use_leaky_relu=True,
                                )
