@@ -506,7 +506,7 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
         sc.pp.neighbors(latent_with_true_labels)
         sc.tl.umap(latent_with_true_labels)
         sc.pl.umap(latent_with_true_labels, color=color,
-                   save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
+                   save=f"_{data_name}_{cell_type}_latent_with_true_labels",
                    show=False,
                    wspace=0.15,
                    frameon=False)
