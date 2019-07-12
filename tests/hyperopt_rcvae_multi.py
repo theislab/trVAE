@@ -36,9 +36,9 @@ def data():
                   'cell_type': 'cell_label'},
 
         "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
-                     'source_conditions': ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', ],
-                     'target_conditions': ['GLP1-E', 'GLP1-E + PEG-insulin'],
-                     'transition': ('Estrogen', 'GLP1-E', 'Estrogen_to_GLP1-E', 2, 5),
+                     'source_conditions': ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', 'GLP1-E',],
+                     'target_conditions': ['GLP1-E + PEG-insulin'],
+                     'transition': ('GLP1-E', 'GLP1-E + PEG-insulin', 'GLP1-E_to_GLP1-E + PEG-insulin', 5, 3),
                      'label_encoder': {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4,
                                        'GLP1-E': 5,
                                        'GLP1-E + PEG-insulin': 6},
@@ -57,7 +57,7 @@ def data():
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
     }
-    data_key = "Cytof"
+    data_key = "EndoNorm"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -69,10 +69,8 @@ def data():
     train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
     valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
 
-    net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
-                                         (train_data.obs[condition_key].isin(target_keys)))]
-    net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
-                                         (valid_data.obs[condition_key].isin(target_keys)))]
+    net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
+    net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
@@ -93,12 +91,8 @@ def create_model(train_data, valid_data,
                  label_encoder,
                  arch_style, data_name,
                  source_condition, target_condition, source_label, target_label):
-    if data_name == 'cytof':
-        z_dim_choices = {{choice([2, 4, 6, 8, 10, 12])}}
-        mmd_dim_choices = {{choice([4, 8, 10, 12, 14, 16])}}
-    else:
-        z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
-        mmd_dim_choices = {{choice([64, 128, 256])}}
+    z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
+    mmd_dim_choices = {{choice([64, 128, 256])}}
 
     alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000, 2000, 3000])}}
@@ -286,22 +280,21 @@ if __name__ == '__main__':
                   'cell_type': 'cell_label'},
 
         "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
-                     'source_conditions': ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', ],
-                     'target_conditions': ['GLP1-E', 'GLP1-E + PEG-insulin'],
+                     'source_conditions': ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', 'GLP1-E'],
+                     'target_conditions': ['GLP1-E + PEG-insulin'],
                      'perturbation': [('Ctrl', 'GLP1', 'Ctrl_to_GLP1', 0, 1),
                                       ('Ctrl', 'Estrogen', 'Ctrl_to_Estrogen', 0, 2),
                                       ('Ctrl', 'PEG-insulin', 'Ctrl_to_PEG-insulin', 0, 3),
                                       ('GLP1', 'GLP1-E', 'GLP1_to_GLP1-E', 1, 5),
-                                      ('GLP1', 'GLP1-E + PEG-insulin', 'GLP1_to_GLP1-E + PEG-insulin', 1, 6),
+                                      ('GLP1-E', 'GLP1-E + PEG-insulin', 'GLP1-E_to_GLP1-E + PEG-insulin', 5, 3),
                                       ('Estrogen', 'GLP1-E', 'Estrogen_to_GLP1-E', 2, 5),
-                                      ('Estrogen', 'GLP1-E + PEG-insulin', 'Estrogen_to_GLP1-E + PEG-insulin', 2, 6),
                                       ('PEG-insulin', 'GLP1-E + PEG-insulin', 'PEG-insulin_to_GLP1-E + PEG-insulin', 3,
-                                       6),
+                                       5),
                                       ('Estrogen_to_GLP1-E', 'GLP1-E + PEG-insulin',
-                                       '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 6),
+                                       '(Estrogen_to_GLP1-E)_to_GLP1-E + PEG-insulin', 5, 3),
                                       ('GLP1_to_GLP1-E', 'GLP1-E + PEG-insulin',
                                        '(GLP1_to_GLP1-E)_to_GLP1-E + PEG-insulin',
-                                       5, 6),
+                                       5, 3),
                                       ],
                      'label_encoder': {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4,
                                        'GLP1-E': 5,
