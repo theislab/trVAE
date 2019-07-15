@@ -280,7 +280,7 @@ class RCVAEMulti:
         def batch_loss():
             def zinb_loss(pi, ridge):
                 def zinb(y_true, y_pred):
-                    zinb_obj = ZINB(pi, ridge_lambda=ridge, debug=False)
+                    zinb_obj = ZINB(pi, ridge_lambda=ridge)
                     return zinb_obj.loss(y_true, y_pred)
                 return zinb
 
