@@ -321,7 +321,7 @@ class RCVAEMulti:
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
 
             self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[kl_recon_loss, mmd_loss],
+                                        loss=[zinb_loss(self.x_hat, ridge=0.1), mmd_loss],
                                         metrics={self.cvae_model.outputs[0].name: zinb_loss(self.x_hat, ridge=0.1),
                                                  self.cvae_model.outputs[1].name: mmd_loss})
 

@@ -96,7 +96,7 @@ def create_model(train_data, valid_data,
 
     alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000, 2000, 3000])}}
-    batch_size_choices = {{choice([128, 256, 512, 1024, 2048])}}
+    batch_size_choices = {{choice([1024, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension=z_dim_choices,
