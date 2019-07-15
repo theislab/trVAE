@@ -354,7 +354,8 @@ class RCVAEMulti:
             else:
                 self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
                                             loss=[zinb_loss(self.h_pi, self.h_disp, ridge=0.1), mmd_loss],
-                                            metrics={self.cvae_model.outputs[0].name: zinb_loss(self.h_pi, ridge=0.1),
+                                            metrics={self.cvae_model.outputs[0].name: zinb_loss(self.h_pi, self.h_disp,
+                                                                                                ridge=0.1),
                                                      self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()
