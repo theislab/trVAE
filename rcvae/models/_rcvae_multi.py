@@ -148,8 +148,10 @@ class RCVAEMulti:
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
 
                 self.h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True)(h)
-                self.h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w, use_bias=True)(h)
-                self.h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w, use_bias=True)(h)
+                self.h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
+                                    use_bias=True)(h)
+                self.h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
+                                    use_bias=True)(h)
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)
@@ -205,7 +207,10 @@ class RCVAEMulti:
         self.x_hat, self.mmd_hl, self.decoder_model = self._mmd_decoder(self.z, self.decoder_labels,
                                                                         name="decoder")
         decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
-        reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
+        if self.loss_fn == 'mse':
+            reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
+        else:
+            reconstruction_output = Lambda(lambda x: x, name="kl_zinb")(decoder_outputs[0])
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
@@ -295,9 +300,12 @@ class RCVAEMulti:
 
         def batch_loss():
             def zinb_loss(pi, ridge):
+                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
+
                 def zinb(y_true, y_pred):
                     zinb_obj = ZINB(pi, ridge_lambda=ridge)
-                    return zinb_obj.loss(y_true, y_pred)
+                    return zinb_obj.loss(y_true, y_pred) + self.alpha * kl_loss
+
                 return zinb
 
             def kl_recon_loss(y_true, y_pred):
@@ -345,6 +353,7 @@ class RCVAEMulti:
                                             loss=[zinb_loss(self.h_pi, ridge=0.1), mmd_loss],
                                             metrics={self.cvae_model.outputs[0].name: zinb_loss(self.h_pi, ridge=0.1),
                                                      self.cvae_model.outputs[1].name: mmd_loss})
+
         batch_loss()
 
     def to_latent(self, data, labels):
