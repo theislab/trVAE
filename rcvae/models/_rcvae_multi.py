@@ -337,13 +337,13 @@ class RCVAEMulti:
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
             if self.loss_fn == 'mse':
                 self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
-                                            loss=[zinb_loss(self.h_pi, ridge=0.1), mmd_loss],
-                                            metrics={self.cvae_model.outputs[0].name: zinb_loss(self.x_hat, ridge=0.1),
+                                            loss=[kl_recon_loss, mmd_loss],
+                                            metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
                                                      self.cvae_model.outputs[1].name: mmd_loss})
             else:
                 self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
-                                            loss=[kl_recon_loss, mmd_loss],
-                                            metrics={self.cvae_model.outputs[0].name: zinb_loss(self.x_hat, ridge=0.1),
+                                            loss=[zinb_loss(self.h_pi, ridge=0.1), mmd_loss],
+                                            metrics={self.cvae_model.outputs[0].name: zinb_loss(self.h_pi, ridge=0.1),
                                                      self.cvae_model.outputs[1].name: mmd_loss})
         batch_loss()
 
