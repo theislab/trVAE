@@ -14,7 +14,7 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
-# from keras_vggface.vggface import VGGFace
+from keras_vggface.vggface import VGGFace
 from scipy import sparse
 
 from .utils import label_encoder
@@ -46,7 +46,7 @@ class RCCVAE:
     """
 
     def __init__(self, x_dimension, z_dimension=100, **kwargs):
-        tf.reset_default_graph()
+        # tf.reset_default_graph()
         self.x_dim = x_dimension if isinstance(x_dimension, tuple) else (x_dimension,)
         self.z_dim = z_dimension
         self.image_shape = x_dimension
@@ -69,13 +69,11 @@ class RCCVAE:
         self.decoder_labels = Input(shape=(1,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
-        # if self.x_dim[0] > 48:
-            # self.vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
-            # self.vggface_layers = ["conv1_1", 'conv1_2',
-            #                        'conv2_1', 'conv2_2',
-            #                        'conv3_1', 'conv3_2', 'conv3_3',
-            #                        'conv4_1', 'conv4_2', 'conv4_3',
-            #                        'conv5_1', 'conv5_2', 'conv5_3']
+        if self.x_dim[0] > 48:
+            self.vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
+            self.vggface_layers = ["conv1_1", 'conv1_2',
+                                   'conv2_1', 'conv2_2',
+                                   'conv3_1', 'conv3_2', 'conv3_3']
 
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()

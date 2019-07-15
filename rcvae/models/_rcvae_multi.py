@@ -57,6 +57,7 @@ class RCVAEMulti:
         self.arch_style = kwargs.get("arch_style", 1)
         self.n_gpus = kwargs.get("n_gpus", 1)
         self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
+        self.loss_fn = kwargs.get("loss_fn", 'mean_squared_error')
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
@@ -133,10 +134,22 @@ class RCVAEMulti:
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
             h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-            if self.use_leaky_relu:
-                h = LeakyReLU(name='reconstruction_output')(h)
+
+            if self.loss_fn == 'mse':
+                h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
+                h = LeakyReLU(name="reconstruction_output")(h)
+                if self.use_leaky_relu:
+                    h = LeakyReLU(name='reconstruction_output')(h)
+                else:
+                    h = Activation('relu', name="reconstruction_output")(h)
+
             else:
-                h = Activation('relu', name="reconstruction_output")(h)
+                mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
+                disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
+
+                self.h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True)(h)
+                self.h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w, use_bias=True)(h)
+                self.h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w, use_bias=True)(h)
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)
@@ -148,10 +161,13 @@ class RCVAEMulti:
             h = BatchNormalization(axis=1)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
+
             h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
             h = LeakyReLU(name="reconstruction_output")(h)
-
-        model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
+        if self.loss_fn == "mse":
+            model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
+        else:
+            model = Model(inputs=[z, y], outputs=[self.h_mean, h_mmd], name=name)
         return h, h_mmd, model
 
     @staticmethod
@@ -319,12 +335,16 @@ class RCVAEMulti:
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
-
-            self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[zinb_loss(self.x_hat, ridge=0.1), mmd_loss],
-                                        metrics={self.cvae_model.outputs[0].name: zinb_loss(self.x_hat, ridge=0.1),
-                                                 self.cvae_model.outputs[1].name: mmd_loss})
-
+            if self.loss_fn == 'mse':
+                self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
+                                            loss=[zinb_loss(self.h_pi, ridge=0.1), mmd_loss],
+                                            metrics={self.cvae_model.outputs[0].name: zinb_loss(self.x_hat, ridge=0.1),
+                                                     self.cvae_model.outputs[1].name: mmd_loss})
+            else:
+                self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
+                                            loss=[kl_recon_loss, mmd_loss],
+                                            metrics={self.cvae_model.outputs[0].name: zinb_loss(self.x_hat, ridge=0.1),
+                                                     self.cvae_model.outputs[1].name: mmd_loss})
         batch_loss()
 
     def to_latent(self, data, labels):
