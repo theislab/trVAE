@@ -57,7 +57,7 @@ class RCVAEMulti:
         self.arch_style = kwargs.get("arch_style", 1)
         self.n_gpus = kwargs.get("n_gpus", 1)
         self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
-        self.loss_fn = kwargs.get("loss_fn", 'mean_squared_error')
+        self.loss_fn = kwargs.get("loss_fn", 'zinb')
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
