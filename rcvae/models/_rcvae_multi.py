@@ -147,10 +147,13 @@ class RCVAEMulti:
                 mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
 
-                self.h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True)(h)
+                self.h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
+                                  name='output_pi')(h)
                 self.h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
+                                    name='output_mean',
                                     use_bias=True)(h)
                 self.h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
+                                    name='output_disp',
                                     use_bias=True)(h)
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
@@ -299,11 +302,11 @@ class RCVAEMulti:
         """
 
         def batch_loss():
-            def zinb_loss(pi, ridge):
+            def zinb_loss(pi, disp, ridge):
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
 
                 def zinb(y_true, y_pred):
-                    zinb_obj = ZINB(pi, ridge_lambda=ridge)
+                    zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
                     return zinb_obj.loss(y_true, y_pred) + self.alpha * kl_loss
 
                 return zinb
@@ -350,7 +353,7 @@ class RCVAEMulti:
                                                      self.cvae_model.outputs[1].name: mmd_loss})
             else:
                 self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
-                                            loss=[zinb_loss(self.h_pi, ridge=0.1), mmd_loss],
+                                            loss=[zinb_loss(self.h_pi, self.h_disp, ridge=0.1), mmd_loss],
                                             metrics={self.cvae_model.outputs[0].name: zinb_loss(self.h_pi, ridge=0.1),
                                                      self.cvae_model.outputs[1].name: mmd_loss})
 
