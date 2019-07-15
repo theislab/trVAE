@@ -12,6 +12,7 @@ from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from scipy import sparse
 
+from rcvae.models.loss import ZINB
 from rcvae.models.utils import label_encoder, shuffle_data
 
 log = logging.getLogger(__file__)
@@ -277,6 +278,12 @@ class RCVAEMulti:
         """
 
         def batch_loss():
+            def zinb_loss(pi, ridge):
+                def zinb(y_true, y_pred):
+                    zinb_obj = ZINB(pi, ridge_lambda=ridge, debug=False)
+                    return zinb_obj.loss(y_true, y_pred)
+                return zinb
+
             def kl_recon_loss(y_true, y_pred):
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
                 recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
@@ -315,7 +322,7 @@ class RCVAEMulti:
 
             self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
                                         loss=[kl_recon_loss, mmd_loss],
-                                        metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
+                                        metrics={self.cvae_model.outputs[0].name: zinb_loss(self.x_hat, ridge=0.1),
                                                  self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()

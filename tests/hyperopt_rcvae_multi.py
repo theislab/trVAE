@@ -36,7 +36,7 @@ def data():
                   'cell_type': 'cell_label'},
 
         "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
-                     'source_conditions': ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', 'GLP1-E',],
+                     'source_conditions': ['Ctrl', 'GLP1', 'Estrogen', 'PEG-insulin', 'Vehicle-STZ', 'GLP1-E', ],
                      'target_conditions': ['GLP1-E + PEG-insulin'],
                      'transition': ('GLP1-E', 'GLP1-E + PEG-insulin', 'GLP1-E_to_GLP1-E + PEG-insulin', 5, 3),
                      'label_encoder': {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4,
@@ -166,11 +166,9 @@ def create_model(train_data, valid_data,
     return {'loss': -best_reg, 'status': STATUS_OK, 'model': network}
 
 
-def visualize_multi_perturbation_between(network, adata, pred_adatas,
-                                         source_condition, target_condition, source_label, target_label, name,
-                                         cell_type='', data_name="", top_100_genes=None, gene_list=None,
-                                         path_to_save='./',
-                                         condition_key='condition'):
+def predict_between_conditions(network, adata, pred_adatas,
+                               source_condition, target_condition, source_label, target_label, name,
+                               condition_key='condition'):
     adata_source = adata.copy()[adata.obs[condition_key] == source_condition]
     adata_target = adata.copy()[adata.obs[condition_key] == target_condition]
 
@@ -199,34 +197,6 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
 
     if sparse.issparse(pred_adata.X):
         pred_adata.X = pred_adata.X.A
-
-    adata_to_plot = pred_adata.concatenate(adata_target)
-
-    rcvae.plotting.reg_mean_plot(adata_to_plot,
-                                 top_100_genes=top_100_genes,
-                                 gene_list=gene_list,
-                                 condition_key=condition_key,
-                                 axis_keys={"x": f'{name}', 'y': target_condition},
-                                 labels={'x': f'{source_condition} to {target_condition}',
-                                         'y': f'real {target_condition}'},
-                                 legend=False,
-                                 fontsize=20,
-                                 textsize=14,
-                                 path_to_save=os.path.join(path_to_save,
-                                                           f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
-
-    rcvae.plotting.reg_var_plot(adata_to_plot,
-                                top_100_genes=top_100_genes,
-                                gene_list=gene_list,
-                                condition_key=condition_key,
-                                axis_keys={"x": f'{name}', 'y': target_condition},
-                                labels={'x': f'{source_condition} to {target_condition}',
-                                        'y': f'real {target_condition}'},
-                                legend=False,
-                                fontsize=20,
-                                textsize=14,
-                                path_to_save=os.path.join(path_to_save,
-                                                          f'rcvae_reg_var_{data_name}_{source_condition} to {target_condition}.pdf'))
 
     return pred_adata
 
@@ -316,7 +286,6 @@ if __name__ == '__main__':
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
     }
-
     data_dict = DATASETS[data_key]
 
     data_name = data_dict['name']
@@ -361,43 +330,21 @@ if __name__ == '__main__':
 
     cell_type_adata = train_data[train_data.obs[cell_type_key] == cell_type]
 
-    if data_name in ["pbmc", 'endo_norm']:
-        sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, groups=source_keys[1:] + target_keys,
-                                reference=source_keys[0], n_genes=100, method="wilcoxon")
-        top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
-        gene_list = top_100_genes[:10]
-    elif data_name in ['cytof']:
-        sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
-        top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
-        gene_list = top_100_genes[:10]
-        top_100_genes = None
-    elif data_name in ['pancreas']:
-        top_100_genes = None
-        gene_list = None
-    else:
-        sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
-        top_50_down_genes = cell_type_adata.uns["rank_genes_groups"]["names"][source_keys[0]].tolist()
-        top_50_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
-        top_100_genes = top_50_up_genes + top_50_down_genes
-        gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
     perturbation_list = data_dict.get("perturbation", [])
     pred_adatas = None
     for source, dest, name, source_label, target_label in perturbation_list:
         print(source, dest, name)
-        pred_adata = visualize_multi_perturbation_between(best_network, cell_type_adata, pred_adatas,
-                                                          source_condition=source, target_condition=dest,
-                                                          name=name,
-                                                          source_label=source_label, target_label=target_label,
-                                                          cell_type=cell_type, data_name=data_name,
-                                                          top_100_genes=top_100_genes, gene_list=gene_list,
-                                                          path_to_save=path_to_save,
-                                                          condition_key=condition_key)
+        pred_adata = predict_between_conditions(best_network, cell_type_adata, pred_adatas,
+                                                source_condition=source, target_condition=dest,
+                                                name=name,
+                                                source_label=source_label, target_label=target_label,
+                                                condition_key=condition_key)
         if pred_adatas is None:
             pred_adatas = pred_adata
         else:
             pred_adatas = pred_adatas.concatenate(pred_adata)
 
-    pred_adatas.write_h5ad(filename=f"./data/reconstructed/RCVAEMulti/{data_name}.h5ad")
+    pred_adatas.write_h5ad(filename=f"./data/reconstructed/RCVAEMulti/{data_name}_{cell_type}.h5ad")
 
     import matplotlib as mpl
 
@@ -465,18 +412,6 @@ if __name__ == '__main__':
                show=False,
                wspace=0.15,
                frameon=False)
-    if gene_list is not None:
-        for target_condition in target_keys:
-            pred_adata = pred_adatas.copy()[pred_adatas.obs[condition_key].str.endswith(target_condition)]
-            real_data = cell_type_adata.copy()[cell_type_adata.obs[condition_key].isin([source_keys[0], target_condition])]
-            violin_adata = real_data.concatenate(pred_adata)
-            for gene in gene_list[:3]:
-                sc.pl.violin(violin_adata, keys=gene, groupby=condition_key,
-                             save=f"_{data_name}_{cell_type}_{gene}_{target_condition}.pdf",
-                             show=False,
-                             wspace=0.2,
-                             rotation=90,
-                             frameon=False)
 
     plt.close("all")
     best_network.save_model()
