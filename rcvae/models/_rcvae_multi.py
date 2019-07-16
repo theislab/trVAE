@@ -216,6 +216,8 @@ class RCVAEMulti:
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
+        self.pi_model = Model(inputs=inputs, outputs=self.h_pi)
+        self.disp_model = Model(inputs=inputs, outputs=self.h_disp)
 
     @staticmethod
     def compute_kernel(x, y, kernel='rbf', **kwargs):
