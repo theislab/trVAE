@@ -344,7 +344,10 @@ class RCVAEMulti:
                                                  self.cvae_model.outputs[1].name: mmd_loss})
             else:
                 self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[zinb_loss(self.h_pi, self.h_disp, ridge=self.ridge), mmd_loss],
+                                        loss=[zinb_loss(
+                                            self.cvae_model.get_layer('decoder').get_layer('output_pi').output,
+                                            self.cvae_model.get_layer('decoder').get_layer('output_disp').output,
+                                            ridge=self.ridge), mmd_loss],
                                         metrics={self.cvae_model.outputs[0].name: zinb_loss(self.h_pi, self.h_disp,
                                                                                             ridge=self.ridge),
                                                  self.cvae_model.outputs[1].name: mmd_loss})
