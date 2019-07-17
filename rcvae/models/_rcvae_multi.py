@@ -571,7 +571,6 @@ class RCVAEMulti:
             log.info("----Training----")
 
         train_labels, _ = label_encoder(train_data, le, condition_key)
-        pseudo_labels = np.ones(shape=train_labels.shape)
 
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
@@ -586,9 +585,6 @@ class RCVAEMulti:
             train_data.X = train_data.X.A
             train_data.raw.X = train_data.raw.X.A
 
-        if shuffle:
-            train_data, train_labels = shuffle_data(train_data, train_labels)
-
         if self.loss_fn != 'mse':
             x = [train_data.X, train_labels, train_labels, train_data.obs['size_factors'].values]
             y = [train_data.raw.X, train_labels]
@@ -601,9 +597,6 @@ class RCVAEMulti:
                 valid_data.X = valid_data.X.A
 
             valid_labels, _ = label_encoder(valid_data, le, condition_key)
-
-            if shuffle:
-                valid_data, valid_labels = shuffle_data(valid_data, valid_labels)
 
             if self.loss_fn != 'mse':
                 x_valid = [valid_data.X, valid_labels, valid_labels, valid_data.obs['size_factors'].values]
