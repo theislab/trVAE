@@ -585,7 +585,7 @@ if __name__ == '__main__':
                                  help='Learning rate of optimizer')
     arguments_group.add_argument('-f', '--loss_fn', type=str, default='mse', required=False,
                                  help='Loss Function of trVAE')
-    arguments_group.add_argument('-v', '--verbose', type=str, default='mse', required=False,
+    arguments_group.add_argument('-v', '--verbose', type=int, default=2, required=False,
                                  help='set Verbosity of training')
 
     args = vars(parser.parse_args())
