@@ -183,7 +183,7 @@ class RCVAEMulti:
         elif self.loss_fn == 'nb':
             model = Model(inputs=[z, y], outputs=[h_mean, h_mmd, h_disp], name=name)
         elif self.loss_fn == 'zinb':
-            model = Model(inputs=[z, y], outputs=[h_mean, h_pi, h_mmd, h_disp], name=name)
+            model = Model(inputs=[z, y], outputs=[h_mean, h_mmd, h_pi, h_disp], name=name)
         return h, h_mmd, model
 
     @staticmethod
