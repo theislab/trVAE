@@ -236,12 +236,16 @@ class RCVAEMulti:
             self.mean_output = ColwiseMultLayer([self.mean_output, self.size_factor])
             self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[2])
             reconstruction_output = SliceLayer(0, name='kl_nb')([self.mean_output, self.disp_output])
+
+            inputs += [self.size_factor]
         elif self.loss_fn == 'zinb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
             self.mean_output = ColwiseMultLayer([self.mean_output, self.size_factor])
             self.pi_output = Lambda(lambda x: x, name='pi_output')(decoder_outputs[2])
             self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[3])
             reconstruction_output = SliceLayer(0, name='kl_zinb')([self.mean_output, self.pi_output, self.disp_output])
+
+            inputs += [self.size_factor]
 
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
@@ -585,11 +589,11 @@ class RCVAEMulti:
         if shuffle:
             train_data, train_labels = shuffle_data(train_data, train_labels)
 
-        x = [train_data.X, train_labels, train_labels]
-
         if self.loss_fn != 'mse':
+            x = [train_data.X, train_labels, train_labels, train_data.obs.size_factors]
             y = [train_data.raw.X, train_labels]
         else:
+            x = [train_data.X, train_labels, train_labels]
             y = [train_data.X, train_labels]
 
         if use_validation:
@@ -601,11 +605,11 @@ class RCVAEMulti:
             if shuffle:
                 valid_data, valid_labels = shuffle_data(valid_data, valid_labels)
 
-            x_valid = [valid_data.X, valid_labels, valid_labels]
-
             if self.loss_fn != 'mse':
+                x_valid = [valid_data.X, valid_labels, valid_labels, valid_data.obs.size_factors]
                 y_valid = [valid_data.raw.X, valid_labels]
             else:
+                x_valid = [valid_data.X, valid_labels, valid_labels]
                 y_valid = [valid_data.X, valid_labels]
 
             histories = self.cvae_model.fit(
