@@ -132,6 +132,7 @@ def train_network(data_dict=None,
                   learning_rate=0.001,
                   arch_style=1,
                   loss_fn='mse',
+                  verbose=2,
                   ):
     data_name = data_dict['name']
     source_keys = data_dict.get("source_conditions")
@@ -166,9 +167,9 @@ def train_network(data_dict=None,
 
             if loss_fn != 'mse':
                 net_train_data = normalize(net_train_data,
-                                           filter_min_counts=True, normalize_input=True, logtrans_input=True)
+                                           filter_min_counts=False, normalize_input=True, logtrans_input=True)
                 net_valid_data = normalize(net_valid_data,
-                                           filter_min_counts=True, normalize_input=True, logtrans_input=True)
+                                           filter_min_counts=False, normalize_input=True, logtrans_input=True)
             network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                        z_dimension=z_dim,
                                        n_conditions=n_conditions,
@@ -190,7 +191,7 @@ def train_network(data_dict=None,
                           valid_data=net_valid_data,
                           n_epochs=n_epochs,
                           batch_size=batch_size,
-                          verbose=2,
+                          verbose=verbose,
                           early_stop_limit=early_stop_limit,
                           shuffle=True,
                           save=True)
@@ -584,6 +585,8 @@ if __name__ == '__main__':
                                  help='Learning rate of optimizer')
     arguments_group.add_argument('-f', '--loss_fn', type=str, default='mse', required=False,
                                  help='Loss Function of trVAE')
+    arguments_group.add_argument('-v', '--verbose', type=str, default='mse', required=False,
+                                 help='set Verbosity of training')
 
     args = vars(parser.parse_args())
 

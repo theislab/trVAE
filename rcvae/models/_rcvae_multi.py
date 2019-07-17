@@ -350,30 +350,12 @@ class RCVAEMulti:
             def mmd_loss(real_labels, y_pred):
                 with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
                     real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
-                    if self.n_conditions == 3:
-                        source_mmd, dest1_mmd, dest2_mmd = tf.dynamic_partition(y_pred, real_labels,
-                                                                                num_partitions=self.n_conditions)
-                        loss = self.compute_mmd(source_mmd, dest1_mmd, self.kernel_method)
-                        loss += self.compute_mmd(source_mmd, dest2_mmd, self.kernel_method)
-                        loss += self.compute_mmd(dest1_mmd, dest2_mmd, self.kernel_method)
-                    elif self.n_conditions == 4:
-                        source1_mmd, source2_mmd, source3_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels,
-                                                                                               num_partitions=self.n_conditions)
+                    conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=self.n_conditions)
+                    loss = 0.0
 
-                        loss = self.compute_mmd(source1_mmd, source2_mmd, self.kernel_method)
-                        loss += self.compute_mmd(source1_mmd, source3_mmd, self.kernel_method)
-                        loss += self.compute_mmd(source1_mmd, dest_mmd, self.kernel_method)
-                        loss += self.compute_mmd(source2_mmd, source3_mmd, self.kernel_method)
-                        loss += self.compute_mmd(source2_mmd, dest_mmd, self.kernel_method)
-                        loss += self.compute_mmd(source3_mmd, dest_mmd, self.kernel_method)
-
-                    else:
-                        conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=self.n_conditions)
-                        loss = 0.0
-
-                        for i in range(len(conditions_mmd)):
-                            for j in range(i):
-                                loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
+                    for i in range(len(conditions_mmd)):
+                        for j in range(i):
+                            loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
