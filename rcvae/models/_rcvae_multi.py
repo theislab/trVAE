@@ -337,7 +337,7 @@ class RCVAEMulti:
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
 
                 def nb(y_true, y_pred):
-                    nb_obj = NB(theta=disp, masking=False, scale_factor=1.0)
+                    nb_obj = NB(theta=disp, masking=True, scale_factor=1.0)
                     return nb_obj.loss(y_true, y_pred) + self.alpha * kl_loss
 
                 return nb
