@@ -78,6 +78,20 @@ DATASETS = {
                  'cell_type': 'cell_type',
                  'condition': 'sample'},
 
+    "ILC": {'name': 'nmuil', 'need_merge': False,
+            'source_conditions': ['control', 'IL33', 'IL25', 'NMU'],
+            'target_conditions': ['NMU_IL25'],
+            'perturbation': [('control', 'IL33', 'control_to_IL33', 0, 1),
+                             ('control', 'IL25', 'control_to_IL25', 0, 2),
+                             ('control', 'NMU', 'control_to_NMU', 0, 3),
+                             ('IL25', 'NMU_IL25', 'IL25_to_NMU_IL25', 2, 3),
+                             ('NMU', 'NMU_IL25', 'NMU_to_NMU_IL25', 3, 2),
+                             ],
+            'label_encoder': {'control': 0, 'IL33': 1, 'IL25': 2, 'NMU': 3, 'NMU_IL25': 4},
+            'spec_cell_types': ['None'],
+            'condition': 'condition',
+            'cell_type': 'cell_type'},
+
 }
 
 
