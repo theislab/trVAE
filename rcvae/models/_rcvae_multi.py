@@ -156,23 +156,25 @@ class RCVAEMulti:
                 mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
                 h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
+                               name='decoder_mean',
                                use_bias=True)(h)
                 h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
                                name='decoder_disp',
                                use_bias=True)(h)
-                h_mean = ColwiseMultLayer([h_mean, self.size_factor], name='decoder_mean')
+                h_mean = ColwiseMultLayer([h_mean, self.size_factor])
             elif self.loss_fn == 'zinb':
                 mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
                 h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
                              name='decoder_pi')(h)
                 h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
+                               name='decoder_mean',
                                use_bias=True)(h)
                 h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
                                name='decoder_disp',
                                use_bias=True)(h)
 
-                h_mean = ColwiseMultLayer([h_mean, self.size_factor], name='decoder_mean')
+                h_mean = ColwiseMultLayer([h_mean, self.size_factor])
 
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
