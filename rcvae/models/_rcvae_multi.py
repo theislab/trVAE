@@ -225,7 +225,7 @@ class RCVAEMulti:
             reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
         elif self.loss_fn == 'nb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
-            self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[3])
+            self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[2])
             reconstruction_output = SliceLayer(0, name='kl_nb')([self.mean_output, self.disp_output])
         elif self.loss_fn == 'zinb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
