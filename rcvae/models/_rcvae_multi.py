@@ -161,7 +161,6 @@ class RCVAEMulti:
                 h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
                                name='decoder_disp',
                                use_bias=True)(h)
-                h_mean = ColwiseMultLayer([h_mean, self.size_factor])
             elif self.loss_fn == 'zinb':
                 mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
@@ -173,9 +172,6 @@ class RCVAEMulti:
                 h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
                                name='decoder_disp',
                                use_bias=True)(h)
-
-                h_mean = ColwiseMultLayer([h_mean, self.size_factor])
-
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)
@@ -237,10 +233,12 @@ class RCVAEMulti:
             reconstruction_output = Lambda(lambda x: x, name="kl_mse")(decoder_outputs[0])
         elif self.loss_fn == 'nb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
+            self.mean_output = ColwiseMultLayer([self.mean_output, self.size_factor])
             self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[2])
             reconstruction_output = SliceLayer(0, name='kl_nb')([self.mean_output, self.disp_output])
         elif self.loss_fn == 'zinb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
+            self.mean_output = ColwiseMultLayer([self.mean_output, self.size_factor])
             self.pi_output = Lambda(lambda x: x, name='pi_output')(decoder_outputs[2])
             self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[3])
             reconstruction_output = SliceLayer(0, name='kl_zinb')([self.mean_output, self.pi_output, self.disp_output])
