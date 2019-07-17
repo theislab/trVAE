@@ -222,7 +222,7 @@ class RCVAEMulti:
                                                                         name="decoder")
         decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
         if self.loss_fn == 'mse':
-            reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
+            reconstruction_output = Lambda(lambda x: x, name="kl_mse")(decoder_outputs[0])
         elif self.loss_fn == 'nb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
             self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[2])
