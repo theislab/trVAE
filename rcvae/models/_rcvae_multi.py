@@ -147,16 +147,15 @@ class RCVAEMulti:
                 mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
 
-                self.h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
-                                  name='output_pi')(h)
-                self.h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
-                                    name='output_mean',
-                                    use_bias=True)(h)
-                self.h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
-                                    name='output_disp',
-                                    use_bias=True)(h)
+                h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
+                             name='decoder_pi')(h)
+                h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
+                               name='decoder_mean',
+                               use_bias=True)(h)
+                h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
+                               name='decoder_disp',
+                               use_bias=True)(h)
 
-                output = SliceLayer(0, name='slice')([self.h_mean, self.h_pi, self.h_disp])
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)
@@ -174,7 +173,7 @@ class RCVAEMulti:
         if self.loss_fn == "mse":
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
         else:
-            model = Model(inputs=[z, y], outputs=[output, h_mmd], name=name)
+            model = Model(inputs=[z, y], outputs=[h_mean, h_mmd, h_pi, h_disp], name=name)
         return h, h_mmd, model
 
     @staticmethod
@@ -215,7 +214,10 @@ class RCVAEMulti:
         if self.loss_fn == 'mse':
             reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
         else:
-            reconstruction_output = Lambda(lambda x: x, name="kl_zinb")(decoder_outputs[0])
+            self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
+            self.pi_output = Lambda(lambda x: x, name='pi_output')(decoder_outputs[2])
+            self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[3])
+            reconstruction_output = SliceLayer(0, name='kl_zinb')([self.mean_output, self.pi_output, self.disp_output])
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
@@ -344,13 +346,11 @@ class RCVAEMulti:
                                                  self.cvae_model.outputs[1].name: mmd_loss})
             else:
                 self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[zinb_loss(
-                                            self.cvae_model.get_layer('decoder').get_layer('output_pi').output,
-                                            self.cvae_model.get_layer('decoder').get_layer('output_disp').output,
-                                            ridge=self.ridge), mmd_loss],
-                                        metrics={self.cvae_model.outputs[0].name: zinb_loss(self.h_pi, self.h_disp,
-                                                                                            ridge=self.ridge),
-                                                 self.cvae_model.outputs[1].name: mmd_loss})
+                                        loss=[zinb_loss(self.pi_output, self.disp_output, ridge=self.ridge), mmd_loss],
+                                        metrics={
+                                            self.cvae_model.outputs[0].name: zinb_loss(self.pi_output, self.disp_output,
+                                                                                       ridge=self.ridge),
+                                            self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()
 
