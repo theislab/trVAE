@@ -7,6 +7,7 @@ import scanpy as sc
 from scipy import sparse
 
 import rcvae
+from rcvae.utils import normalize
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -162,6 +163,12 @@ def train_network(data_dict=None,
                 use_leaky_relu = True
             else:
                 use_leaky_relu = False
+
+            if loss_fn != 'mse':
+                net_train_data = normalize(net_train_data,
+                                           filter_min_counts=True, normalize_input=True, logtrans_input=True)
+                net_valid_data = normalize(net_valid_data,
+                                           filter_min_counts=True, normalize_input=True, logtrans_input=True)
             network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                        z_dimension=z_dim,
                                        n_conditions=n_conditions,

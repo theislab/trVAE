@@ -11,7 +11,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from scipy import sparse
 
-from rcvae.models.layers import SliceLayer
+from rcvae.models.layers import SliceLayer, ColwiseMultLayer
 from rcvae.models.losses import ZINB, NB
 from rcvae.models.utils import label_encoder, shuffle_data
 
@@ -64,6 +64,9 @@ class RCVAEMulti:
         self.decoder_labels = Input(shape=(1,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
+        if self.loss_fn != "mse":
+            self.size_factor = Input(shape=(1,), name='size_factor')
+
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
         self._loss_function()
@@ -92,6 +95,10 @@ class RCVAEMulti:
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
             h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(h)
             h = BatchNormalization()(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
@@ -126,9 +133,11 @@ class RCVAEMulti:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)
             h_mmd = LeakyReLU(name="mmd")(h)
-            h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
+            h = Dropout(self.dr_rate)(h_mmd)
+            h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
             h = BatchNormalization()(h)
             h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
             h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(h)
             h = BatchNormalization(axis=1)(h)
             h = LeakyReLU()(h)
@@ -147,22 +156,23 @@ class RCVAEMulti:
                 mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
                 h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
-                               name='decoder_mean',
                                use_bias=True)(h)
                 h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
                                name='decoder_disp',
                                use_bias=True)(h)
+                h_mean = ColwiseMultLayer([h_mean, self.size_factor], name='decoder_mean')
             elif self.loss_fn == 'zinb':
                 mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
                 h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
                              name='decoder_pi')(h)
                 h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
-                               name='decoder_mean',
                                use_bias=True)(h)
                 h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
                                name='decoder_disp',
                                use_bias=True)(h)
+
+                h_mean = ColwiseMultLayer([h_mean, self.size_factor], name='decoder_mean')
 
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
@@ -570,16 +580,18 @@ class RCVAEMulti:
 
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
+            train_data.raw.X = train_data.raw.X.A
 
         if shuffle:
             train_data, train_labels = shuffle_data(train_data, train_labels)
 
-        if self.train_with_fake_labels:
-            x = [train_data.X, train_labels, pseudo_labels]
-            y = [train_data.X, train_labels]
+        x = [train_data.X, train_labels, train_labels]
+
+        if self.loss_fn != 'mse':
+            y = [train_data.raw.X, train_labels]
         else:
-            x = [train_data.X, train_labels, train_labels]
             y = [train_data.X, train_labels]
+
         if use_validation:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
@@ -590,7 +602,12 @@ class RCVAEMulti:
                 valid_data, valid_labels = shuffle_data(valid_data, valid_labels)
 
             x_valid = [valid_data.X, valid_labels, valid_labels]
-            y_valid = [valid_data.X, valid_labels]
+
+            if self.loss_fn != 'mse':
+                y_valid = [valid_data.raw.X, valid_labels]
+            else:
+                y_valid = [valid_data.X, valid_labels]
+
             histories = self.cvae_model.fit(
                 x=x,
                 y=y,

@@ -1,4 +1,6 @@
+import tensorflow as tf
 from keras.engine.topology import Layer
+from keras.layers import Lambda
 
 
 class SliceLayer(Layer):
@@ -18,3 +20,6 @@ class SliceLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape[self.index]
+
+
+ColwiseMultLayer = Lambda(lambda l: l[0] * tf.reshape(l[1], (-1, 1)))
