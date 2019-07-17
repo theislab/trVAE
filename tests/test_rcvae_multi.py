@@ -78,7 +78,7 @@ DATASETS = {
                  'cell_type': 'cell_type',
                  'condition': 'sample'},
 
-    "ILC": {'name': 'nmuil', 'need_merge': False,
+    "ILC": {'name': 'nmuil_count', 'need_merge': False,
             'source_conditions': ['control', 'IL33', 'IL25', 'NMU'],
             'target_conditions': ['NMU_IL25'],
             'perturbation': [('control', 'IL33', 'control_to_IL33', 0, 1),
@@ -575,7 +575,7 @@ if __name__ == '__main__':
                                  help='Architecture Style')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='Learning rate of optimizer')
-    arguments_group.add_argument('-f', '--loss_fn', type=int, default=1, required=False,
+    arguments_group.add_argument('-f', '--loss_fn', type=str, default='mse', required=False,
                                  help='Loss Function of trVAE')
 
     args = vars(parser.parse_args())
