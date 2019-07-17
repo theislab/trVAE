@@ -12,7 +12,7 @@ from keras.models import Model, load_model
 from scipy import sparse
 
 from rcvae.models.layers import SliceLayer
-from rcvae.models.losses import ZINB
+from rcvae.models.losses import ZINB, NB
 from rcvae.models.utils import label_encoder, shuffle_data
 
 log = logging.getLogger(__file__)
@@ -56,7 +56,7 @@ class RCVAEMulti:
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.arch_style = kwargs.get("arch_style", 1)
         self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
-        self.loss_fn = kwargs.get("loss_fn", 'zinb')
+        self.loss_fn = kwargs.get("loss_fn", 'nb')
         self.ridge = kwargs.get('ridge', 0.1)
 
         self.x = Input(shape=(self.x_dim,), name="data")
@@ -143,10 +143,18 @@ class RCVAEMulti:
                 else:
                     h = Activation('relu', name="reconstruction_output")(h)
 
-            else:
+            elif self.loss_fn == 'nb':
                 mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
                 disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
-
+                h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
+                               name='decoder_mean',
+                               use_bias=True)(h)
+                h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
+                               name='decoder_disp',
+                               use_bias=True)(h)
+            elif self.loss_fn == 'zinb':
+                mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
+                disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
                 h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
                              name='decoder_pi')(h)
                 h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
@@ -172,8 +180,10 @@ class RCVAEMulti:
             h = LeakyReLU(name="reconstruction_output")(h)
         if self.loss_fn == "mse":
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
-        else:
-            model = Model(inputs=[z, y], outputs=[h_mean, h_mmd, h_pi, h_disp], name=name)
+        elif self.loss_fn == 'nb':
+            model = Model(inputs=[z, y], outputs=[h_mean, h_mmd, h_disp], name=name)
+        elif self.loss_fn == 'zinb':
+            model = Model(inputs=[z, y], outputs=[h_mean, h_pi, h_mmd, h_disp], name=name)
         return h, h_mmd, model
 
     @staticmethod
@@ -213,11 +223,16 @@ class RCVAEMulti:
         decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
         if self.loss_fn == 'mse':
             reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
-        else:
+        elif self.loss_fn == 'nb':
+            self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
+            self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[3])
+            reconstruction_output = SliceLayer(0, name='kl_nb')([self.mean_output, self.disp_output])
+        elif self.loss_fn == 'zinb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
             self.pi_output = Lambda(lambda x: x, name='pi_output')(decoder_outputs[2])
             self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[3])
             reconstruction_output = SliceLayer(0, name='kl_zinb')([self.mean_output, self.pi_output, self.disp_output])
+
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
@@ -304,6 +319,15 @@ class RCVAEMulti:
 
                 return zinb
 
+            def nb_loss(disp):
+                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
+
+                def nb(y_true, y_pred):
+                    nb_obj = NB(theta=disp, masking=False, scale_factor=1.0)
+                    return nb_obj.loss(y_true, y_pred) + self.alpha * kl_loss
+
+                return nb
+
             def kl_recon_loss(y_true, y_pred):
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
                 recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
@@ -344,7 +368,13 @@ class RCVAEMulti:
                                         loss=[kl_recon_loss, mmd_loss],
                                         metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
                                                  self.cvae_model.outputs[1].name: mmd_loss})
-            else:
+            elif self.loss_fn == 'nb':
+                self.cvae_model.compile(optimizer=self.cvae_optimizer,
+                                        loss=[nb_loss(self.disp_output), mmd_loss],
+                                        metrics={
+                                            self.cvae_model.outputs[0].name: nb_loss(self.disp_output),
+                                            self.cvae_model.outputs[1].name: mmd_loss})
+            elif self.loss_fn == 'zinb':
                 self.cvae_model.compile(optimizer=self.cvae_optimizer,
                                         loss=[zinb_loss(self.pi_output, self.disp_output, ridge=self.ridge), mmd_loss],
                                         metrics={
