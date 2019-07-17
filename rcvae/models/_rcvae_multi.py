@@ -590,7 +590,7 @@ class RCVAEMulti:
             train_data, train_labels = shuffle_data(train_data, train_labels)
 
         if self.loss_fn != 'mse':
-            x = [train_data.X, train_labels, train_labels, train_data.obs.size_factors]
+            x = [train_data.X, train_labels, train_labels, train_data.obs['size_factors'].values]
             y = [train_data.raw.X, train_labels]
         else:
             x = [train_data.X, train_labels, train_labels]
@@ -606,7 +606,7 @@ class RCVAEMulti:
                 valid_data, valid_labels = shuffle_data(valid_data, valid_labels)
 
             if self.loss_fn != 'mse':
-                x_valid = [valid_data.X, valid_labels, valid_labels, valid_data.obs.size_factors]
+                x_valid = [valid_data.X, valid_labels, valid_labels, valid_data.obs['size_factors'].values]
                 y_valid = [valid_data.raw.X, valid_labels]
             else:
                 x_valid = [valid_data.X, valid_labels, valid_labels]
