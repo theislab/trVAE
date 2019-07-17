@@ -11,7 +11,8 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from scipy import sparse
 
-from rcvae.models.loss import ZINB
+from rcvae.models.layers import SliceLayer
+from rcvae.models.losses import ZINB
 from rcvae.models.utils import label_encoder, shuffle_data
 
 log = logging.getLogger(__file__)
@@ -56,6 +57,7 @@ class RCVAEMulti:
         self.arch_style = kwargs.get("arch_style", 1)
         self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
         self.loss_fn = kwargs.get("loss_fn", 'zinb')
+        self.ridge = kwargs.get('ridge', 0.1)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
@@ -153,6 +155,8 @@ class RCVAEMulti:
                 self.h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
                                     name='output_disp',
                                     use_bias=True)(h)
+
+                output = SliceLayer(0, name='slice')([self.h_mean, self.h_pi, self.h_disp])
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)
@@ -170,7 +174,7 @@ class RCVAEMulti:
         if self.loss_fn == "mse":
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
         else:
-            model = Model(inputs=[z, y], outputs=[self.h_mean, h_mmd], name=name)
+            model = Model(inputs=[z, y], outputs=[output, h_mmd], name=name)
         return h, h_mmd, model
 
     @staticmethod
@@ -216,8 +220,6 @@ class RCVAEMulti:
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
-        self.pi_model = Model(inputs=inputs, outputs=self.h_pi)
-        self.disp_model = Model(inputs=inputs, outputs=self.h_disp)
 
     @staticmethod
     def compute_kernel(x, y, kernel='rbf', **kwargs):
@@ -342,9 +344,9 @@ class RCVAEMulti:
                                                  self.cvae_model.outputs[1].name: mmd_loss})
             else:
                 self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[zinb_loss(self.h_pi, self.h_disp, ridge=0.1), mmd_loss],
+                                        loss=[zinb_loss(self.h_pi, self.h_disp, ridge=self.ridge), mmd_loss],
                                         metrics={self.cvae_model.outputs[0].name: zinb_loss(self.h_pi, self.h_disp,
-                                                                                            ridge=0.1),
+                                                                                            ridge=self.ridge),
                                                  self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()
