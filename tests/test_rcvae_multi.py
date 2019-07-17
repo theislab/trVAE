@@ -130,6 +130,7 @@ def train_network(data_dict=None,
                   dropout_rate=0.2,
                   learning_rate=0.001,
                   arch_style=1,
+                  loss_fn='mse',
                   ):
     data_name = data_dict['name']
     source_keys = data_dict.get("source_conditions")
@@ -170,6 +171,7 @@ def train_network(data_dict=None,
                                        beta=beta,
                                        kernel=kernel,
                                        learning_rate=learning_rate,
+                                       loss_fn=loss_fn,
                                        model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}-{arch_style}/",
                                        dropout_rate=dropout_rate,
                                        use_leaky_relu=use_leaky_relu)
@@ -573,6 +575,8 @@ if __name__ == '__main__':
                                  help='Architecture Style')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='Learning rate of optimizer')
+    arguments_group.add_argument('-f', '--loss_fn', type=int, default=1, required=False,
+                                 help='Loss Function of trVAE')
 
     args = vars(parser.parse_args())
 
