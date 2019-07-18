@@ -369,7 +369,7 @@ class RCVAEMulti:
                             loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
                     return self.beta * loss
 
-            self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
+            self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=5.0)
             if self.loss_fn == 'mse':
                 self.cvae_model.compile(optimizer=self.cvae_optimizer,
                                         loss=[kl_recon_loss, mmd_loss],
@@ -577,7 +577,7 @@ class RCVAEMulti:
             History(),
             EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold),
             CSVLogger(filename="./csv_logger.log"),
-            ReduceLROnPlateau(monitor='val_loss', patience=25, verbose=verbose)
+            ReduceLROnPlateau(monitor='val_loss', patience=10, verbose=verbose)
         ]
 
         if sparse.issparse(train_data.X):
