@@ -1,5 +1,5 @@
-import scanpy as sc
 import numpy as np
+import scanpy as sc
 
 
 def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True):
@@ -25,3 +25,16 @@ def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=
         sc.pp.scale(adata)
 
     return adata
+
+
+def train_test_split(adata, train_frac=0.85):
+    train_size = int(adata.shape[0] * train_frac)
+    indices = np.arange(adata.shape[0])
+    np.random.shuffle(indices)
+    train_idx = indices[:train_size]
+    test_idx = indices[train_size:]
+
+    train_data = adata[train_idx, :]
+    valid_data = adata[test_idx, :]
+
+    return train_data, valid_data

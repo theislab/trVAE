@@ -7,7 +7,7 @@ import scanpy as sc
 from scipy import sparse
 
 import rcvae
-from rcvae.utils import normalize
+from rcvae.utils import normalize, train_test_split
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -145,8 +145,11 @@ def train_network(data_dict=None,
     if need_merge:
         train_data, valid_data = merge_data(data_dict)
     else:
-        train_data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
-        valid_data = sc.read(f"../data/{data_name}/valid_{data_name}.h5ad")
+        adata = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        if loss_fn != 'mse':
+            adata = normalize(adata,
+                              filter_min_counts=False, normalize_input=True, logtrans_input=True)
+        train_data, valid_data = train_test_split(adata, 0.80)
 
     spec_cell_type = data_dict.get("spec_cell_types", None)
     if cell_type_key is not None:
@@ -165,11 +168,6 @@ def train_network(data_dict=None,
             else:
                 use_leaky_relu = False
 
-            if loss_fn != 'mse':
-                net_train_data = normalize(net_train_data,
-                                           filter_min_counts=False, normalize_input=True, logtrans_input=True)
-                net_valid_data = normalize(net_valid_data,
-                                           filter_min_counts=False, normalize_input=True, logtrans_input=True)
             network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                        z_dimension=z_dim,
                                        n_conditions=n_conditions,
@@ -212,7 +210,10 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
     if need_merge:
         data, _ = merge_data(data_dict)
     else:
-        data = sc.read(f"../data/{data_name}/train_{data_name}.h5ad")
+        data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        if loss_fn != 'mse':
+            data = normalize(data,
+                             filter_min_counts=False, normalize_input=True, logtrans_input=True)
 
     cell_types = data.obs[cell_type_key].unique().tolist()
 
