@@ -4,7 +4,7 @@ from keras.layers import Lambda
 
 
 class SliceLayer(Layer):
-    def __init__(self, index, **kwargs):
+    def __init__(self, index=0, **kwargs):
         self.index = index
         super().__init__(**kwargs)
 
