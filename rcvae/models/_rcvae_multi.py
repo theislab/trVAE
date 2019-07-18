@@ -234,7 +234,7 @@ class RCVAEMulti:
             reconstruction_output = Lambda(lambda x: x, name="kl_mse")(decoder_outputs[0])
         elif self.loss_fn == 'nb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
-            self.mean_output = ColwiseMultLayer([self.mean_output, self.size_factor])
+            self.mean_output = ColwiseMultLayer()([self.mean_output, self.size_factor])
             self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[2])
             reconstruction_output = SliceLayer(0, name='kl_nb')([self.mean_output, self.disp_output])
 
@@ -246,7 +246,7 @@ class RCVAEMulti:
                                          'ColwiseMultLayer': ColwiseMultLayer})
         elif self.loss_fn == 'zinb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
-            self.mean_output = ColwiseMultLayer([self.mean_output, self.size_factor])
+            self.mean_output = ColwiseMultLayer()([self.mean_output, self.size_factor])
             self.pi_output = Lambda(lambda x: x, name='pi_output')(decoder_outputs[2])
             self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[3])
             reconstruction_output = SliceLayer(0, name='kl_zinb')([self.mean_output, self.pi_output, self.disp_output])
