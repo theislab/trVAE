@@ -426,8 +426,10 @@ class RCVAEMulti:
             decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
         else:
             decoder_labels = encoder_labels
-
-        x = [data, encoder_labels, decoder_labels, np.zeros((data.shape[0], 1))]
+        if self.loss_fn == 'mse':
+            x = [data, encoder_labels, decoder_labels]
+        else:
+            x = [data, encoder_labels, decoder_labels, np.zeros((data.shape[0], 1))]
         mmd_latent = model.cvae_model.predict(x)[1]
         return mmd_latent
 
