@@ -394,7 +394,8 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
 
     pred_target = network.predict(adata_source,
                                   encoder_labels=source_labels,
-                                  decoder_labels=target_labels)
+                                  decoder_labels=target_labels,
+                                  size_factor=adata_source.obs['source_factors'].values)
 
     pred_adata = anndata.AnnData(X=pred_target)
     pred_adata.obs[condition_key] = [name] * pred_target.shape[0]

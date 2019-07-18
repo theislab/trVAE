@@ -408,7 +408,7 @@ class RCVAEMulti:
         latent = self.encoder_model.predict([data, labels])[2]
         return latent
 
-    def to_mmd_layer(self, model, data, encoder_labels, feed_fake=0, size_factor=None):
+    def to_mmd_layer(self, model, data, encoder_labels, feed_fake=0):
         """
             Map `data` in to the pn layer after latent layer. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -427,10 +427,7 @@ class RCVAEMulti:
         else:
             decoder_labels = encoder_labels
 
-        if self.loss_fn != 'mse':
-            x = [data, encoder_labels, decoder_labels, size_factor]
-        else:
-            x = [data, encoder_labels, decoder_labels]
+        x = [data, encoder_labels, decoder_labels, np.zeros((data.shape[0], 1))]
         mmd_latent = model.cvae_model.predict(x)[1]
         return mmd_latent
 
