@@ -199,7 +199,7 @@ def train_network(data_dict=None,
             print(f"Model for {cell_type} has been trained")
 
 
-def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, arch_style=1):
+def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, arch_style=1, loss_fn='mse'):
     plt.close("all")
     data_name = data_dict['name']
     source_keys = data_dict.get("source_conditions")
@@ -224,11 +224,12 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
         path_to_save = f"../results/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/Visualizations/"
         os.makedirs(path_to_save, exist_ok=True)
         sc.settings.figdir = os.path.abspath(path_to_save)
-
+        if loss_fn != 'mse':
+            data = normalize(data, filter_min_counts=False, normalize_input=True, logtrans_input=True)
         train_data = data.copy()[
             ~((data.obs[condition_key].isin(target_keys)) & (data.obs[cell_type_key] == cell_type))]
 
-        cell_type_adata = data[data.obs[cell_type_key] == cell_type]
+        cell_type_adata = data.copy()[data.obs[cell_type_key] == cell_type]
         network = rcvae.RCVAEMulti(x_dimension=data.shape[1],
                                    z_dimension=z_dim,
                                    n_conditions=len(source_keys),
@@ -602,5 +603,5 @@ if __name__ == '__main__':
                                    mmd_dimension=args['mmd_dimension'])
     else:
         visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'],
-                                          mmd_dimension=args['mmd_dimension'])
+                                          mmd_dimension=args['mmd_dimension'], loss_fn=args['loss_fn'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
