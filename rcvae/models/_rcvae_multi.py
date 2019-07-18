@@ -408,7 +408,7 @@ class RCVAEMulti:
         latent = self.encoder_model.predict([data, labels])[2]
         return latent
 
-    def to_mmd_layer(self, model, data, encoder_labels, feed_fake=0):
+    def to_mmd_layer(self, model, data, encoder_labels, feed_fake=0, size_factor=None):
         """
             Map `data` in to the pn layer after latent layer. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -426,10 +426,15 @@ class RCVAEMulti:
             decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
         else:
             decoder_labels = encoder_labels
-        mmd_latent = model.cvae_model.predict([data, encoder_labels, decoder_labels])[1]
+
+        if self.loss_fn != 'mse':
+            x = [data, encoder_labels, decoder_labels, size_factor]
+        else:
+            x = [data, encoder_labels, decoder_labels]
+        mmd_latent = model.cvae_model.predict(x)[1]
         return mmd_latent
 
-    def _reconstruct(self, data, encoder_labels, decoder_labels, use_data=False):
+    def _reconstruct(self, data, encoder_labels, decoder_labels, size_factor=None):
         """
             Map back the latent space encoding via the decoder.
             # Parameters
@@ -445,14 +450,14 @@ class RCVAEMulti:
                 rec_data: 'numpy nd-array'
                     returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
         """
-        if use_data:
-            latent = data
+        if self.loss_fn == 'mse':
+            x = [data, encoder_labels, decoder_labels]
         else:
-            latent = self.to_latent(data, encoder_labels)
-        rec_data = self.decoder_model.predict([latent, decoder_labels])
+            x = [data, encoder_labels, decoder_labels, size_factor]
+        rec_data = self.cvae_model.predict(x)[0]
         return rec_data
 
-    def predict(self, data, encoder_labels, decoder_labels, data_space='None'):
+    def predict(self, data, encoder_labels, decoder_labels, size_factor=None, data_space='None'):
         """
             Predicts the cell type provided by the user in stimulated condition.
             # Parameters
@@ -475,24 +480,17 @@ class RCVAEMulti:
             ```
         """
         if sparse.issparse(data.X):
-            if data_space == 'latent':
-                stim_pred = self._reconstruct(data.X.A, encoder_labels, decoder_labels, use_data=True)
-            elif data_space == 'mmd':
-                stim_pred = self._reconstruct_from_mmd(data.X.A)
-            else:
-                stim_pred = self._reconstruct(data.X.A, encoder_labels, decoder_labels)
+            data.X = data.X.A
+
+        if data_space == 'mmd':
+            stim_pred = self._reconstruct_from_mmd(data.X)
         else:
-            if data_space == 'latent':
-                stim_pred = self._reconstruct(data.X, encoder_labels, decoder_labels, use_data=True)
-            elif data_space == 'mmd':
-                stim_pred = self._reconstruct_from_mmd(data.X)
-            else:
-                stim_pred = self._reconstruct(data.X, encoder_labels, decoder_labels)
-        return stim_pred[0]
+            stim_pred = self._reconstruct(data.X, encoder_labels, decoder_labels, size_factor)
+        return stim_pred
 
     def _reconstruct_from_mmd(self, data):
         model = Model(inputs=self.decoder_model.layers[1], outputs=self.decoder_model.outputs)
-        return model.predict(data)
+        return model.predict(data)[0]
 
     def restore_model(self):
         """
