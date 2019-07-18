@@ -11,9 +11,10 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from scipy import sparse
 
+from rcvae.models.activations import disp_activation, mean_activation
 from rcvae.models.layers import SliceLayer, ColwiseMultLayer
 from rcvae.models.losses import ZINB, NB
-from rcvae.models.utils import label_encoder, shuffle_data
+from rcvae.models.utils import label_encoder
 
 log = logging.getLogger(__file__)
 
@@ -153,8 +154,6 @@ class RCVAEMulti:
                     h = Activation('relu', name="reconstruction_output")(h)
 
             elif self.loss_fn == 'nb':
-                mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
-                disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
                 h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
                                name='decoder_mean',
                                use_bias=True)(h)
@@ -162,8 +161,6 @@ class RCVAEMulti:
                                name='decoder_disp',
                                use_bias=True)(h)
             elif self.loss_fn == 'zinb':
-                mean_activation = lambda x: tf.clip_by_value(K.exp(x), 1e-5, 1e6)
-                disp_activation = lambda x: tf.clip_by_value(tf.nn.softplus(x), 1e-4, 1e4)
                 h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
                              name='decoder_pi')(h)
                 h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
@@ -500,9 +497,12 @@ class RCVAEMulti:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False)
-        self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
-        self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
+        self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False,
+                                     custom_objects=[mean_activation, disp_activation])
+        self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False,
+                                        custom_objects=[mean_activation, disp_activation])
+        self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False,
+                                        custom_objects=[mean_activation, disp_activation])
         self._loss_function()
 
     def save_model(self):
