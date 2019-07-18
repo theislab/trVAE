@@ -241,7 +241,8 @@ class RCVAEMulti:
             inputs += [self.size_factor]
 
             get_custom_objects().update({'mean_activation': Activation(mean_activation),
-                                         'disp_activation': Activation(disp_activation)})
+                                         'disp_activation': Activation(disp_activation),
+                                         'slice_layer': SliceLayer})
         elif self.loss_fn == 'zinb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
             self.mean_output = ColwiseMultLayer([self.mean_output, self.size_factor])
@@ -252,7 +253,8 @@ class RCVAEMulti:
             inputs += [self.size_factor]
 
             get_custom_objects().update({'mean_activation': Activation(mean_activation),
-                                         'disp_activation': Activation(disp_activation)})
+                                         'disp_activation': Activation(disp_activation),
+                                         'slice_layer': SliceLayer})
 
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
@@ -509,11 +511,13 @@ class RCVAEMulti:
         """
         self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False,
                                      custom_objects={'mean_activation': mean_activation,
-                                                     'disp_activation': disp_activation})
+                                                     'disp_activation': disp_activation,
+                                                     'slice_layer': SliceLayer})
         self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False,
                                         custom_objects={'mean_activation': mean_activation,
-                                                        'disp_activation': disp_activation})
+                                                        'disp_activation': disp_activation,
+                                                        'slice_layer': SliceLayer})
         self._loss_function()
 
     def save_model(self):
