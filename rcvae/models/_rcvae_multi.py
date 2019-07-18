@@ -498,12 +498,12 @@ class RCVAEMulti:
             ```
         """
         self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False,
-                                     custom_objects={'decoder_mean': mean_activation,
-                                                     'decoder_disp': disp_activation})
-        self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False,
-                                        custom_objects=[mean_activation, disp_activation])
+                                     custom_objects={'mean_activation': mean_activation,
+                                                     'disp_activation': disp_activation})
+        self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False,
-                                        custom_objects=[mean_activation, disp_activation])
+                                        custom_objects={'mean_activation': mean_activation,
+                                                        'disp_activation': disp_activation})
         self._loss_function()
 
     def save_model(self):
