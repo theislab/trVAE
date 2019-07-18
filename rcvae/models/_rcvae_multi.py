@@ -5,7 +5,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from keras.callbacks import CSVLogger, History, EarlyStopping
+from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -576,7 +576,8 @@ class RCVAEMulti:
         callbacks = [
             History(),
             EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold),
-            CSVLogger(filename="./csv_logger.log")
+            CSVLogger(filename="./csv_logger.log"),
+            ReduceLROnPlateau(monitor='val_loss', patience=25, verbose=verbose)
         ]
 
         if sparse.issparse(train_data.X):
