@@ -9,6 +9,7 @@ from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
+from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
 
 from rcvae.models.activations import disp_activation, mean_activation
@@ -154,21 +155,24 @@ class RCVAEMulti:
                     h = Activation('relu', name="reconstruction_output")(h)
 
             elif self.loss_fn == 'nb':
-                h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
-                               name='decoder_mean',
+                h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
                                use_bias=True)(h)
-                h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
-                               name='decoder_disp',
+                h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
+
+                h_disp = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
                                use_bias=True)(h)
+                h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
             elif self.loss_fn == 'zinb':
                 h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
                              name='decoder_pi')(h)
-                h_mean = Dense(self.x_dim, activation=mean_activation, kernel_initializer=self.init_w,
-                               name='decoder_mean',
+                h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
                                use_bias=True)(h)
-                h_disp = Dense(self.x_dim, activation=disp_activation, kernel_initializer=self.init_w,
-                               name='decoder_disp',
+                h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
+
+                h_disp = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
                                use_bias=True)(h)
+                h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
+
         else:
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
             h = BatchNormalization()(h)
@@ -235,6 +239,9 @@ class RCVAEMulti:
             reconstruction_output = SliceLayer(0, name='kl_nb')([self.mean_output, self.disp_output])
 
             inputs += [self.size_factor]
+
+            get_custom_objects().update({'mean_activation': Activation(mean_activation),
+                                         'disp_activation': Activation(disp_activation)})
         elif self.loss_fn == 'zinb':
             self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
             self.mean_output = ColwiseMultLayer([self.mean_output, self.size_factor])
@@ -243,6 +250,9 @@ class RCVAEMulti:
             reconstruction_output = SliceLayer(0, name='kl_zinb')([self.mean_output, self.pi_output, self.disp_output])
 
             inputs += [self.size_factor]
+
+            get_custom_objects().update({'mean_activation': Activation(mean_activation),
+                                         'disp_activation': Activation(disp_activation)})
 
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
