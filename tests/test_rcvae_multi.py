@@ -413,33 +413,33 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
     if sparse.issparse(pred_adata.X):
         pred_adata.X = pred_adata.X.A
 
-    adata_to_plot = pred_adata.concatenate(adata_target)
+    # adata_to_plot = pred_adata.concatenate(adata_target)
 
-    rcvae.plotting.reg_mean_plot(adata_to_plot,
-                                 top_100_genes=top_100_genes,
-                                 gene_list=gene_list,
-                                 condition_key=condition_key,
-                                 axis_keys={"x": f'{name}', 'y': target_condition},
-                                 labels={'x': f'{source_condition} to {target_condition}',
-                                         'y': f'real {target_condition}'},
-                                 legend=False,
-                                 fontsize=20,
-                                 textsize=14,
-                                 path_to_save=os.path.join(path_to_save,
-                                                           f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
-
-    rcvae.plotting.reg_var_plot(adata_to_plot,
-                                top_100_genes=top_100_genes,
-                                gene_list=gene_list,
-                                condition_key=condition_key,
-                                axis_keys={"x": f'{name}', 'y': target_condition},
-                                labels={'x': f'{source_condition} to {target_condition}',
-                                        'y': f'real {target_condition}'},
-                                legend=False,
-                                fontsize=20,
-                                textsize=14,
-                                path_to_save=os.path.join(path_to_save,
-                                                          f'rcvae_reg_var_{data_name}_{source_condition} to {target_condition}.pdf'))
+    # rcvae.plotting.reg_mean_plot(adata_to_plot,
+    #                              top_100_genes=top_100_genes,
+    #                              gene_list=gene_list,
+    #                              condition_key=condition_key,
+    #                              axis_keys={"x": f'{name}', 'y': target_condition},
+    #                              labels={'x': f'{source_condition} to {target_condition}',
+    #                                      'y': f'real {target_condition}'},
+    #                              legend=False,
+    #                              fontsize=20,
+    #                              textsize=14,
+    #                              path_to_save=os.path.join(path_to_save,
+    #                                                        f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
+    #
+    # rcvae.plotting.reg_var_plot(adata_to_plot,
+    #                             top_100_genes=top_100_genes,
+    #                             gene_list=gene_list,
+    #                             condition_key=condition_key,
+    #                             axis_keys={"x": f'{name}', 'y': target_condition},
+    #                             labels={'x': f'{source_condition} to {target_condition}',
+    #                                     'y': f'real {target_condition}'},
+    #                             legend=False,
+    #                             fontsize=20,
+    #                             textsize=14,
+    #                             path_to_save=os.path.join(path_to_save,
+    #                                                       f'rcvae_reg_var_{data_name}_{source_condition} to {target_condition}.pdf'))
 
     # adata_scatter = adata.copy()[adata.obs[condition_key].isin([name, target_condition, 'Bez', 'Das', 'Bez+Das'])]
     # sc.pl.scatter(adata_scatter, x='p4EBP1', y='pSTAT5', color="condition",
