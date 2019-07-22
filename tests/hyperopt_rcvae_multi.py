@@ -13,6 +13,7 @@ from matplotlib import pyplot as plt
 from scipy import stats, sparse
 
 import rcvae
+from rcvae.utils import normalize, train_test_split
 
 
 def data():
@@ -57,7 +58,7 @@ def data():
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
     }
-    data_key = "EndoNorm"
+    data_key = "ILC"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -66,18 +67,19 @@ def data():
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
 
-    train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
-    valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+    if data_name.endswith("count"):
+        adata = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        adata = normalize(adata,
+                          filter_min_counts=False, normalize_input=True, logtrans_input=True)
+        train_data, valid_data = train_test_split(adata, 0.80)
+    else:
+        train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
+        valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
 
     net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
     net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
-
-    if data_name == 'cytof':
-        arch_style = 2
-    else:
-        arch_style = 1
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
@@ -98,6 +100,8 @@ def create_model(train_data, valid_data,
     beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000, 2000, 3000])}}
     batch_size_choices = {{choice([1024, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
+    clip_value_choices = {{choice([1.0, 2.0, 3.0, 5.0])}}
+
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension=z_dim_choices,
                                arch_style=arch_style,
@@ -107,9 +111,11 @@ def create_model(train_data, valid_data,
                                beta=beta_choices,
                                kernel='rbf',
                                learning_rate=0.001,
+                               clip_value=clip_value_choices,
+                               loss_fn='nb',
                                model_path=f"./models/RCVAEMulti/{data_name}/hyperopt/",
                                dropout_rate=dropout_rate_choices,
-                               use_leaky_relu=True,
+                               use_leaky_relu=False,
                                )
 
     network.train(net_train_data,

@@ -130,7 +130,6 @@ def train_network(data_dict=None,
                   early_stop_limit=50,
                   dropout_rate=0.2,
                   learning_rate=0.001,
-                  arch_style=1,
                   loss_fn='mse',
                   verbose=2,
                   ):
@@ -173,12 +172,11 @@ def train_network(data_dict=None,
                                        n_conditions=n_conditions,
                                        mmd_dimension=mmd_dimension,
                                        alpha=alpha,
-                                       arch_style=arch_style,
                                        beta=beta,
                                        kernel=kernel,
                                        learning_rate=learning_rate,
                                        loss_fn=loss_fn,
-                                       model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}-{arch_style}/",
+                                       model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/",
                                        dropout_rate=dropout_rate,
                                        use_leaky_relu=use_leaky_relu)
 
@@ -197,7 +195,7 @@ def train_network(data_dict=None,
             print(f"Model for {cell_type} has been trained")
 
 
-def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, arch_style=1, loss_fn='mse'):
+def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, loss_fn='mse'):
     plt.close("all")
     data_name = data_dict['name']
     source_keys = data_dict.get("source_conditions")
@@ -235,8 +233,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, a
                                    z_dimension=z_dim,
                                    n_conditions=len(source_keys),
                                    mmd_dimension=mmd_dimension,
-                                   arch_style=arch_style,
-                                   model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}-{arch_style}/",
+                                   model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/",
                                    )
 
         network.restore_model()
@@ -449,7 +446,7 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
     return pred_adata
 
 
-def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_style=1):
+def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128):
     plt.close("all")
     data_name = data_dict['name']
     source_keys = data_dict.get("source_conditions")
@@ -483,8 +480,7 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128, arch_sty
                                    z_dimension=z_dim,
                                    n_conditions=len(source_keys),
                                    mmd_dimension=mmd_dimension,
-                                   arch_style=arch_style,
-                                   model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}-{arch_style}/",
+                                   model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/",
                                    )
 
         network.restore_model()
@@ -583,8 +579,6 @@ if __name__ == '__main__':
                                  help='Learning rate of optimizer')
     arguments_group.add_argument('-y', '--early_stop_limit', type=int, default=50, required=False,
                                  help='do train the network')
-    arguments_group.add_argument('-s', '--arch_style', type=int, default=1, required=False,
-                                 help='Architecture Style')
     arguments_group.add_argument('-t', '--do_train', type=int, default=1, required=False,
                                  help='Learning rate of optimizer')
     arguments_group.add_argument('-f', '--loss_fn', type=str, default='mse', required=False,
@@ -600,9 +594,9 @@ if __name__ == '__main__':
         del args['do_train']
         train_network(data_dict=data_dict, **args)
     if data_dict['name'] == 'pancreas':
-        visualize_batch_correction(data_dict=data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'],
+        visualize_batch_correction(data_dict=data_dict, z_dim=args['z_dim'],
                                    mmd_dimension=args['mmd_dimension'])
     else:
-        visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'], arch_style=args['arch_style'],
-                                          mmd_dimension=args['mmd_dimension'], loss_fn=args['loss_fn'])
+        visualize_trained_network_results(data_dict=data_dict, z_dim=args['z_dim'], mmd_dimension=args['mmd_dimension'],
+                                          loss_fn=args['loss_fn'])
     print(f"Model for {data_dict['name']} has been trained and sample results are ready!")
