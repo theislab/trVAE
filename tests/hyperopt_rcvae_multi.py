@@ -97,7 +97,7 @@ def create_model(train_data, valid_data,
     mmd_dim_choices = {{choice([64, 128, 256])}}
 
     alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
-    beta_choices = {{choice([50, 100, 200, 400, 600, 800, 1000, 2000, 3000])}}
+    beta_choices = {{choice([1, 5, 10, 50, 100, 500, 1000])}}
     batch_size_choices = {{choice([1024, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
     clip_value_choices = {{choice([1.0, 2.0, 3.0, 5.0])}}
@@ -132,8 +132,6 @@ def create_model(train_data, valid_data,
                   save=False)
 
     cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
-    # sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100, method="wilcoxon")
-    # top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_condition].tolist()
 
     source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == source_condition]
 
@@ -149,9 +147,6 @@ def create_model(train_data, valid_data,
 
     pred_target = pred_adata.copy()
     real_target = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == target_condition]
-
-    # pred_target = pred_target.copy()[:, top_100_genes]
-    # real_target = real_target.copy()[:, top_100_genes]
 
     if sparse.issparse(pred_target.X):
         pred_target.X = pred_target.X.A
