@@ -56,7 +56,6 @@ class RCVAEMulti:
         self.model_to_use = kwargs.get("model_path", "./")
         self.train_with_fake_labels = kwargs.get("train_with_fake_labels", False)
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
-        self.arch_style = kwargs.get("arch_style", 1)
         self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
         self.loss_fn = kwargs.get("loss_fn", 'nb')
         self.ridge = kwargs.get('ridge', 0.1)
@@ -92,28 +91,18 @@ class RCVAEMulti:
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
         xy = concatenate([x, y], axis=1)
-        if self.arch_style == 1:
-            h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(xy)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dropout(self.dr_rate)(h)
-            h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dropout(self.dr_rate)(h)
-            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(h)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dropout(self.dr_rate)(h)
-        else:
-            h = Dense(32, kernel_initializer=self.init_w, use_bias=False)(xy)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dropout(self.dr_rate)(h)
-            h = Dense(16, kernel_initializer=self.init_w, use_bias=False)(h)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dropout(self.dr_rate)(h)
+        h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(xy)
+        h = BatchNormalization(axis=1, scale=True)(h)
+        h = LeakyReLU()(h)
+        h = Dropout(self.dr_rate)(h)
+        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
+        h = BatchNormalization(axis=1, scale=True)(h)
+        h = LeakyReLU()(h)
+        h = Dropout(self.dr_rate)(h)
+        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(h)
+        h = BatchNormalization(axis=1, scale=True)(h)
+        h = LeakyReLU()(h)
+        h = Dropout(self.dr_rate)(h)
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
@@ -132,62 +121,47 @@ class RCVAEMulti:
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
         zy = concatenate([z, y], axis=1)
-        if self.arch_style == 1:
-            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h_mmd = LeakyReLU(name="mmd")(h)
-            h = Dropout(self.dr_rate)(h_mmd)
-            h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dropout(self.dr_rate)(h)
-            h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(h)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dropout(self.dr_rate)(h)
-            h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
+        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
+        h = BatchNormalization(axis=1, scale=True)(h)
+        h_mmd = LeakyReLU(name="mmd")(h)
+        h = Dropout(self.dr_rate)(h_mmd)
+        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
+        h = BatchNormalization(axis=1, scale=True)(h)
+        h = LeakyReLU()(h)
+        h = Dropout(self.dr_rate)(h)
+        h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(h)
+        h = BatchNormalization(axis=1, scale=True)(h)
+        h = LeakyReLU()(h)
+        h = Dropout(self.dr_rate)(h)
+        h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
 
-            if self.loss_fn == 'mse':
-                h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-                h = LeakyReLU(name="reconstruction_output")(h)
-                if self.use_leaky_relu:
-                    h = LeakyReLU(name='reconstruction_output')(h)
-                else:
-                    h = Activation('relu', name="reconstruction_output")(h)
-
-            elif self.loss_fn == 'nb':
-                h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
-                               use_bias=True)(h)
-                h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
-
-                h_disp = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
-                               use_bias=True)(h)
-                h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
-            elif self.loss_fn == 'zinb':
-                h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
-                             name='decoder_pi')(h)
-                h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
-                               use_bias=True)(h)
-                h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
-
-                h_disp = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
-                               use_bias=True)(h)
-                h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
-
-        else:
-            h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h_mmd = LeakyReLU(name="mmd")(h)
-            h = Dense(16, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dense(32, kernel_initializer=self.init_w, use_bias=False)(h)
-            h = BatchNormalization(axis=1, scale=True)(h)
-            h = LeakyReLU()(h)
-            h = Dropout(self.dr_rate)(h)
-
+        if self.loss_fn == 'mse':
             h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
             h = LeakyReLU(name="reconstruction_output")(h)
+            if self.use_leaky_relu:
+                h = LeakyReLU(name='reconstruction_output')(h)
+            else:
+                h = Activation('relu', name="reconstruction_output")(h)
+
+        elif self.loss_fn == 'nb':
+            h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
+                           use_bias=True)(h)
+            h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
+
+            h_disp = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
+                           use_bias=True)(h)
+            h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
+        elif self.loss_fn == 'zinb':
+            h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
+                         name='decoder_pi')(h)
+            h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
+                           use_bias=True)(h)
+            h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
+
+            h_disp = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
+                           use_bias=True)(h)
+            h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
+
         if self.loss_fn == "mse":
             model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
         elif self.loss_fn == 'nb':
