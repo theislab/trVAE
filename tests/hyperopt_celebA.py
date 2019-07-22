@@ -32,9 +32,9 @@ def data():
     attribute = data_dict.get('attribute', None)
     gender = data_dict.get('gender', None)
 
-    data = rcvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
-                                         attr_path="../data/celeba/list_attr_celeba.txt",
-                                         landmark_path="../data/celeba/list_landmarks_align_celeba.txt",
+    data = rcvae.prepare_and_load_celeba(file_path="./data/celeba/img_align_celeba.zip",
+                                         attr_path="./data/celeba/list_attr_celeba.txt",
+                                         landmark_path="./data/celeba/list_landmarks_align_celeba.txt",
                                          gender=gender,
                                          attribute=attribute,
                                          max_n_images=50000,
@@ -106,7 +106,7 @@ def create_model(train_data, valid_data, data_name):
                            arch_style=3,
                            train_with_fake_labels=False,
                            learning_rate=0.001,
-                           model_path=f"../models/RCCVAE/hyperopt/{data_name}-{64}x{64}-{True}/{3}-{z_dim_choices}/",
+                           model_path=f"./models/RCCVAE/hyperopt/{data_name}-{64}x{64}-{True}/{3}-{z_dim_choices}/",
                            gpus=4,
                            dropout_rate=dropout_rate_choices)
 
