@@ -92,7 +92,7 @@ def create_model(train_data, valid_data, data_name):
 
     alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([1, 5, 10, 50, 100, 500, 1000])}}
-    gamma_choices = {{choice([0.001, 0.01, 0.1, 1, 10.0])}}
+    # gamma_choices = {{choice([0.001, 0.01, 0.1, 1, 10.0])}}
     batch_size_choices = {{choice([256, 512, 1024])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
 
@@ -101,7 +101,7 @@ def create_model(train_data, valid_data, data_name):
                            mmd_dimension=mmd_dim_choices,
                            alpha=alpha_choices,
                            beta=beta_choices,
-                           gamma=gamma_choices,
+                           gamma=0,
                            kernel='rbf',
                            arch_style=3,
                            train_with_fake_labels=False,

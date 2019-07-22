@@ -69,7 +69,7 @@ class RCCVAE:
         self.decoder_labels = Input(shape=(1,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
-        if self.x_dim[0] > 48:
+        if self.x_dim[0] > 48 and self.gamma > 0:
             self.vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
             self.vggface_layers = ["conv1_1", 'conv1_2',
                                    'conv2_1', 'conv2_2',
@@ -438,7 +438,10 @@ class RCCVAE:
 
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
                 recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
-                p_loss = perceptual_loss(y_true, y_pred)
+                if self.gamma > 0:
+                    p_loss = perceptual_loss(y_true, y_pred)
+                else:
+                    p_loss = 0.0
                 return self.alpha * kl_loss + self.gamma * p_loss + recon_loss
 
             def mmd_loss(real_labels, y_pred):
