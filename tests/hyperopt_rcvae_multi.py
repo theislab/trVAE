@@ -141,7 +141,7 @@ def create_model(train_data, valid_data,
         pred_target = network.predict(source_adata,
                                       encoder_labels=source_labels,
                                       decoder_labels=target_labels,
-                                      size_factor=source_adata.obs['size_factor'].values)
+                                      size_factor=source_adata.obs['size_factors'].values)
     else:
         pred_target = network.predict(source_adata,
                                       encoder_labels=source_labels,
