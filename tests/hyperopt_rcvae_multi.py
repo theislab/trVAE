@@ -98,7 +98,7 @@ def create_model(train_data, valid_data,
 
     alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([1, 5, 10, 50, 100, 500, 1000])}}
-    batch_size_choices = {{choice([1024, 2048])}}
+    batch_size_choices = {{choice([256, 512, 1024])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
     clip_value_choices = {{choice([1.0, 2.0, 3.0, 5.0])}}
 
@@ -137,9 +137,15 @@ def create_model(train_data, valid_data,
     source_labels = np.zeros(source_adata.shape[0]) + source_label
     target_labels = np.zeros(source_adata.shape[0]) + target_label
 
-    pred_target = network.predict(source_adata,
-                                  encoder_labels=source_labels,
-                                  decoder_labels=target_labels)
+    if data_name.endswith("count"):
+        pred_target = network.predict(source_adata,
+                                      encoder_labels=source_labels,
+                                      decoder_labels=target_labels,
+                                      size_factor=source_adata.obs['size_factor'].values)
+    else:
+        pred_target = network.predict(source_adata,
+                                      encoder_labels=source_labels,
+                                      decoder_labels=target_labels)
 
     pred_adata = anndata.AnnData(X=pred_target)
     pred_adata.var_names = source_adata.var_names
