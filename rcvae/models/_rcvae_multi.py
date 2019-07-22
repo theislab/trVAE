@@ -60,6 +60,7 @@ class RCVAEMulti:
         self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
         self.loss_fn = kwargs.get("loss_fn", 'nb')
         self.ridge = kwargs.get('ridge', 0.1)
+        self.clip_value = kwargs.get('clip_value', 3.0)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(1,), name="encoder_labels")
@@ -369,7 +370,7 @@ class RCVAEMulti:
                             loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
                     return self.beta * loss
 
-            self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=5.0)
+            self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value)
             if self.loss_fn == 'mse':
                 self.cvae_model.compile(optimizer=self.cvae_optimizer,
                                         loss=[kl_recon_loss, mmd_loss],

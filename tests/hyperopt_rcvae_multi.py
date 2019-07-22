@@ -47,7 +47,7 @@ def data():
                      'condition': 'treatment',
                      'cell_type': 'groups_named_broad'},
 
-        "ILC": {'name': 'nmuil', 'need_merge': False,
+        "ILC": {'name': 'nmuil_count', 'need_merge': False,
                 'source_conditions': ['control', 'IL33', 'IL25', 'NMU'],
                 'target_conditions': ['NMU_IL25'],
                 'transition': ('IL25', 'NMU_IL25', 'IL25_to_NMU_IL25', 2, 3),
@@ -272,7 +272,7 @@ if __name__ == '__main__':
                      'spec_cell_types': ['beta'],
                      'condition': 'treatment',
                      'cell_type': 'groups_named_broad'},
-        "ILC": {'name': 'nmuil', 'need_merge': False,
+        "ILC": {'name': 'nmuil_count', 'need_merge': False,
                 'source_conditions': ['control', 'IL33', 'IL25', 'NMU'],
                 'target_conditions': ['NMU_IL25'],
                 'perturbation': [('control', 'IL33', 'control_to_IL33', 0, 1),
