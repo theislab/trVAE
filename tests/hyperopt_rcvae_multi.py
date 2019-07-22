@@ -150,6 +150,10 @@ def create_model(train_data, valid_data,
     pred_adata = anndata.AnnData(X=pred_target)
     pred_adata.var_names = source_adata.var_names
 
+    if data_name.endswith("count"):
+        pred_adata = normalize(pred_adata,
+                               filter_min_counts=False, normalize_input=True, logtrans_input=True)
+
     pred_target = pred_adata.copy()
     real_target = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == target_condition]
 
