@@ -68,7 +68,7 @@ def data():
     label_encoder = data_dict['label_encoder']
 
     if data_name.endswith("count"):
-        adata = sc.read(f"../data/{data_name}/{data_name}.h5ad")
+        adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
         adata = normalize(adata,
                           filter_min_counts=False, normalize_input=True, logtrans_input=True)
         train_data, valid_data = train_test_split(adata, 0.80)
