@@ -83,7 +83,7 @@ def data():
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
-    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type, n_conditions, label_encoder, arch_style, data_name, source_condition, target_condition, source_label, target_label
+    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type, n_conditions, label_encoder, data_name, source_condition, target_condition, source_label, target_label
 
 
 def create_model(train_data, valid_data,
@@ -91,7 +91,7 @@ def create_model(train_data, valid_data,
                  condition_key, cell_type_key,
                  cell_type, n_conditions,
                  label_encoder,
-                 arch_style, data_name,
+                 data_name,
                  source_condition, target_condition, source_label, target_label):
     z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
     mmd_dim_choices = {{choice([64, 128, 256])}}
@@ -104,7 +104,6 @@ def create_model(train_data, valid_data,
 
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension=z_dim_choices,
-                               arch_style=arch_style,
                                n_conditions=n_conditions,
                                mmd_dimension=mmd_dim_choices,
                                alpha=alpha_choices,
@@ -302,11 +301,6 @@ if __name__ == '__main__':
 
     net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
     net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
-
-    if data_name == 'cytof':
-        arch_style = 2
-    else:
-        arch_style = 1
 
     path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
