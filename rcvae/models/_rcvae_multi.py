@@ -10,6 +10,7 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils.generic_utils import get_custom_objects
+from keras.utils import to_categorical
 from scipy import sparse
 
 from rcvae.models.activations import disp_activation, mean_activation
@@ -51,10 +52,8 @@ class RCVAEMulti:
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
         self.beta = kwargs.get("beta", 100)
-        self.conditions = kwargs.get("condition_list")
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
-        self.train_with_fake_labels = kwargs.get("train_with_fake_labels", False)
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
         self.loss_fn = kwargs.get("loss_fn", 'nb')
@@ -62,8 +61,8 @@ class RCVAEMulti:
         self.clip_value = kwargs.get('clip_value', 3.0)
 
         self.x = Input(shape=(self.x_dim,), name="data")
-        self.encoder_labels = Input(shape=(1,), name="encoder_labels")
-        self.decoder_labels = Input(shape=(1,), name="decoder_labels")
+        self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_labels")
+        self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
         if self.loss_fn != "mse":
@@ -379,6 +378,7 @@ class RCVAEMulti:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
+        labels = to_categorical(labels, num_classes=self.n_conditions)
         latent = self.encoder_model.predict([data, labels])[2]
         return latent
 
@@ -400,6 +400,10 @@ class RCVAEMulti:
             decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
         else:
             decoder_labels = encoder_labels
+
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+
         if sparse.issparse(data.X):
             data.X = data.X.A
 
@@ -426,6 +430,9 @@ class RCVAEMulti:
                 rec_data: 'numpy nd-array'
                     returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
         """
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+
         if self.loss_fn == 'mse':
             x = [data, encoder_labels, decoder_labels]
         else:
@@ -546,6 +553,7 @@ class RCVAEMulti:
             log.info("----Training----")
 
         train_labels, _ = label_encoder(train_data, le, condition_key)
+        train_labels = to_categorical(train_labels, num_classes=self.n_conditions)
 
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
@@ -575,6 +583,7 @@ class RCVAEMulti:
                 valid_data.X = valid_data.X.A
 
             valid_labels, _ = label_encoder(valid_data, le, condition_key)
+            valid_labels = to_categorical(valid_labels, num_classes=self.n_conditions)
 
             if self.loss_fn != 'mse':
                 x_valid = [valid_data.X, valid_labels, valid_labels, valid_data.obs['size_factors'].values]
