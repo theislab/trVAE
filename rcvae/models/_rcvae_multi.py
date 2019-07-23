@@ -333,6 +333,8 @@ class RCVAEMulti:
 
             def mmd_loss(real_labels, y_pred):
                 with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
+                    real_labels = K.argmax(real_labels, axis=1)
+                    y_pred = K.argmax(y_pred, axis=1)
                     real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
                     conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=self.n_conditions)
                     loss = 0.0
