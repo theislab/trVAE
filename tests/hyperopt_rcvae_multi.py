@@ -70,7 +70,7 @@ def data():
     if data_name.endswith("count"):
         adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
         adata = normalize(adata,
-                          filter_min_counts=False, normalize_input=True, logtrans_input=True)
+                          filter_min_counts=False, normalize_input=False, logtrans_input=True)
         train_data, valid_data = train_test_split(adata, 0.80)
     else:
         train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
