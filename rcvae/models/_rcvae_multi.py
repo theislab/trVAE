@@ -514,7 +514,7 @@ class RCVAEMulti:
         log.info(f"Model saved in file: {self.model_to_use}. Training finished")
 
     def train(self, train_data, le=None, condition_key='condition', use_validation=False, valid_data=None, n_epochs=25,
-              batch_size=32, early_stop_limit=20,
+              batch_size=32, early_stop_limit=20, lr_reducer=10,
               threshold=0.0025, initial_run=True, monitor='val_loss',
               shuffle=True, verbose=2, save=True):
         """
@@ -563,7 +563,7 @@ class RCVAEMulti:
             History(),
             EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold),
             CSVLogger(filename="./csv_logger.log"),
-            ReduceLROnPlateau(monitor='val_loss', patience=10, verbose=verbose)
+            ReduceLROnPlateau(monitor=monitor, patience=lr_reducer, verbose=verbose)
         ]
 
         if sparse.issparse(train_data.X):
