@@ -134,7 +134,6 @@ def train_network(data_dict=None,
                   verbose=2,
                   ):
     data_name = data_dict['name']
-    source_keys = data_dict.get("source_conditions")
     target_keys = data_dict.get("target_conditions")
     cell_type_key = data_dict.get("cell_type", None)
     need_merge = data_dict.get('need_merge', False)
@@ -223,15 +222,17 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
         path_to_save = f"../results/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/Visualizations/"
         os.makedirs(path_to_save, exist_ok=True)
         sc.settings.figdir = os.path.abspath(path_to_save)
-        if loss_fn != 'mse':
-            data = normalize(data, filter_min_counts=False, normalize_input=True, logtrans_input=True)
         train_data = data.copy()[
             ~((data.obs[condition_key].isin(target_keys)) & (data.obs[cell_type_key] == cell_type))]
 
         cell_type_adata = data.copy()[data.obs[cell_type_key] == cell_type]
+
+        n_conditions = len(train_data.obs[condition_key].unique().tolist())
+
         network = rcvae.RCVAEMulti(x_dimension=data.shape[1],
                                    z_dimension=z_dim,
-                                   n_conditions=len(source_keys),
+                                   loss_fn=loss_fn,
+                                   n_conditions=n_conditions,
                                    mmd_dimension=mmd_dimension,
                                    model_path=f"../models/RCVAEMulti/{data_name}/{cell_type}/{z_dim}/",
                                    )
@@ -246,7 +247,6 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
         train_labels, _ = rcvae.label_encoder(data, label_encoder, condition_key)
         fake_labels = []
 
-        n_conditions = len(source_keys) + len(target_keys)
         for i in range(n_conditions):
             fake_labels.append(np.zeros(train_labels.shape) + i)
 
@@ -261,12 +261,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
             sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100, method="wilcoxon")
             top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
             gene_list = top_100_genes[:10]
-        elif data_name in ['cytof']:
-            sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10, method="wilcoxon")
-            top_100_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
-            gene_list = top_100_genes[:10]
-            top_100_genes = None
-        elif data_name in ['pancreas']:
+        elif data_name in ['pancreas', 'nmuil_count']:
             gene_list = None
             top_100_genes = None
         else:
@@ -275,6 +270,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
             top_50_up_genes = cell_type_adata.uns["rank_genes_groups"]["names"][target_keys[-1]].tolist()
             top_100_genes = top_50_up_genes + top_50_down_genes
             gene_list = top_50_down_genes[:5] + top_50_up_genes[:5]
+
         perturbation_list = data_dict.get("perturbation", [])
         pred_adatas = None
         for source, dest, name, source_label, target_label in perturbation_list:
@@ -297,10 +293,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)
 
-        if data_name == "cytof":
-            color = [condition_key]
-        else:
-            color = [condition_key, cell_type_key]
+        color = [condition_key, cell_type_key]
 
         latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
         latent_with_true_labels.obs[condition_key] = data.obs[condition_key].values

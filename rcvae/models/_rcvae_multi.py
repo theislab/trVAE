@@ -404,7 +404,7 @@ class RCVAEMulti:
         if self.loss_fn == 'mse':
             x = [data, encoder_labels, decoder_labels]
         else:
-            x = [data, encoder_labels, decoder_labels, np.zeros((data.shape[0], 1))]
+            x = [data, encoder_labels, decoder_labels, data.obs['size_factors'].values]
         mmd_latent = model.cvae_model.predict(x)[1]
         return mmd_latent
 
