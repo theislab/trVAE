@@ -137,7 +137,6 @@ class RCVAEMulti:
 
         if self.loss_fn == 'mse':
             h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-            h = LeakyReLU(name="reconstruction_output")(h)
             if self.use_leaky_relu:
                 h = LeakyReLU(name='reconstruction_output')(h)
             else:
