@@ -242,7 +242,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
         if sparse.issparse(data.X):
             data.X = data.X.A
 
-        feed_data = data.X
+        feed_data = data
 
         train_labels, _ = rcvae.label_encoder(data, label_encoder, condition_key)
         fake_labels = []
@@ -250,11 +250,11 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
         for i in range(n_conditions):
             fake_labels.append(np.zeros(train_labels.shape) + i)
 
-        latent_with_true_labels = network.to_latent(feed_data, train_labels)
-        latent_with_fake_labels = [network.to_latent(feed_data, fake_labels[i]) for i in
+        latent_with_true_labels = network.to_latent(feed_data.X, train_labels)
+        latent_with_fake_labels = [network.to_latent(feed_data.X, fake_labels[i]) for i in
                                    range(n_conditions)]
-        mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=0)
-        mmd_latent_with_fake_labels = [network.to_mmd_layer(network, feed_data, train_labels, feed_fake=i) for i in
+        mmd_latent_with_true_labels = network.to_mmd_layer(feed_data, train_labels, feed_fake=0)
+        mmd_latent_with_fake_labels = [network.to_mmd_layer(feed_data, train_labels, feed_fake=i) for i in
                                        range(n_conditions)]
 
         if data_name in ["pbmc", 'endo_norm']:
