@@ -146,7 +146,7 @@ def train_network(data_dict=None,
         adata = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if loss_fn != 'mse':
             adata = normalize(adata,
-                              filter_min_counts=False, normalize_input=True, logtrans_input=True)
+                              filter_min_counts=False, normalize_input=False, logtrans_input=True)
         train_data, valid_data = train_test_split(adata, 0.80)
 
     spec_cell_type = data_dict.get("spec_cell_types", None)
@@ -210,7 +210,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if loss_fn != 'mse':
             data = normalize(data,
-                             filter_min_counts=False, normalize_input=True, logtrans_input=True)
+                             filter_min_counts=False, normalize_input=False, logtrans_input=True)
 
     cell_types = data.obs[cell_type_key].unique().tolist()
 
