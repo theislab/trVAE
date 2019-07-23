@@ -120,8 +120,8 @@ def create_model(train_data, valid_data, data_name):
                             shuffle=True,
                             save=True)
 
-    print(f'Best Reconstruction Loss of model: ({history["val_kl_reconstruction"]})')
-    return {'loss': history["val_kl_reconstruction"], 'status': STATUS_OK}
+    print(f'Best Reconstruction Loss of model: ({history.history["val_kl_reconstruction_loss"][0]})')
+    return {'loss': history.history["val_kl_reconstruction_loss"][0], 'status': STATUS_OK}
 
 
 if __name__ == '__main__':
