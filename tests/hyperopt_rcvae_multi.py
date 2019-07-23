@@ -165,17 +165,19 @@ def create_model(train_data, valid_data,
 
     x_var = np.var(pred_target.X, axis=0)
     y_var = np.var(real_target.X, axis=0)
-    m, b, r_value_var, p_value, std_err = stats.linregress(x_var, y_var)
+    z_var = np.var(source_adata.X, axis=0)
+    m, b, r_value_var, p_value, std_err = stats.linregress(x_var - z_var, y_var - z_var)
     r_value_var = r_value_var ** 2
 
     x_mean = np.mean(pred_target.X, axis=0)
     y_mean = np.mean(real_target.X, axis=0)
-    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean, y_mean)
+    z_mean = np.mean(source_adata.X, axis=0)
+    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean - z_mean, y_mean - z_mean)
     r_value_mean = r_value_mean ** 2
 
-    best_reg = r_value_var + r_value_mean
+    best_reg = r_value_mean
     print(f'Best Reg of model: ({r_value_mean}, {r_value_var}, {best_reg})')
-    return {'loss': -best_reg, 'status': STATUS_OK, 'model': network}
+    return {'loss': -best_reg, 'status': STATUS_OK}
 
 
 def predict_between_conditions(network, adata, pred_adatas,
