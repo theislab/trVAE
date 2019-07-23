@@ -560,6 +560,8 @@ class RCVAEMulti:
 
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
+
+        if sparse.issparse(train_data.raw.X):
             train_data.raw.X = train_data.raw.X.A
 
         if self.loss_fn != 'mse':
