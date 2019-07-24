@@ -57,8 +57,18 @@ def data():
                 'violin_genes': ['Eef1a1'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
+
+        "Toy": {'name': 'toy', 'need_merge': False,
+                'source_conditions': ['Stable', 'Angry'],
+                'target_conditions': ['Happy'],
+                'transition': ('Stable', 'Happy', 'Stable_to_Happy', 0, 2),
+                'label_encoder': {'Stable': 0, 'Angry': 1, 'Happy': 2},
+                'spec_cell_types': ['Mohammad'],
+                'violin_genes': [0, 250, 600],
+                'condition': 'condition',
+                'cell_type': 'cell_type'},
     }
-    data_key = "ILC"
+    data_key = "Toy"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -73,11 +83,17 @@ def data():
                           filter_min_counts=False, normalize_input=False, logtrans_input=True)
         train_data, valid_data = train_test_split(adata, 0.80)
     else:
-        train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
-        valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+        if os.path.exists(f"./data/{data_name}/train_{data_name}.h5ad"):
+            train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
+            valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+        else:
+            data = sc.read(f"./data/{data_name}/{data_name}.h5ad")
+            train_data, valid_data = train_test_split(data, 0.80)
 
-    net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
-    net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
+    net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
+                                         (train_data.obs[condition_key].isin(target_keys)))]
+    net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
+                                         (valid_data.obs[condition_key].isin(target_keys)))]
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
@@ -111,10 +127,10 @@ def create_model(train_data, valid_data,
                                kernel='rbf',
                                learning_rate=0.001,
                                clip_value=clip_value_choices,
-                               loss_fn='nb',
+                               loss_fn='mse',
                                model_path=f"./models/RCVAEMulti/{data_name}/hyperopt/",
                                dropout_rate=dropout_rate_choices,
-                               use_leaky_relu=False,
+                               use_leaky_relu=True,
                                )
 
     network.train(net_train_data,
@@ -299,6 +315,18 @@ if __name__ == '__main__':
                 'spec_cell_types': ['None'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
+        "Toy": {'name': 'toy', 'need_merge': False,
+                'source_conditions': ['Stable', 'Angry'],
+                'target_conditions': ['Happy'],
+                'perturbation': [('Stable', 'Angry', 'control_to_Angry', 0, 1),
+                                 ('Stable', 'Happy', 'control_to_Happy', 0, 2),
+                                 ('Angry', 'Happy', 'Angry_to_Happy', 1, 2),
+                                 ],
+                'label_encoder': {'Stable': 0, 'Angry': 1, 'Happy': 2},
+                'spec_cell_types': ['Mohammad'],
+                'violin_genes': [0, 250, 600],
+                'condition': 'condition',
+                'cell_type': 'cell_type'},
     }
     data_dict = DATASETS[data_key]
 
@@ -310,8 +338,12 @@ if __name__ == '__main__':
     label_encoder = data_dict['label_encoder']
     cell_type = data_dict['spec_cell_types'][0]
 
-    train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
-    valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+    if os.path.exists(f"./data/{data_name}/train_{data_name}.h5ad"):
+        train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
+        valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+    else:
+        data = sc.read(f"./data/{data_name}/{data_name}.h5ad")
+        train_data, valid_data = train_test_split(data, 0.80)
 
     net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
     net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
@@ -426,12 +458,3 @@ if __name__ == '__main__':
     best_network.save_model()
     print("All Done!")
     print(best_run)
-
-"""
-    best run for MMD-CVAE:
-    alpha = xxx, 
-    beta = xx,
-    kernel = rbf,
-    n_epochs = 5000,
-    z_dim = xxx
-"""
