@@ -199,9 +199,9 @@ def create_model(train_data, valid_data,
     if sparse.issparse(real_target.X):
         real_target.X = real_target.X.A
 
-    pred_target = pred_target[:, top_genes]
-    real_target = pred_target[:, top_genes]
-    source_adata = source_adata[:, top_genes]
+    # pred_target = pred_target[:, top_genes]
+    # real_target = pred_target[:, top_genes]
+    # source_adata = source_adata[:, top_genes]
 
     x_var = np.var(pred_target.X, axis=0)
     y_var = np.var(real_target.X, axis=0)
