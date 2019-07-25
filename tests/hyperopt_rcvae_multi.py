@@ -412,7 +412,7 @@ if __name__ == '__main__':
     for i in range(n_conditions):
         fake_labels.append(np.zeros(train_labels.shape) + i)
 
-    feed_data = train_data
+    feed_data = train_data.copy()
 
     latent_with_true_labels = best_network.to_latent(feed_data, train_labels)
     latent_with_fake_labels = [best_network.to_latent(feed_data, fake_labels[i]) for i in
