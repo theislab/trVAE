@@ -359,7 +359,7 @@ if __name__ == '__main__':
                   'perturbation': [('Control', 'Hpoly.Day3', 'Control_to_Hpoly.Day3', 0, 1),
                                    ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
                                    ('Hpoly.Day3', 'Hpoly.Day10', 'Hpoly.Day3_to_Hpoly.Day10', 1, 2),
-                                   ('Control_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1, 2),
+                                   ('Control_to_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1, 2),
                                    ],
                   'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
                   'spec_cell_types': ['Tuft'],
