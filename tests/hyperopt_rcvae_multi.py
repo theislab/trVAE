@@ -163,7 +163,7 @@ def create_model(train_data, valid_data,
                   lr_reducer=0,
                   monitor='val_loss',
                   shuffle=True,
-                  save=False)
+                  save=True)
 
     cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
     sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100)
