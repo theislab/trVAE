@@ -67,8 +67,17 @@ def data():
                 'violin_genes': [0, 250, 600],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
+
+        "Haber": {'name': 'haber', 'need_merge': False,
+                  'source_conditions': ['Control', 'Hpoly.Day3', 'Salmonella'],
+                  'target_conditions': ['Hpoly.Day10'],
+                  'transition': ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
+                  'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
+                  'spec_cell_types': ['Tuft'],
+                  'condition': 'condition',
+                  'cell_type': 'cell_label'},
     }
-    data_key = "Toy"
+    data_key = "Haber"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -327,6 +336,22 @@ if __name__ == '__main__':
                 'violin_genes': [0, 250, 600],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
+        "Haber": {'name': 'haber', 'need_merge': False,
+                  'source_conditions': ['Control', 'Hpoly.Day3', 'Salmonella'],
+                  'target_conditions': ['Hpoly.Day10'],
+                  'perturbation': [('Control', 'Hpoly.Day3', 'Control_to_Hpoly.Day3', 0, 1),
+                                   ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
+                                   ('Control', 'Salmonella', 'Control_to_Salmonella', 0, 3),
+                                   ('Hpoly.Day3', 'Hpoly.Day10', 'Hpoly.Day3_to_Hpoly.Day10', 1, 2),
+                                   ('Hpoly.Day3', 'Salmonella', 'Hpoly.Day3_to_Salmonella', 1, 3),
+                                   ('Hpoly.Day10', 'Salmonella', 'Hpoly.Day10_to_Salmonella', 2, 3),
+                                   ('Salmonella', 'Hpoly.Day10', 'Salmonella_to_Hpoly.Day10', 3, 2),
+                                   ('Control_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1, 2),
+                                   ],
+                  'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
+                  'spec_cell_types': ['Tuft'],
+                  'condition': 'condition',
+                  'cell_type': 'cell_label'},
     }
     data_dict = DATASETS[data_key]
 
@@ -345,8 +370,10 @@ if __name__ == '__main__':
         data = sc.read(f"./data/{data_name}/{data_name}.h5ad")
         train_data, valid_data = train_test_split(data, 0.80)
 
-    net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
-    net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
+    net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
+                                         (train_data.obs[condition_key].isin(target_keys)))]
+    net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
+                                         (valid_data.obs[condition_key].isin(target_keys)))]
 
     path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
