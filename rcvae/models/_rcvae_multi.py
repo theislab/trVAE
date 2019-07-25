@@ -9,8 +9,8 @@ from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
-from keras.utils.generic_utils import get_custom_objects
 from keras.utils import to_categorical
+from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
 
 from rcvae.models.activations import disp_activation, mean_activation
@@ -561,10 +561,13 @@ class RCVAEMulti:
 
         callbacks = [
             History(),
-            EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold),
             CSVLogger(filename="./csv_logger.log"),
-            ReduceLROnPlateau(monitor=monitor, patience=lr_reducer, verbose=verbose)
         ]
+        if early_stop_limit > 0:
+            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold))
+
+        if lr_reducer > 0:
+            callbacks.append(ReduceLROnPlateau(monitor=monitor, patience=lr_reducer, verbose=verbose))
 
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
