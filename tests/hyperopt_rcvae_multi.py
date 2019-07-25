@@ -74,6 +74,7 @@ def data():
                   'transition': ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
                   'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
                   'spec_cell_types': ['Tuft'],
+                  'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10'],
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
     }
@@ -85,9 +86,12 @@ def data():
     cell_type = data_dict['spec_cell_types'][0]
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
+    conditions = data_dict.get('conditions', None)
 
     if data_name.endswith("count"):
         adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
+        if conditions:
+            adata = adata[adata.obs[condition_key].isin(conditions)]
         adata = normalize(adata,
                           filter_min_counts=False, normalize_input=False, logtrans_input=True)
         train_data, valid_data = train_test_split(adata, 0.80)
@@ -95,9 +99,14 @@ def data():
         if os.path.exists(f"./data/{data_name}/train_{data_name}.h5ad"):
             train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
             valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+            if conditions:
+                train_data = train_data[train_data.obs[condition_key].isin(conditions)]
+                valid_data = valid_data[valid_data.obs[condition_key].isin(conditions)]
         else:
-            data = sc.read(f"./data/{data_name}/{data_name}.h5ad")
-            train_data, valid_data = train_test_split(data, 0.80)
+            adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
+            if conditions:
+                adata = adata[adata.obs[condition_key].isin(conditions)]
+            train_data, valid_data = train_test_split(adata, 0.80)
 
     net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
                                          (train_data.obs[condition_key].isin(target_keys)))]
@@ -150,12 +159,16 @@ def create_model(train_data, valid_data,
                   n_epochs=10000,
                   batch_size=batch_size_choices,
                   verbose=2,
-                  early_stop_limit=25,
+                  early_stop_limit=50,
+                  lr_reducer=0,
                   monitor='val_loss',
                   shuffle=True,
                   save=False)
 
     cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
+    sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=20)
+    top_genes = cell_type_adata.uns['rank_genes_groups']['names'][target_condition]
+
 
     source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == source_condition]
 
@@ -187,6 +200,10 @@ def create_model(train_data, valid_data,
 
     if sparse.issparse(real_target.X):
         real_target.X = real_target.X.A
+
+    pred_target = pred_target[:, top_genes]
+    real_target = pred_target[:, top_genes]
+    source_adata = source_adata[:, top_genes]
 
     x_var = np.var(pred_target.X, axis=0)
     y_var = np.var(real_target.X, axis=0)
@@ -346,10 +363,12 @@ if __name__ == '__main__':
                                    ('Hpoly.Day3', 'Salmonella', 'Hpoly.Day3_to_Salmonella', 1, 3),
                                    ('Hpoly.Day10', 'Salmonella', 'Hpoly.Day10_to_Salmonella', 2, 3),
                                    ('Salmonella', 'Hpoly.Day10', 'Salmonella_to_Hpoly.Day10', 3, 2),
-                                   ('Control_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1, 2),
+                                   (
+                                   'Control_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1, 2),
                                    ],
                   'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
                   'spec_cell_types': ['Tuft'],
+                  'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10'],
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
     }
@@ -362,12 +381,19 @@ if __name__ == '__main__':
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
     cell_type = data_dict['spec_cell_types'][0]
+    conditions = data_dict.get('conditions', None)
 
     if os.path.exists(f"./data/{data_name}/train_{data_name}.h5ad"):
         train_data = sc.read(f"./data/{data_name}/train_{data_name}.h5ad")
         valid_data = sc.read(f"./data/{data_name}/valid_{data_name}.h5ad")
+
+        if conditions:
+            train_data = train_data[train_data.obs[condition_key].isin(conditions)]
+            valid_data = valid_data[valid_data.obs[condition_key].isin(conditions)]
     else:
         data = sc.read(f"./data/{data_name}/{data_name}.h5ad")
+        if conditions:
+            data = data[data.obs[condition_key].isin(conditions)]
         train_data, valid_data = train_test_split(data, 0.80)
 
     net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
