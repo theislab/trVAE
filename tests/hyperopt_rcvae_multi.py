@@ -63,7 +63,6 @@ def data():
                 'transition': ('Stable', 'Happy', 'Stable_to_Happy', 0, 2),
                 'label_encoder': {'Stable': 0, 'Angry': 1, 'Happy': 2},
                 'spec_cell_types': ['Mohammad'],
-                'violin_genes': [0, 250, 600],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
 
@@ -77,7 +76,7 @@ def data():
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
     }
-    data_key = "Haber"
+    data_key = "Toy"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -342,13 +341,13 @@ if __name__ == '__main__':
         "Toy": {'name': 'toy', 'need_merge': False,
                 'source_conditions': ['Stable', 'Angry'],
                 'target_conditions': ['Happy'],
-                'perturbation': [('Stable', 'Angry', 'control_to_Angry', 0, 1),
-                                 ('Stable', 'Happy', 'control_to_Happy', 0, 2),
+                'perturbation': [('Stable', 'Angry', 'Stable_to_Angry', 0, 1),
+                                 ('Stable', 'Happy', 'Stable_to_Happy', 0, 2),
                                  ('Angry', 'Happy', 'Angry_to_Happy', 1, 2),
+                                 ('Stable_to_Angry', 'Happy', '(Stable_to_Angry)_to_Happy', 1, 2),
                                  ],
                 'label_encoder': {'Stable': 0, 'Angry': 1, 'Happy': 2},
                 'spec_cell_types': ['Mohammad'],
-                'violin_genes': [0, 250, 600],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
         "Haber": {'name': 'haber', 'need_merge': False,
