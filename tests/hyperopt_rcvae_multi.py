@@ -401,7 +401,7 @@ if __name__ == '__main__':
     net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
                                          (valid_data.obs[condition_key].isin(target_keys)))]
 
-    path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
+    path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dimension}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
     sc.settings.figdir = os.path.abspath(path_to_save)
 
