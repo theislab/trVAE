@@ -365,7 +365,7 @@ class RCVAEMulti:
 
         batch_loss()
 
-    def to_latent(self, data, labels):
+    def to_latent(self, adata, labels):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -379,11 +379,14 @@ class RCVAEMulti:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
+        if sparse.issparse(adata.X):
+            adata.X = adata.X.A
+
         labels = to_categorical(labels, num_classes=self.n_conditions)
-        latent = self.encoder_model.predict([data, labels])[2]
+        latent = self.encoder_model.predict([adata.X, labels])[2]
         return latent
 
-    def to_mmd_layer(self, data, encoder_labels, feed_fake=0):
+    def to_mmd_layer(self, adata, encoder_labels, feed_fake=0):
         """
             Map `data` in to the pn layer after latent layer. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -405,13 +408,13 @@ class RCVAEMulti:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        if sparse.issparse(data.X):
-            data.X = data.X.A
+        if sparse.issparse(adata.X):
+            adata.X = adata.X.A
 
         if self.loss_fn == 'mse':
-            x = [data.X, encoder_labels, decoder_labels]
+            x = [adata.X, encoder_labels, decoder_labels]
         else:
-            x = [data.X, encoder_labels, decoder_labels, data.obs['size_factors'].values]
+            x = [adata.X, encoder_labels, decoder_labels, adata.obs['size_factors'].values]
         mmd_latent = self.cvae_model.predict(x)[1]
         return mmd_latent
 
