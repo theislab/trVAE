@@ -166,7 +166,7 @@ def create_model(train_data, valid_data,
                   save=False)
 
     cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
-    sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=20)
+    sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100)
     top_genes = cell_type_adata.uns['rank_genes_groups']['names'][target_condition]
 
 
@@ -217,7 +217,7 @@ def create_model(train_data, valid_data,
     m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean - z_mean, y_mean - z_mean)
     r_value_mean = r_value_mean ** 2
 
-    best_reg = r_value_mean
+    best_reg = r_value_mean + r_value_var
     print(f'Best Reg of model: ({r_value_mean}, {r_value_var}, {best_reg})')
     return {'loss': -best_reg, 'status': STATUS_OK}
 
