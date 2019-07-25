@@ -219,7 +219,7 @@ def create_model(train_data, valid_data,
 
     best_reg = r_value_mean + r_value_var
     print(f'Best Reg of model: ({r_value_mean}, {r_value_var}, {best_reg})')
-    return {'loss': -best_reg, 'status': STATUS_OK}
+    return {'loss': -best_reg, 'status': STATUS_OK, 'model': network}
 
 
 def predict_between_conditions(network, adata, pred_adatas,
