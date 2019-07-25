@@ -9,7 +9,6 @@ import scanpy as sc
 from hyperas import optim
 from hyperas.distributions import choice
 from hyperopt import Trials, STATUS_OK, tpe
-from matplotlib import pyplot as plt
 from scipy import stats, sparse
 
 import rcvae
@@ -72,7 +71,7 @@ def data():
                   'source_conditions': ['Control', 'Hpoly.Day3', 'Salmonella'],
                   'target_conditions': ['Hpoly.Day10'],
                   'transition': ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
-                  'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
+                  'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2},
                   'spec_cell_types': ['Tuft'],
                   'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10'],
                   'condition': 'condition',
@@ -169,7 +168,6 @@ def create_model(train_data, valid_data,
     sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100)
     top_genes = cell_type_adata.uns['rank_genes_groups']['names'][target_condition]
 
-
     source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == source_condition]
 
     source_labels = np.zeros(source_adata.shape[0]) + source_label
@@ -208,13 +206,13 @@ def create_model(train_data, valid_data,
     x_var = np.var(pred_target.X, axis=0)
     y_var = np.var(real_target.X, axis=0)
     z_var = np.var(source_adata.X, axis=0)
-    m, b, r_value_var, p_value, std_err = stats.linregress(x_var - z_var, y_var - z_var)
+    m, b, r_value_var, p_value, std_err = stats.linregress(x_var, y_var)
     r_value_var = r_value_var ** 2
 
     x_mean = np.mean(pred_target.X, axis=0)
     y_mean = np.mean(real_target.X, axis=0)
     z_mean = np.mean(source_adata.X, axis=0)
-    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean - z_mean, y_mean - z_mean)
+    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean, y_mean)
     r_value_mean = r_value_mean ** 2
 
     best_reg = r_value_mean + r_value_var
@@ -359,7 +357,8 @@ if __name__ == '__main__':
                   'perturbation': [('Control', 'Hpoly.Day3', 'Control_to_Hpoly.Day3', 0, 1),
                                    ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
                                    ('Hpoly.Day3', 'Hpoly.Day10', 'Hpoly.Day3_to_Hpoly.Day10', 1, 2),
-                                   ('Control_to_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1, 2),
+                                   ('Control_to_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1,
+                                    2),
                                    ],
                   'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
                   'spec_cell_types': ['Tuft'],
