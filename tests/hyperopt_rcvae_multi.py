@@ -417,8 +417,8 @@ if __name__ == '__main__':
     latent_with_true_labels = best_network.to_latent(feed_data, train_labels)
     latent_with_fake_labels = [best_network.to_latent(feed_data, fake_labels[i]) for i in
                                range(n_conditions)]
-    mmd_latent_with_true_labels = best_network.to_mmd_layer(best_network, feed_data, train_labels, feed_fake=0)
-    mmd_latent_with_fake_labels = [best_network.to_mmd_layer(best_network, feed_data, train_labels, feed_fake=i) for i
+    mmd_latent_with_true_labels = best_network.to_mmd_layer(feed_data, train_labels, feed_fake=0)
+    mmd_latent_with_fake_labels = [best_network.to_mmd_layer(feed_data, train_labels, feed_fake=i) for i
                                    in
                                    range(n_conditions)]
 
