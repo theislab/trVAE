@@ -131,8 +131,7 @@ def data():
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
-    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type[0],\
-           n_conditions, label_encoder, data_name, source_condition, target_condition, source_label, target_label
+    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type[0], n_conditions, label_encoder, data_name, source_condition, target_condition, source_label, target_label
 
 
 def create_model(train_data, valid_data,
