@@ -93,6 +93,20 @@ DATASETS = {
             'condition': 'condition',
             'cell_type': 'cell_type'},
 
+    "Broad": {'name': 'broad', 'need_merge': False,
+              'source_conditions': ['13.0', '14.0', '15.0', '16.0', '17.0'],
+              'target_conditions': ['18.0'],
+              'perturbation': [('13.0', '14.0', '13.0_to_14.0', 0, 1),
+                               ('14.0', '15.0', '14.0_to_15.0', 1, 2),
+                               ('15.0', '16.0', '15.0_to_16.0', 2, 3),
+                               ('16.0', '17.0', '15.0_to_16.0', 3, 4),
+                               ('17.0', '18.0', '15.0_to_16.0', 4, 5),
+                               ],
+              'label_encoder': {'13.0': 0, '14.0': 1, '15.0': 2, '16.0': 3, '17.0': 4, '18.0': 5},
+              'spec_cell_types': [],
+              'condition': 'day',
+              'cell_type': 'cell_type'},
+
 }
 
 

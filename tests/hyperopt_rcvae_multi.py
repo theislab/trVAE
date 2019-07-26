@@ -75,13 +75,22 @@ def data():
                   'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10'],
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
+
+        "Broad": {'name': 'broad', 'need_merge': False,
+                  'source_conditions': ['13.0', '14.0', '15.0', '16.0', '17.0', '18.0'],
+                  'target_conditions': [],
+                  'transition': ('16.0', '17.0', '16.0_to_17.0', 3, 4),
+                  'label_encoder': {'13.0': 0, '14.0': 1, '15.0': 2, '16.0': 3, '17.0': 4, '18.0': 5},
+                  'spec_cell_types': [],
+                  'condition': 'day',
+                  'cell_type': 'cell_type'},
     }
     data_key = "Toy"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
     cell_type_key = data_dict['cell_type']
-    cell_type = data_dict['spec_cell_types'][0]
+    cell_type = data_dict['spec_cell_types']
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
     conditions = data_dict.get('conditions', None)
@@ -105,17 +114,25 @@ def data():
             if conditions:
                 adata = adata[adata.obs[condition_key].isin(conditions)]
             train_data, valid_data = train_test_split(adata, 0.80)
+    if cell_type and target_keys:
+        net_train_data = train_data.copy()[~((train_data.obs[cell_type_key].isin(cell_type)) &
+                                             (train_data.obs[condition_key].isin(target_keys)))]
+        net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key].isin(cell_type)) &
+                                             (valid_data.obs[condition_key].isin(target_keys)))]
+    elif target_keys:
+        net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
+        net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
 
-    net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
-                                         (train_data.obs[condition_key].isin(target_keys)))]
-    net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
-                                         (valid_data.obs[condition_key].isin(target_keys)))]
+    else:
+        net_train_data = train_data.copy()
+        net_valid_data = valid_data.copy()
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
-    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type, n_conditions, label_encoder, data_name, source_condition, target_condition, source_label, target_label
+    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type[
+        0], n_conditions, label_encoder, data_name, source_condition, target_condition, source_label, target_label
 
 
 def create_model(train_data, valid_data,
@@ -364,6 +381,19 @@ if __name__ == '__main__':
                   'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10'],
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
+        "Broad": {'name': 'broad', 'need_merge': False,
+                  'source_conditions': ['13.0', '14.0', '15.0', '16.0', '17.0', '18.0'],
+                  'target_conditions': [],
+                  'perturbation': [('13.0', '14.0', '13.0_to_14.0', 0, 1),
+                                   ('14.0', '15.0', '14.0_to_15.0', 1, 2),
+                                   ('15.0', '16.0', '15.0_to_16.0', 2, 3),
+                                   ('16.0', '17.0', '15.0_to_16.0', 3, 4),
+                                   ('17.0', '18.0', '15.0_to_16.0', 4, 5),
+                                   ],
+                  'label_encoder': {'13.0': 0, '14.0': 1, '15.0': 2, '16.0': 3, '17.0': 4, '18.0': 5},
+                  'spec_cell_types': [],
+                  'condition': 'day',
+                  'cell_type': 'cell_type'},
     }
     data_dict = DATASETS[data_key]
 
@@ -373,7 +403,7 @@ if __name__ == '__main__':
     source_keys = data_dict['source_conditions']
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
-    cell_type = data_dict['spec_cell_types'][0]
+    cell_type = data_dict['spec_cell_types']
     conditions = data_dict.get('conditions', None)
 
     if os.path.exists(f"./data/{data_name}/train_{data_name}.h5ad"):
@@ -388,11 +418,23 @@ if __name__ == '__main__':
         if conditions:
             data = data[data.obs[condition_key].isin(conditions)]
         train_data, valid_data = train_test_split(data, 0.80)
+    if cell_type and target_keys:
+        net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
+                                             (train_data.obs[condition_key].isin(target_keys)))]
+        net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
+                                             (valid_data.obs[condition_key].isin(target_keys)))]
+    elif target_keys:
+        net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
+        net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
 
-    net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
-                                         (train_data.obs[condition_key].isin(target_keys)))]
-    net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
-                                         (valid_data.obs[condition_key].isin(target_keys)))]
+    else:
+        net_train_data = train_data.copy()
+        net_valid_data = valid_data.copy()
+
+    if cell_type:
+        cell_type = cell_type[0]
+    else:
+        cell_type = 'all'
 
     path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
     os.makedirs(path_to_save, exist_ok=True)
