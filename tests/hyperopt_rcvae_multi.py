@@ -85,7 +85,7 @@ def data():
                   'condition': 'day',
                   'cell_type': 'cell_type'},
     }
-    data_key = "Toy"
+    data_key = "Broad"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
