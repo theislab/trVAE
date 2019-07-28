@@ -55,7 +55,7 @@ class RCVAEMulti:
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
-        self.use_leaky_relu = kwargs.get("use_leaky_relu", False)
+        self.output_activation = kwargs.get("output_activation", False)
         self.loss_fn = kwargs.get("loss_fn", 'nb')
         self.ridge = kwargs.get('ridge', 0.1)
         self.clip_value = kwargs.get('clip_value', 3.0)
@@ -136,10 +136,10 @@ class RCVAEMulti:
 
         if self.loss_fn == 'mse':
             h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-            if self.use_leaky_relu:
+            if self.output_activation == 'leaky_relu':
                 h = LeakyReLU(name='reconstruction_output')(h)
             else:
-                h = Activation('relu', name="reconstruction_output")(h)
+                h = Activation(self.output_activation, name="reconstruction_output")(h)
 
         elif self.loss_fn == 'nb':
             h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
