@@ -132,7 +132,6 @@ class RCVAEMulti:
         h = BatchNormalization(axis=1, scale=True)(h)
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
-        h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
 
         if self.loss_fn == 'mse':
             h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
@@ -142,21 +141,21 @@ class RCVAEMulti:
                 h = Activation(self.output_activation, name="reconstruction_output")(h)
 
         elif self.loss_fn == 'nb':
-            h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
+            h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
             h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
 
-            h_disp = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
+            h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
             h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
         elif self.loss_fn == 'zinb':
             h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
                          name='decoder_pi')(h)
-            h_mean = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
+            h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
             h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
 
-            h_disp = Dense(self.x_dim, activation='linear', kernel_initializer=self.init_w,
+            h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
                            use_bias=True)(h)
             h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
 
