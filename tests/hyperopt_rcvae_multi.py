@@ -278,7 +278,7 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
     data_key = args['data']
-    cell_type = args['cell_type']
+    cell_type = [args['cell_type']]
 
     best_run, best_network = optim.minimize(model=create_model,
                                             data=data,
@@ -443,14 +443,6 @@ if __name__ == '__main__':
 
     feed_data = train_data.copy()
 
-    latent_with_true_labels = best_network.to_latent(feed_data, train_labels)
-    latent_with_fake_labels = [best_network.to_latent(feed_data, fake_labels[i]) for i in
-                               range(n_conditions)]
-    mmd_latent_with_true_labels = best_network.to_mmd_layer(feed_data, train_labels, feed_fake=0)
-    mmd_latent_with_fake_labels = [best_network.to_mmd_layer(feed_data, train_labels, feed_fake=i) for i
-                                   in
-                                   range(n_conditions)]
-
     cell_type_adata = train_data[train_data.obs[cell_type_key] == cell_type]
 
     perturbation_list = data_dict.get("perturbation", [])
@@ -469,74 +461,6 @@ if __name__ == '__main__':
 
     pred_adatas.write_h5ad(filename=f"./data/reconstructed/RCVAEMulti/{data_name}_{cell_type}.h5ad")
 
-    # import matplotlib as mpl
-    #
-    # mpl.rcParams.update(mpl.rcParamsDefault)
-    #
-    # if data_name == "cytof":
-    #     color = [condition_key]
-    # else:
-    #     color = [condition_key, cell_type_key]
-    #
-    # latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
-    # latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
-    # latent_with_true_labels.obs[cell_type_key] = train_data.obs[cell_type_key].values
-    #
-    # latent_with_fake_labels = [sc.AnnData(X=latent_with_fake_labels[i]) for i in range(n_conditions)]
-    # for i in range(n_conditions):
-    #     latent_with_fake_labels[i].obs[condition_key] = train_data.obs[condition_key].values
-    #     latent_with_fake_labels[i].obs[cell_type_key] = train_data.obs[cell_type_key].values
-    #
-    #     sc.pp.neighbors(latent_with_fake_labels[i])
-    #     sc.tl.umap(latent_with_fake_labels[i])
-    #     sc.pl.umap(latent_with_fake_labels[i], color=color,
-    #                save=f"_{data_name}_{cell_type}_latent_with_fake_labels_{i}",
-    #                show=False,
-    #                wspace=0.15,
-    #                frameon=False)
-    #
-    # mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
-    # mmd_latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
-    # mmd_latent_with_true_labels.obs[cell_type_key] = train_data.obs[cell_type_key].values
-    #
-    # mmd_latent_with_fake_labels = [sc.AnnData(X=mmd_latent_with_fake_labels[i]) for i in range(n_conditions)]
-    # for i in range(n_conditions):
-    #     mmd_latent_with_fake_labels[i].obs[condition_key] = train_data.obs[condition_key].values
-    #     mmd_latent_with_fake_labels[i].obs[cell_type_key] = train_data.obs[cell_type_key].values
-    #
-    #     sc.pp.neighbors(mmd_latent_with_fake_labels[i])
-    #     sc.tl.umap(mmd_latent_with_fake_labels[i])
-    #     sc.pl.umap(mmd_latent_with_fake_labels[i], color=color,
-    #                save=f"_{data_name}_latent_with_fake_labels_{i}",
-    #                show=False,
-    #                wspace=0.15,
-    #                frameon=False)
-    #
-    # sc.pp.neighbors(train_data)
-    # sc.tl.umap(train_data)
-    # sc.pl.umap(train_data, color=color,
-    #            save=f'_{data_name}_{cell_type}_train_data',
-    #            show=False,
-    #            wspace=0.15,
-    #            frameon=False)
-    #
-    # sc.pp.neighbors(latent_with_true_labels)
-    # sc.tl.umap(latent_with_true_labels)
-    # sc.pl.umap(latent_with_true_labels, color=color,
-    #            save=f"_{data_name}_{cell_type}_latent_with_true_labels",
-    #            show=False,
-    #            wspace=0.15,
-    #            frameon=False)
-    #
-    # sc.pp.neighbors(mmd_latent_with_true_labels)
-    # sc.tl.umap(mmd_latent_with_true_labels)
-    # sc.pl.umap(mmd_latent_with_true_labels, color=color,
-    #            save=f"_{data_name}_{cell_type}_mmd_latent_with_true_labels",
-    #            show=False,
-    #            wspace=0.15,
-    #            frameon=False)
-    #
-    # plt.close("all")
     best_network.save_model()
     print("All Done!")
     print(best_run)
