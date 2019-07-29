@@ -23,7 +23,8 @@ def data():
                      'target_conditions': ['Salmonella'],
                      'transition': ('ctrl_to_hpoly', 'Salmonella', '(ctrl_to_hpoly)_to_sal'),
                      'violin_genes': [],
-                     "cell_type": "cell_label", 'spec_cell_types': ['Stem']},
+                     "cell_type": "cell_label",
+                     },
 
         "Cytof": {'name': 'cytof', 'need_merge': False,
                   'source_conditions': ['Basal', 'Bez', 'Das', 'Tof'],
@@ -32,7 +33,6 @@ def data():
                   'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
                   'condition': 'condition',
                   'violin_genes': ['p4EBp1'],
-                  'spec_cell_types': ['None'],
                   'cell_type': 'cell_label'},
 
         "EndoNorm": {'name': 'endo_norm', 'need_merge': False,
@@ -43,7 +43,6 @@ def data():
                                        'GLP1-E': 5,
                                        'GLP1-E + PEG-insulin': 6},
                      'violin_genes': [],
-                     'spec_cell_types': ['beta'],
                      'condition': 'treatment',
                      'cell_type': 'groups_named_broad'},
 
@@ -52,7 +51,6 @@ def data():
                 'target_conditions': ['NMU_IL25'],
                 'transition': ('IL25', 'NMU_IL25', 'IL25_to_NMU_IL25', 2, 3),
                 'label_encoder': {'control': 0, 'IL33': 1, 'IL25': 2, 'NMU': 3, 'NMU_IL25': 4},
-                'spec_cell_types': ['None'],
                 'violin_genes': ['Eef1a1'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
@@ -62,7 +60,6 @@ def data():
                 'target_conditions': ['Happy'],
                 'transition': ('Stable', 'Happy', 'Stable_to_Happy', 0, 2),
                 'label_encoder': {'Stable': 0, 'Angry': 1, 'Happy': 2},
-                'spec_cell_types': ['Mohammad'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
 
@@ -71,7 +68,6 @@ def data():
                   'target_conditions': ['Hpoly.Day10', 'Hpoly.Day3'],
                   'transition': ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
                   'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2},
-                  'spec_cell_types': ['Endocrine'],
                   'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10'],
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
@@ -81,16 +77,15 @@ def data():
                   'target_conditions': [],
                   'transition': ('day16', 'day17', 'day16_to_day17', 3, 4),
                   'label_encoder': {'day13': 0, 'day14': 1, 'day15': 2, 'day16': 3, 'day17': 4, 'day18': 5},
-                  'spec_cell_types': [],
                   'condition': 'day',
                   'cell_type': 'cell_type'},
     }
-    data_key = "Broad"
+    data_key = "Haber"
+    cell_type = ["TA"]
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
     cell_type_key = data_dict['cell_type']
-    cell_type = data_dict['spec_cell_types']
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
     conditions = data_dict.get('conditions', None)
@@ -114,6 +109,7 @@ def data():
             if conditions:
                 adata = adata[adata.obs[condition_key].isin(conditions)]
             train_data, valid_data = train_test_split(adata, 0.80)
+
     if cell_type and target_keys:
         net_train_data = train_data.copy()[~((train_data.obs[cell_type_key].isin(cell_type)) &
                                              (train_data.obs[condition_key].isin(target_keys)))]
@@ -144,11 +140,11 @@ def create_model(train_data, valid_data,
     z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
     mmd_dim_choices = {{choice([64, 128, 256])}}
 
-    alpha_choices = {{choice([1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
-    beta_choices = {{choice([1, 5, 10, 50, 100, 500, 1000])}}
+    alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
+    beta_choices = {{choice([50, 100, 500, 1000])}}
     batch_size_choices = {{choice([512, 1024, 2048, 4096])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
-    clip_value_choices = {{choice([1.0, 2.0, 3.0, 5.0])}}
+    clip_value_choices = {{choice([1.0, 3.0, 5.0, 10.0])}}
 
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension=z_dim_choices,
@@ -160,7 +156,7 @@ def create_model(train_data, valid_data,
                                learning_rate=0.001,
                                clip_value=clip_value_choices,
                                loss_fn='mse',
-                               model_path=f"./models/RCVAEMulti/{data_name}/hyperopt/",
+                               model_path=f"./models/RCVAEMulti/hyperopt/{data_name}/{cell_type}/",
                                dropout_rate=dropout_rate_choices,
                                use_leaky_relu=True,
                                )
@@ -275,11 +271,14 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='name of dataset you want to train')
+    arguments_group.add_argument('-c', '--cell_type', type=str, required=False, default=None,
+                                 help='Specific Cell type')
     arguments_group.add_argument('-n', '--max_evals', type=int, required=True,
                                  help='name of dataset you want to train')
 
     args = vars(parser.parse_args())
     data_key = args['data']
+    cell_type = args['cell_type']
 
     best_run, best_network = optim.minimize(model=create_model,
                                             data=data,
@@ -314,7 +313,6 @@ if __name__ == '__main__':
                                    ('Basal_to_Das', 'Bez+Das', '(Basal_to_Das)_to_Bez+Das', 2, 3),
                                    ],
                   'label_encoder': {'Basal': 0, 'Bez': 1, 'Das': 2, 'Tof': 3, 'Bez+Das': 4, 'Bez+Tof': 5},
-                  'spec_cell_types': ['None'],
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
 
@@ -338,7 +336,6 @@ if __name__ == '__main__':
                      'label_encoder': {'Ctrl': 0, 'GLP1': 1, 'Estrogen': 2, 'PEG-insulin': 3, 'Vehicle-STZ': 4,
                                        'GLP1-E': 5,
                                        'GLP1-E + PEG-insulin': 6},
-                     'spec_cell_types': ['beta'],
                      'condition': 'treatment',
                      'cell_type': 'groups_named_broad'},
         "ILC": {'name': 'nmuil_count', 'need_merge': False,
@@ -351,7 +348,6 @@ if __name__ == '__main__':
                                  ('NMU', 'NMU_IL25', 'NMU_to_NMU_IL25', 3, 2),
                                  ],
                 'label_encoder': {'control': 0, 'IL33': 1, 'IL25': 2, 'NMU': 3, 'NMU_IL25': 4},
-                'spec_cell_types': ['None'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
         "Toy": {'name': 'toy', 'need_merge': False,
@@ -363,7 +359,6 @@ if __name__ == '__main__':
                                  ('Stable_to_Angry', 'Happy', '(Stable_to_Angry)_to_Happy', 1, 2),
                                  ],
                 'label_encoder': {'Stable': 0, 'Angry': 1, 'Happy': 2},
-                'spec_cell_types': ['Mohammad'],
                 'condition': 'condition',
                 'cell_type': 'cell_type'},
         "Haber": {'name': 'haber', 'need_merge': False,
@@ -376,7 +371,6 @@ if __name__ == '__main__':
                                     2),
                                    ],
                   'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
-                  'spec_cell_types': ['Endocrine'],
                   'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10'],
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
@@ -388,21 +382,22 @@ if __name__ == '__main__':
                                    ('day15', 'day16', 'day15_to_day16', 2, 3),
                                    ('day16', 'day17', 'day15_to_day17', 3, 4),
                                    ('day17', 'day18', 'day15_to_day18', 4, 5),
+                                   ('day13_to_day14', 'day15', '(day13_to_day14)_to_day15', 1, 2),
+                                   ('day14_to_day15', 'day16', '(day14_to_day15)_to_day16', 2, 3),
+                                   ('day15_to_day16', 'day17', '(day15_to_day16)_to_day17', 3, 4),
+                                   ('day16_to_day17', 'day18', '(day16_to_day17)_to_day18', 4, 5),
                                    ],
                   'label_encoder': {'day13': 0, 'day14': 1, 'day15': 2, 'day16': 3, 'day17': 4, 'day18': 5},
-                  'spec_cell_types': [],
                   'condition': 'day',
                   'cell_type': 'cell_type'},
     }
     data_dict = DATASETS[data_key]
-
     data_name = data_dict['name']
     condition_key = data_dict['condition']
     cell_type_key = data_dict['cell_type']
     source_keys = data_dict['source_conditions']
     target_keys = data_dict['target_conditions']
     label_encoder = data_dict['label_encoder']
-    cell_type = data_dict['spec_cell_types']
     conditions = data_dict.get('conditions', None)
 
     if os.path.exists(f"./data/{data_name}/train_{data_name}.h5ad"):
@@ -418,9 +413,9 @@ if __name__ == '__main__':
             data = data[data.obs[condition_key].isin(conditions)]
         train_data, valid_data = train_test_split(data, 0.80)
     if cell_type and target_keys:
-        net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == cell_type) &
+        net_train_data = train_data.copy()[~((train_data.obs[cell_type_key].isin(cell_type)) &
                                              (train_data.obs[condition_key].isin(target_keys)))]
-        net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == cell_type) &
+        net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key].isin(cell_type)) &
                                              (valid_data.obs[condition_key].isin(target_keys)))]
     elif target_keys:
         net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
