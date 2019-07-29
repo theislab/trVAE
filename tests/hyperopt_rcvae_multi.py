@@ -158,7 +158,7 @@ def create_model(train_data, valid_data,
                                loss_fn='mse',
                                model_path=f"./models/RCVAEMulti/hyperopt/{data_name}/{cell_type}/",
                                dropout_rate=dropout_rate_choices,
-                               use_leaky_relu=True,
+                               output_activation="relu",
                                )
 
     network.train(net_train_data,
