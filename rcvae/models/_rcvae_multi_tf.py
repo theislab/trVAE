@@ -56,8 +56,8 @@ class RCVAEMultiTF:
         self.global_step = tf.Variable(0, name='global_step', trainable=False, dtype=tf.int32)
         self.x = tf.placeholder(tf.float32, shape=[None, self.x_dim], name="data")
         self.z = tf.placeholder(tf.float32, shape=[None, self.z_dim], name="latent")
-        self.encoder_labels = tf.placeholder(tf.float32, shape=[None, self.n_conditions], name="labels")
-        self.decoder_labels = tf.placeholder(tf.float32, shape=[None, self.n_conditions], name="labels")
+        self.encoder_labels = tf.placeholder(tf.float32, shape=[None, self.n_conditions], name="encoder_labels")
+        self.decoder_labels = tf.placeholder(tf.float32, shape=[None, self.n_conditions], name="decoder_labels")
         self.time_step = tf.placeholder(tf.int32)
         self.init_w = tf.contrib.layers.xavier_initializer()
 
