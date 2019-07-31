@@ -142,7 +142,7 @@ def create_model(train_data, valid_data,
 
     alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([50, 100, 500, 1000])}}
-    batch_size_choices = {{choice([512, 1024, 2048])}}
+    batch_size_choices = {{choice([128, 256, 512, 1024, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
     clip_value_choices = {{choice([1.0, 3.0, 5.0, 10.0])}}
 
@@ -169,7 +169,7 @@ def create_model(train_data, valid_data,
                   n_epochs=10000,
                   batch_size=batch_size_choices,
                   verbose=2,
-                  early_stop_limit=50,
+                  early_stop_limit=30,
                   lr_reducer=0,
                   monitor='val_loss',
                   shuffle=True,
