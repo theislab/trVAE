@@ -55,8 +55,8 @@ class RCVAEMulti:
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
-        self.output_activation = kwargs.get("output_activation", False)
-        self.loss_fn = kwargs.get("loss_fn", 'nb')
+        self.output_activation = kwargs.get("output_activation", 'relu')
+        self.loss_fn = kwargs.get("loss_fn", 'mse')
         self.ridge = kwargs.get('ridge', 0.1)
         self.clip_value = kwargs.get('clip_value', 3.0)
 
