@@ -453,6 +453,7 @@ class RCVAEMultiTF:
         patience = early_stop_limit
         min_delta = threshold
         patience_cnt = 0
+        min_loss = 1000000.0
         for it in range(n_epochs):
             increment_global_step_op = tf.assign(self.global_step, self.global_step + 1)
             _step = self.sess.run(increment_global_step_op)
@@ -494,11 +495,11 @@ class RCVAEMultiTF:
                                                                                           self.is_training: False})
                     valid_loss += current_loss_valid
                     valid_mmd_loss += current_mmd_loss_valid
-                loss_hist.append(valid_loss / valid_data.shape[0])
-                if it > 0 and loss_hist[it - 1] - loss_hist[it] > min_delta:
-                    patience_cnt = 0
-                else:
+                if it > 0 and valid_loss - min_loss > min_delta:
                     patience_cnt += 1
+                else:
+                    patience_cnt = 0
+                    min_loss = valid_loss
                 if patience_cnt > patience:
                     os.makedirs(self.model_to_use, exist_ok=True)
                     save_path = self.saver.save(self.sess, self.model_to_use)
