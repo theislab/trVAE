@@ -193,7 +193,7 @@ class RCVAEMultiTF:
 
             beta = 1. / (2. * (tf.expand_dims(sigmas, 1)))
             distances = RCVAEMultiTF.squared_distance(x, y)
-            s = tf.dot(beta, tf.reshape(distances, (1, -1)))
+            s = tf.matmul(beta, tf.reshape(distances, (1, -1)))
 
             return tf.reshape(tf.reduce_sum(tf.exp(-s), 0), tf.shape(distances)) / len(sigmas)
 
