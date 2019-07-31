@@ -312,7 +312,7 @@ class RCVAEMultiTF:
                                                        self.is_training: False})
         return latent
 
-    def _reconstruct(self, adata, encoder_labels, decoder_labels, size_factor=None):
+    def _reconstruct(self, data, encoder_labels, decoder_labels, size_factor=None):
         """
             Map back the latent space encoding via the decoder.
 
@@ -332,8 +332,7 @@ class RCVAEMultiTF:
                 rec_data: 'numpy nd-array'
                     returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
         """
-        latent = self.to_latent(adata, encoder_labels)
-        rec_data = self.sess.run(self.x_hat, feed_dict={self.z_mean: latent,
+        rec_data = self.sess.run(self.x_hat, feed_dict={self.x: data,
                                                         self.encoder_labels: encoder_labels,
                                                         self.decoder_labels: decoder_labels,
                                                         self.is_training: False})
@@ -371,7 +370,7 @@ class RCVAEMultiTF:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        stim_pred = self._reconstruct(adata, encoder_labels, decoder_labels, size_factor)
+        stim_pred = self._reconstruct(adata.X, encoder_labels, decoder_labels, size_factor)
 
         return stim_pred
 
