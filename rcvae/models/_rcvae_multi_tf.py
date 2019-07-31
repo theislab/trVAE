@@ -273,6 +273,7 @@ class RCVAEMultiTF:
         """
         if sparse.issparse(adata.X):
             adata.X = adata.X.A
+        labels = to_categorical(labels, num_classes=self.n_conditions)
         latent = self.sess.run(self.z_mean, feed_dict={self.x: adata.X,
                                                        self.encoder_labels: labels,
                                                        self.is_training: False})
