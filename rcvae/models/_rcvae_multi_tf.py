@@ -1,12 +1,12 @@
 import logging
 import os
-
+import numpy as np
 import tensorflow as tf
 from keras.utils import to_categorical
 from scipy import sparse
 
-from rcvae.models.utils import shuffle_data
 from rcvae.models.utils import label_encoder
+from rcvae.models.utils import shuffle_data
 
 log = logging.getLogger(__file__)
 
@@ -59,7 +59,6 @@ class RCVAEMultiTF:
         self.encoder_labels = tf.placeholder(tf.float32, shape=[None, self.n_conditions], name="labels")
         self.decoder_labels = tf.placeholder(tf.float32, shape=[None, self.n_conditions], name="labels")
         self.time_step = tf.placeholder(tf.int32)
-        self.size = tf.placeholder(tf.int32)
         self.init_w = tf.contrib.layers.xavier_initializer()
 
         self._create_network()
@@ -255,7 +254,7 @@ class RCVAEMultiTF:
         with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
             self.solver = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.trvae_loss)
 
-    def to_latent(self, data, labels):
+    def to_latent(self, adata, labels):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -271,13 +270,14 @@ class RCVAEMultiTF:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
-        if sparse.issparse(data):
-            data = data.A
-        latent = self.sess.run(self.z_mean, feed_dict={self.x: data, self.encoder_labels: labels,
-                                                       self.size: data.shape[0], self.is_training: False})
+        if sparse.issparse(adata.X):
+            adata.X = adata.X.A
+        latent = self.sess.run(self.z_mean, feed_dict={self.x: adata.X,
+                                                       self.encoder_labels: labels,
+                                                       self.is_training: False})
         return latent
 
-    def to_mmd_layer(self, data, labels):
+    def to_mmd_layer(self, adata, encoder_labels, feed_fake=0):
         """
                     Map `data` in to the pn layer after latent layer. This function will feed data
                     in encoder part of C-VAE and compute the latent space coordinates
@@ -293,12 +293,24 @@ class RCVAEMultiTF:
                         latent: numpy nd-array
                             returns array containing latent space encoding of 'data'
                 """
+        if feed_fake > 0:
+            decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
+        else:
+            decoder_labels = encoder_labels
 
-        latent = self.sess.run(self.mmd_hl, feed_dict={self.x: data, self.decoder_labels: labels,
-                                                       self.size: data.shape[0], self.is_training: False})
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+
+        if sparse.issparse(adata.X):
+            adata.X = adata.X.A
+
+        latent = self.sess.run(self.mmd_hl, feed_dict={self.x: adata.X,
+                                                       self.encoder_labels: encoder_labels,
+                                                       self.decoder_labels: decoder_labels,
+                                                       self.is_training: False})
         return latent
 
-    def _reconstruct(self, data, labels, use_data=False):
+    def _reconstruct(self, data, encoder_labels, decoder_labels, size_factor=None):
         """
             Map back the latent space encoding via the decoder.
 
@@ -318,15 +330,14 @@ class RCVAEMultiTF:
                 rec_data: 'numpy nd-array'
                     returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
         """
-        if use_data:
-            latent = data
-        else:
-            latent = self.to_latent(data, labels)
-        rec_data = self.sess.run(self.x_hat, feed_dict={self.z_mean: latent, self.encoder_labels: labels.reshape(-1, 1),
+        latent = self.to_latent(data, encoder_labels)
+        rec_data = self.sess.run(self.x_hat, feed_dict={self.z_mean: latent,
+                                                        self.encoder_labels: encoder_labels,
+                                                        self.decoder_labels: decoder_labels,
                                                         self.is_training: False})
         return rec_data
 
-    def predict(self, data, labels):
+    def predict(self, adata, encoder_labels, decoder_labels, size_factor=None):
         """
             Predicts the cell type provided by the user in stimulated condition.
 
@@ -352,10 +363,13 @@ class RCVAEMultiTF:
             prediction = network.predict('CD4T', obs_key={"cell_type": ["CD8T", "NK"]})
             ```
         """
-        if sparse.issparse(data.X):
-            data.X = data.X.A
+        if sparse.issparse(adata.X):
+            adata.X = adata.X.A
 
-        stim_pred = self._reconstruct(data.X, labels)
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+
+        stim_pred = self._reconstruct(adata.X, encoder_labels, decoder_labels, size_factor)
 
         return stim_pred
 
@@ -490,10 +504,10 @@ class RCVAEMultiTF:
                     save_path = self.saver.save(self.sess, self.model_to_use)
                     break
                 if verbose:
-                    print(f"Epoch {it}: Train Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    Train MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size):.4f}    Valid Loss: {valid_loss / (valid_data.shape[0] // batch_size):.4f}    Valid MMD Loss: {valid_mmd_loss / (valid_data.shape[0] // batch_size):.4f}")
+                    print(f"Epoch {it}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size):.4f}    Valid Loss: {valid_loss / (valid_data.shape[0] // batch_size):.4f}    Valid MMD Loss: {valid_mmd_loss / (valid_data.shape[0] // batch_size):.4f}")
             else:
                 if verbose:
-                    print(f"Epoch {it}: Train Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    Train MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size)}")
+                    print(f"Epoch {it}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size)}")
         os.makedirs(self.model_to_use, exist_ok=True)
         save_path = self.saver.save(self.sess, self.model_to_use)
         print(f"Model saved in file: {save_path}. Training finished")
