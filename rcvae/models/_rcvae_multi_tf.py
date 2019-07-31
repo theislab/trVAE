@@ -5,8 +5,8 @@ import tensorflow as tf
 from keras.utils import to_categorical
 from scipy import sparse
 
-from rcvae import label_encoder
 from rcvae.models.utils import shuffle_data
+from rcvae.models.utils import label_encoder
 
 log = logging.getLogger(__file__)
 
@@ -381,7 +381,8 @@ class RCVAEMultiTF:
         """
         self.saver.restore(self.sess, self.model_to_use)
 
-    def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
+    def train(self, train_data, le=None, condition_key='condition', use_validation=False, valid_data=None, n_epochs=25,
+              batch_size=32, early_stop_limit=20, lr_reducer=0,
               threshold=0.0025, initial_run=True, shuffle=True, verbose=True):
         """
             Trains the network `n_epochs` times with given `train_data`
@@ -426,13 +427,13 @@ class RCVAEMultiTF:
             _init_step = self.sess.run(assign_step_zero)
         if not initial_run:
             self.saver.restore(self.sess, self.model_to_use)
-        train_labels, le = label_encoder(train_data)
+        train_labels, le = label_encoder(train_data, label_encoder=le, condition_key=condition_key)
         if shuffle:
             train_data, train_labels = shuffle_data(train_data, train_labels)
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
         if use_validation:
-            valid_labels, _ = label_encoder(valid_data)
+            valid_labels, _ = label_encoder(valid_data, label_encoder=le, condition_key=condition_key)
         loss_hist = []
         patience = early_stop_limit
         min_delta = threshold
