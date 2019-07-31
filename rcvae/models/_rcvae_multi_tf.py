@@ -145,7 +145,7 @@ class RCVAEMultiTF:
             # Returns
                 The computed Tensor of samples with shape [size, z_dim].
         """
-        eps = tf.random_normal(shape=[self.size, self.z_dim])
+        eps = tf.random_normal(shape=[None, self.z_dim])
         return self.mu + tf.exp(self.log_var / 2) * eps
 
     def _create_network(self):
@@ -471,7 +471,7 @@ class RCVAEMultiTF:
                     feed_dict={self.x: x_mb, self.encoder_labels: y_mb,
                                self.decoder_labels: y_mb,
                                self.time_step: current_step,
-                               self.size: len(x_mb), self.is_training: True})
+                               self.is_training: True})
                 train_loss += current_loss_train
                 train_mmd_loss += current_mmd_loss_train
             if use_validation:
@@ -490,7 +490,6 @@ class RCVAEMultiTF:
                                                                                           self.encoder_labels: y_mb,
                                                                                           self.decoder_labels: y_mb,
                                                                                           self.time_step: current_step,
-                                                                                          self.size: len(x_mb),
                                                                                           self.is_training: False})
                     valid_loss += current_loss_valid
                     valid_mmd_loss += current_mmd_loss_valid
