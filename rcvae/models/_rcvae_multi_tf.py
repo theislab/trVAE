@@ -145,7 +145,8 @@ class RCVAEMultiTF:
             # Returns
                 The computed Tensor of samples with shape [size, z_dim].
         """
-        eps = tf.random_normal(shape=[None, self.z_dim])
+        batch_size = tf.shape(self.mu)[0]
+        eps = tf.random_normal(shape=[batch_size, self.z_dim])
         return self.mu + tf.exp(self.log_var / 2) * eps
 
     def _create_network(self):
