@@ -482,7 +482,7 @@ class RCVAEMultiTF:
                     x_valid = valid_data.X.A
                 else:
                     x_valid = valid_data.X
-                y_valid = valid_labels
+                y_valid = to_categorical(valid_labels, num_classes=self.n_conditions)
                 valid_loss, valid_mmd_loss = self.sess.run([self.trvae_loss, self.mmd_loss],
                                                            feed_dict={self.x: x_valid,
                                                                       self.encoder_labels: y_valid,
