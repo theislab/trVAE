@@ -1,5 +1,6 @@
 import logging
 import os
+
 import numpy as np
 import tensorflow as tf
 from keras.utils import to_categorical
@@ -477,24 +478,17 @@ class RCVAEMultiTF:
                 train_loss += current_loss_train
                 train_mmd_loss += current_mmd_loss_train
             if use_validation:
-                valid_loss = 0
-                valid_mmd_loss = 0
-                for lower in range(0, valid_data.shape[0], batch_size):
-                    upper = min(lower + batch_size, valid_data.shape[0])
-                    if sparse.issparse(valid_data.X):
-                        x_mb = valid_data[lower:upper, :].X.A
-                    else:
-                        x_mb = valid_data[lower:upper, :].X
-                    y_mb = valid_labels[lower:upper]
-                    y_mb = to_categorical(y_mb, num_classes=self.n_conditions)
-                    current_loss_valid, current_mmd_loss_valid = self.sess.run([self.trvae_loss, self.mmd_loss],
-                                                                               feed_dict={self.x: x_mb,
-                                                                                          self.encoder_labels: y_mb,
-                                                                                          self.decoder_labels: y_mb,
-                                                                                          self.time_step: current_step,
-                                                                                          self.is_training: False})
-                    valid_loss += current_loss_valid
-                    valid_mmd_loss += current_mmd_loss_valid
+                if sparse.issparse(valid_data.X):
+                    x_valid = valid_data.X.A
+                else:
+                    x_valid = valid_data.X
+                y_valid = valid_labels
+                valid_loss, valid_mmd_loss = self.sess.run([self.trvae_loss, self.mmd_loss],
+                                                           feed_dict={self.x: x_valid,
+                                                                      self.encoder_labels: y_valid,
+                                                                      self.decoder_labels: y_valid,
+                                                                      self.time_step: current_step,
+                                                                      self.is_training: False})
                 if it > 0 and valid_loss - min_loss > min_delta:
                     patience_cnt += 1
                 else:
@@ -505,7 +499,7 @@ class RCVAEMultiTF:
                     save_path = self.saver.save(self.sess, self.model_to_use)
                     break
                 if verbose:
-                    print(f"Epoch {it}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size):.4f}    Valid Loss: {valid_loss / (valid_data.shape[0] // batch_size):.4f}    Valid MMD Loss: {valid_mmd_loss / (valid_data.shape[0] // batch_size):.4f}")
+                    print(f"Epoch {it}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size):.4f}    Valid Loss: {valid_loss:.4f}    Valid MMD Loss: {valid_mmd_loss:.4f}")
             else:
                 if verbose:
                     print(f"Epoch {it}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size)}")
