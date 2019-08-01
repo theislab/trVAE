@@ -499,10 +499,10 @@ class RCVAEMultiTF:
                     save_path = self.saver.save(self.sess, self.model_to_use)
                     break
                 if verbose:
-                    print(f"Epoch {it}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size):.4f}    Valid Loss: {valid_loss:.4f}    Valid MMD Loss: {valid_mmd_loss:.4f}")
+                    print(f"Epoch {it}/{n_epochs}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size):.4f}    Valid Loss: {valid_loss:.4f}    Valid MMD Loss: {valid_mmd_loss:.4f}")
             else:
                 if verbose:
-                    print(f"Epoch {it}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size)}")
+                    print(f"Epoch {it}/{n_epochs}: Loss: {train_loss / (train_data.shape[0] // batch_size):.4f}    MMD Loss: {train_mmd_loss / (train_data.shape[0] // batch_size)}")
         os.makedirs(self.model_to_use, exist_ok=True)
         save_path = self.saver.save(self.sess, self.model_to_use)
         print(f"Model saved in file: {save_path}. Training finished")
