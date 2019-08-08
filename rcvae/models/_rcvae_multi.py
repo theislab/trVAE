@@ -52,6 +52,7 @@ class RCVAEMulti:
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
         self.beta = kwargs.get("beta", 100)
+        self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
@@ -328,7 +329,7 @@ class RCVAEMulti:
             def kl_recon_loss(y_true, y_pred):
                 kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
                 recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
-                return K.mean(recon_loss + self.alpha * kl_loss)
+                return K.mean(self.eta * recon_loss + self.alpha * kl_loss)
 
             def mmd_loss(real_labels, y_pred):
                 with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
