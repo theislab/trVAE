@@ -225,8 +225,8 @@ def create_model(train_data, valid_data,
     m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean, y_mean)
     r_value_mean = r_value_mean ** 2
 
-    best_mean_diff = np.mean(x_mean - y_mean)
-    best_var_diff = np.var(x_var - y_var)
+    best_mean_diff = np.abs(np.mean(x_mean - y_mean))
+    best_var_diff = np.abs(np.var(x_var - y_var))
     objective = best_mean_diff
     print(f'Reg_mean_diff: {r_value_mean}, Reg_var_all: {r_value_var})')
     print(f'Mean diff: {best_mean_diff}, Var_diff: {best_var_diff}')
