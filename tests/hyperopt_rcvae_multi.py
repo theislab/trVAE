@@ -81,7 +81,7 @@ def data():
                   'cell_type': 'cell_type'},
     }
     data_key = "Haber"
-    cell_type = ["TA"]
+    cell_type = ["Tuft"]
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     condition_key = data_dict['condition']
@@ -141,10 +141,9 @@ def create_model(train_data, valid_data,
     mmd_dim_choices = {{choice([64, 128, 256])}}
 
     alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
-    beta_choices = {{choice([50, 100, 500, 1000])}}
-    batch_size_choices = {{choice([128, 256, 512, 1024, 2048])}}
+    beta_choices = {{choice([50, 100, 500, 1000, 2000])}}
+    batch_size_choices = {{choice([128, 256, 512, 1024, 1500, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
-    clip_value_choices = {{choice([1.0, 3.0, 5.0, 10.0])}}
 
     network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension=z_dim_choices,
@@ -154,7 +153,7 @@ def create_model(train_data, valid_data,
                                beta=beta_choices,
                                kernel='multi-scale-rbf',
                                learning_rate=0.001,
-                               clip_value=clip_value_choices,
+                               clip_value=1e6,
                                loss_fn='mse',
                                model_path=f"./models/RCVAEMulti/hyperopt/{data_name}/{cell_type}/",
                                dropout_rate=dropout_rate_choices,
@@ -169,14 +168,14 @@ def create_model(train_data, valid_data,
                   n_epochs=10000,
                   batch_size=batch_size_choices,
                   verbose=2,
-                  early_stop_limit=30,
+                  early_stop_limit=50,
                   lr_reducer=0,
                   monitor='val_loss',
                   shuffle=True,
                   save=True)
 
     cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
-    sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=100)
+    sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10)
     top_genes = cell_type_adata.uns['rank_genes_groups']['names'][target_condition]
 
     source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == source_condition]
@@ -210,9 +209,9 @@ def create_model(train_data, valid_data,
     if sparse.issparse(real_target.X):
         real_target.X = real_target.X.A
 
-    # pred_target = pred_target[:, top_genes]
-    # real_target = pred_target[:, top_genes]
-    # source_adata = source_adata[:, top_genes]
+    pred_target = pred_target[:, top_genes]
+    real_target = real_target[:, top_genes]
+    source_adata = source_adata[:, top_genes]
 
     x_var = np.var(pred_target.X, axis=0)
     y_var = np.var(real_target.X, axis=0)
@@ -223,12 +222,14 @@ def create_model(train_data, valid_data,
     x_mean = np.mean(pred_target.X, axis=0)
     y_mean = np.mean(real_target.X, axis=0)
     z_mean = np.mean(source_adata.X, axis=0)
-    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean, y_mean)
+    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean - z_mean, y_mean - z_mean)
     r_value_mean = r_value_mean ** 2
 
-    best_reg = r_value_mean + r_value_var
-    print(f'Best Reg of model: ({r_value_mean}, {r_value_var}, {best_reg})')
-    return {'loss': -best_reg, 'status': STATUS_OK, 'model': network}
+    best_reg = r_value_mean
+    print(f'Best Reg of model: Reg_mean_diff: {r_value_mean}, Reg_var_all: {r_value_var})')
+    print(
+        f'alpha = {network.alpha}, beta = {network.beta}, z_dim = {network.z_dim}, mmd_dim = {network.mmd_dim}, batch_size = {batch_size_choices}, dropout_rate = {network.dr_rate}, lr = {network.lr}')
+    return {'loss': -best_reg, 'status': STATUS_OK}
 
 
 def predict_between_conditions(network, adata, pred_adatas,
