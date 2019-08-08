@@ -222,14 +222,17 @@ def create_model(train_data, valid_data,
     x_mean = np.mean(pred_target.X, axis=0)
     y_mean = np.mean(real_target.X, axis=0)
     z_mean = np.mean(source_adata.X, axis=0)
-    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean - z_mean, y_mean - z_mean)
+    m, b, r_value_mean, p_value, std_err = stats.linregress(x_mean, y_mean)
     r_value_mean = r_value_mean ** 2
 
-    best_reg = r_value_mean
-    print(f'Best Reg of model: Reg_mean_diff: {r_value_mean}, Reg_var_all: {r_value_var})')
+    best_mean_diff = np.mean(x_mean - y_mean)
+    best_var_diff = np.var(x_var - y_var)
+    objective = best_mean_diff
+    print(f'Reg_mean_diff: {r_value_mean}, Reg_var_all: {r_value_var})')
+    print(f'Mean diff: {best_mean_diff}, Var_diff: {best_var_diff}')
     print(
         f'alpha = {network.alpha}, beta = {network.beta}, z_dim = {network.z_dim}, mmd_dim = {network.mmd_dim}, batch_size = {batch_size_choices}, dropout_rate = {network.dr_rate}, lr = {network.lr}')
-    return {'loss': -best_reg, 'status': STATUS_OK}
+    return {'loss': objective, 'status': STATUS_OK}
 
 
 def predict_between_conditions(network, adata, pred_adatas,
