@@ -141,7 +141,8 @@ def create_model(train_data, valid_data,
     mmd_dim_choices = {{choice([64, 128, 256])}}
 
     alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
-    beta_choices = {{choice([50, 100, 500, 1000, 2000])}}
+    beta_choices = {{choice([1, 5, 10, 20, 40, 50, 100])}}
+    eta_choices = {{choice([1, 2, 5, 7, 10])}}
     batch_size_choices = {{choice([128, 256, 512, 1024, 1500, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
 
@@ -151,6 +152,7 @@ def create_model(train_data, valid_data,
                                mmd_dimension=mmd_dim_choices,
                                alpha=alpha_choices,
                                beta=beta_choices,
+                               eta=eta_choices,
                                kernel='multi-scale-rbf',
                                learning_rate=0.001,
                                clip_value=1e6,
@@ -168,7 +170,7 @@ def create_model(train_data, valid_data,
                   n_epochs=10000,
                   batch_size=batch_size_choices,
                   verbose=2,
-                  early_stop_limit=50,
+                  early_stop_limit=250,
                   lr_reducer=0,
                   monitor='val_loss',
                   shuffle=True,
@@ -231,7 +233,7 @@ def create_model(train_data, valid_data,
     print(f'Reg_mean_diff: {r_value_mean}, Reg_var_all: {r_value_var})')
     print(f'Mean diff: {best_mean_diff}, Var_diff: {best_var_diff}')
     print(
-        f'alpha = {network.alpha}, beta = {network.beta}, z_dim = {network.z_dim}, mmd_dim = {network.mmd_dim}, batch_size = {batch_size_choices}, dropout_rate = {network.dr_rate}, lr = {network.lr}')
+        f'alpha = {network.alpha}, beta = {network.beta}, eta={network.eta}, z_dim = {network.z_dim}, mmd_dim = {network.mmd_dim}, batch_size = {batch_size_choices}, dropout_rate = {network.dr_rate}, lr = {network.lr}')
     return {'loss': objective, 'status': STATUS_OK}
 
 
