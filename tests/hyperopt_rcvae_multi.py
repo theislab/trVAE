@@ -72,6 +72,16 @@ def data():
                   'condition': 'condition',
                   'cell_type': 'cell_label'},
 
+        "DBTimeCourse": {'name': 'db_timecourse', 'need_merge': False,
+                         'source_conditions': ['WT_12w', 'LeprHom_5w', 'LeprHom_10w', 'LeprHom_16w'],
+                         'target_conditions': ['LeprHom_24w'],
+                         'transition': ('LeprHom_16w', 'LeprHom_24w', 'Control_to_Hpoly.Day10', 3, 4),
+                         'label_encoder': {'WT_12w': 0, 'LeprHom_5w': 1, 'LeprHom_10w': 2, 'LeprHom_16w': 3,
+                                           'LeprHom_24w': 4},
+                         'conditions': ['WT_12w', 'LeprHom_5w', 'LeprHom_10w', 'LeprHom_16w', 'LeprHom_24w'],
+                         'condition': 'timepoint',
+                         'cell_type': 'annotations'},
+
         "Broad": {'name': 'broad', 'need_merge': False,
                   'source_conditions': ['13.0', '14.0', '15.0', '16.0', '17.0', '18.0'],
                   'target_conditions': [],
@@ -127,7 +137,8 @@ def data():
 
     source_condition, target_condition, _, source_label, target_label = data_dict['transition']
 
-    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type[0], n_conditions, label_encoder, data_name, source_condition, target_condition, source_label, target_label
+    return train_data, valid_data, net_train_data, net_valid_data, condition_key, cell_type_key, cell_type[
+        0], n_conditions, label_encoder, data_name, source_condition, target_condition, source_label, target_label
 
 
 def create_model(train_data, valid_data,
@@ -374,7 +385,8 @@ if __name__ == '__main__':
                                    ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
                                    ('Control', 'Salmonella', 'Control_to_Salmonella', 0, 3),
                                    ('Hpoly.Day3', 'Hpoly.Day10', 'Hpoly.Day3_to_Hpoly.Day10', 1, 2),
-                                   ('Control_to_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1, 2),
+                                   ('Control_to_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1,
+                                    2),
                                    ],
                   'label_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
                   'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10', 'Salmonella'],
@@ -395,13 +407,30 @@ if __name__ == '__main__':
                                    ('(day13_to_day14)_to_day15', 'day16', '((day13_to_day14)_to_day15)_to_day16', 2, 3),
                                    ('(day14_to_day15)_to_day16', 'day17', '((day14_to_day15)_to_day16)_to_day17', 3, 4),
                                    ('(day15_to_day16)_to_day17', 'day18', '((day15_to_day16)_to_day17)_to_day18', 4, 5),
-                                   ('((day13_to_day14)_to_day15)_to_day16', 'day17', '(((day13_to_day14)_to_day15)_to_day16)_to_day17', 3, 4),
-                                   ('((day14_to_day15)_to_day16)_to_day17', 'day18', '(((day14_to_day15)_to_day16)_to_day17)_to_day18', 4, 5),
-                                   ('(((day13_to_day14)_to_day15)_to_day16)_to_day17', 'day18', '((((day13_to_day14)_to_day15)_to_day16)_to_day17)_to_day18', 4, 5),
+                                   ('((day13_to_day14)_to_day15)_to_day16', 'day17',
+                                    '(((day13_to_day14)_to_day15)_to_day16)_to_day17', 3, 4),
+                                   ('((day14_to_day15)_to_day16)_to_day17', 'day18',
+                                    '(((day14_to_day15)_to_day16)_to_day17)_to_day18', 4, 5),
+                                   ('(((day13_to_day14)_to_day15)_to_day16)_to_day17', 'day18',
+                                    '((((day13_to_day14)_to_day15)_to_day16)_to_day17)_to_day18', 4, 5),
                                    ],
                   'label_encoder': {'day13': 0, 'day14': 1, 'day15': 2, 'day16': 3, 'day17': 4, 'day18': 5},
                   'condition': 'day',
                   'cell_type': 'cell_type'},
+        "DBTimeCourse": {'name': 'db_timecourse', 'need_merge': False,
+                         'source_conditions': ['WT_12w', 'LeprHom_5w', 'LeprHom_10w', 'LeprHom_16w'],
+                         'target_conditions': ['LeprHom_24w'],
+                         'perturbation': [
+                             ('WT_12w', 'LeprHom_5w', 'WT_12w_to_LeprHom_5w', 0, 4),
+                             ('LeprHom_5w', 'LeprHom_10w', 'LeprHom_5w_to_LeprHom_10w', 3, 4),
+                             ('LeprHom_10w', 'LeprHom_16w', 'Control_to_Hpoly.Day10', 3, 4),
+                             ('LeprHom_16w', 'LeprHom_24w', 'Control_to_Hpoly.Day10', 3, 4),
+                         ],
+                         'label_encoder': {'WT_12w': 0, 'LeprHom_5w': 1, 'LeprHom_10w': 2, 'LeprHom_16w': 3,
+                                           'LeprHom_24w': 4},
+                         'conditions': ['WT_12w', 'LeprHom_5w', 'LeprHom_10w', 'LeprHom_16w', 'LeprHom_24w'],
+                         'condition': 'timepoint',
+                         'cell_type': 'annotations'},
     }
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
