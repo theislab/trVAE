@@ -575,8 +575,9 @@ class RCVAEMulti:
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
 
-        if train_data.raw is not None and sparse.issparse(train_data.raw.X):
-            train_data.raw.X = train_data.raw.X.A
+        if self.loss_fn in ['nb', 'zinb']:
+            if train_data.raw is not None and sparse.issparse(train_data.raw.X):
+                train_data.raw.X = train_data.raw.X.A
 
         if self.loss_fn != 'mse':
             x = [train_data.X, train_labels, train_labels, train_data.obs['size_factors'].values]
