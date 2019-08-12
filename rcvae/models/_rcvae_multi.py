@@ -575,7 +575,9 @@ class RCVAEMulti:
         if verbose > 2:
             callbacks.append(
                 LambdaCallback(on_epoch_end=lambda epoch, logs: self._print_message(epoch, logs, n_epochs, verbose)))
-            verbose = 0
+            fit_verbose = 0
+        else:
+            fit_verbose = verbose
 
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
@@ -613,7 +615,7 @@ class RCVAEMulti:
                 validation_data=(x_valid, y_valid),
                 shuffle=shuffle,
                 callbacks=callbacks,
-                verbose=verbose)
+                verbose=fit_verbose)
         else:
             histories = self.cvae_model.fit(
                 x=x,
@@ -622,7 +624,7 @@ class RCVAEMulti:
                 batch_size=batch_size,
                 shuffle=shuffle,
                 callbacks=callbacks,
-                verbose=verbose)
+                verbose=fit_verbose)
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
             self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
