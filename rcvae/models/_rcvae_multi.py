@@ -573,9 +573,9 @@ class RCVAEMulti:
             callbacks.append(ReduceLROnPlateau(monitor=monitor, patience=lr_reducer, verbose=verbose))
 
         if verbose > 2:
-            verbose = 0
             callbacks.append(
                 LambdaCallback(on_epoch_end=lambda epoch, logs: self._print_message(epoch, logs, n_epochs, verbose)))
+            verbose = 0
 
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
