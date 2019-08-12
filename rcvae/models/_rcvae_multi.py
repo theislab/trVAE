@@ -5,7 +5,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau
+from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -572,6 +572,11 @@ class RCVAEMulti:
         if lr_reducer > 0:
             callbacks.append(ReduceLROnPlateau(monitor=monitor, patience=lr_reducer, verbose=verbose))
 
+        if verbose > 2:
+            verbose = 0
+            callbacks.append(
+                LambdaCallback(on_epoch_end=lambda epoch, logs: self._print_message(epoch, logs, n_epochs, verbose)))
+
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
 
@@ -625,3 +630,10 @@ class RCVAEMulti:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
+
+    def _print_message(self, epoch, logs, n_epochs=10000, duration=50):
+        if epoch % duration == 0:
+            print(f"Epoch {epoch + 1}/{n_epochs}:")
+            print(f" - loss: {logs['loss']:.4f} - kl_sse_loss: {logs['kl_mse_loss']:.4f}"
+                  f" - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f}"
+                  f" - val_kl_sse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
