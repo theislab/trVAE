@@ -7,7 +7,7 @@ import scanpy.api as sc
 import tensorflow as tf
 from scipy import sparse
 
-import rcvae
+import trvae
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -353,20 +353,20 @@ for spec_cell_type in spec_cell_types:
     sc.pl.umap(dt, color=["condition"], show=False, frameon=False
                , save="_latent_condition.pdf", palette=["#96a1a3", "#A4E804"])
 
-    rcvae.plotting.reg_mean_plot(all_Data,
-                                top_100_genes=top_100_genes,
-                                gene_list=gene_list,
-                                condition_key='condition',
-                                axis_keys={"x": 'pred_stim', 'y': "real_stim"},
-                                labels={'x': 'pred stim', 'y': 'real stim'},
-                                legend=False,
-                                fontsize=20,
-                                textsize=14,
-                                title=spec_cell_type,
-                                path_to_save=os.path.join(path_to_save,
+    trvae.plotting.reg_mean_plot(all_Data,
+                                 top_100_genes=top_100_genes,
+                                 gene_list=gene_list,
+                                 condition_key='condition',
+                                 axis_keys={"x": 'pred_stim', 'y': "real_stim"},
+                                 labels={'x': 'pred stim', 'y': 'real stim'},
+                                 legend=False,
+                                 fontsize=20,
+                                 textsize=14,
+                                 title=spec_cell_type,
+                                 path_to_save=os.path.join(path_to_save,
                                                           f'mmd_resnet_reg_mean_{data_name}_{spec_cell_type}.pdf'))
 
-    rcvae.plotting.reg_var_plot(all_Data,
+    trvae.plotting.reg_var_plot(all_Data,
                                 top_100_genes=top_100_genes,
                                 gene_list=gene_list,
                                 condition_key='condition',

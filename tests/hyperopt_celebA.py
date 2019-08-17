@@ -12,7 +12,7 @@ from hyperopt import Trials, STATUS_OK, tpe
 from matplotlib import pyplot as plt
 from scipy import sparse
 
-import rcvae
+import trvae
 
 
 def data():
@@ -32,7 +32,7 @@ def data():
     attribute = data_dict.get('attribute', None)
     gender = data_dict.get('gender', None)
 
-    data = rcvae.prepare_and_load_celeba(file_path="./data/celeba/img_align_celeba.zip",
+    data = trvae.prepare_and_load_celeba(file_path="./data/celeba/img_align_celeba.zip",
                                          attr_path="./data/celeba/list_attr_celeba.txt",
                                          landmark_path="./data/celeba/list_landmarks_align_celeba.txt",
                                          gender=gender,
@@ -96,7 +96,7 @@ def create_model(train_data, valid_data, data_name):
     batch_size_choices = {{choice([256, 512, 1024])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
 
-    network = rcvae.RCCVAE(x_dimension=(64, 64, 3),
+    network = trvae.CtrVAE(x_dimension=(64, 64, 3),
                            z_dimension=z_dim_choices,
                            mmd_dimension=mmd_dim_choices,
                            alpha=alpha_choices,

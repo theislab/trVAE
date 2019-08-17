@@ -6,13 +6,13 @@ import tensorflow as tf
 from keras.utils import to_categorical
 from scipy import sparse
 
-from rcvae.models.utils import label_encoder
-from rcvae.models.utils import shuffle_data
+from trvae.models.utils import label_encoder
+from trvae.models.utils import shuffle_data
 
 log = logging.getLogger(__file__)
 
 
-class RCVAEMultiTF:
+class trVAEMultiTF:
     """
         C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.
@@ -193,7 +193,7 @@ class RCVAEMultiTF:
             sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
 
             beta = 1. / (2. * (tf.expand_dims(sigmas, 1)))
-            distances = RCVAEMultiTF.squared_distance(x, y)
+            distances = trVAEMultiTF.squared_distance(x, y)
             s = tf.matmul(beta, tf.reshape(distances, (1, -1)))
 
             return tf.reshape(tf.reduce_sum(tf.exp(-s), 0), tf.shape(distances)) / len(sigmas)
@@ -217,9 +217,9 @@ class RCVAEMultiTF:
             # Returns
                 returns the computed MMD between x and y
         """
-        x_kernel = RCVAEMultiTF.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = RCVAEMultiTF.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = RCVAEMultiTF.compute_kernel(x, y, kernel=kernel, **kwargs)
+        x_kernel = trVAEMultiTF.compute_kernel(x, x, kernel=kernel, **kwargs)
+        y_kernel = trVAEMultiTF.compute_kernel(y, y, kernel=kernel, **kwargs)
+        xy_kernel = trVAEMultiTF.compute_kernel(x, y, kernel=kernel, **kwargs)
         return tf.reduce_mean(x_kernel) + tf.reduce_mean(y_kernel) - 2 * tf.reduce_mean(
             xy_kernel)
 

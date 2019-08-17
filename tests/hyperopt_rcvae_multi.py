@@ -11,8 +11,8 @@ from hyperas.distributions import choice
 from hyperopt import Trials, STATUS_OK, tpe
 from scipy import stats, sparse
 
-import rcvae
-from rcvae.utils import normalize, train_test_split
+import trvae
+from trvae.utils import normalize, train_test_split
 
 
 def data():
@@ -157,7 +157,7 @@ def create_model(train_data, valid_data,
     batch_size_choices = {{choice([128, 256, 512, 1024, 1500, 2048])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
 
-    network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
+    network = trvae.trVAEMulti(x_dimension=net_train_data.shape[1],
                                z_dimension=z_dim_choices,
                                n_conditions=n_conditions,
                                mmd_dimension=mmd_dim_choices,
@@ -188,8 +188,24 @@ def create_model(train_data, valid_data,
                   save=True)
 
     cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
-    sc.tl.rank_genes_groups(cell_type_adata, groupby=condition_key, n_genes=10)
-    top_genes = cell_type_adata.uns['rank_genes_groups']['names'][target_condition]
+
+    sc.tl.rank_genes_groups(cell_type_adata,
+                            key_added='up_reg_genes',
+                            groupby=condition_key,
+                            groups=[target_condition],
+                            reference=source_condition,
+                            n_genes=10)
+
+    sc.tl.rank_genes_groups(cell_type_adata,
+                            key_added='down_reg_genes',
+                            groupby=condition_key,
+                            groups=[source_condition],
+                            reference=target_condition,
+                            n_genes=10)
+    up_genes = cell_type_adata.uns['up_reg_genes']['names'][target_condition].tolist()
+    down_genes = cell_type_adata.uns['down_reg_genes']['names'][source_condition].tolist()
+
+    top_genes = up_genes + down_genes
 
     source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == source_condition]
 
@@ -240,7 +256,7 @@ def create_model(train_data, valid_data,
 
     best_mean_diff = np.abs(np.mean(x_mean - y_mean))
     best_var_diff = np.abs(np.var(x_var - y_var))
-    objective = best_mean_diff
+    objective = r_value_mean + r_value_var
     print(f'Reg_mean_diff: {r_value_mean}, Reg_var_all: {r_value_var})')
     print(f'Mean diff: {best_mean_diff}, Var_diff: {best_var_diff}')
     print(
@@ -477,7 +493,7 @@ if __name__ == '__main__':
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
-    train_labels, _ = rcvae.label_encoder(train_data, label_encoder, condition_key)
+    train_labels, _ = trvae.label_encoder(train_data, label_encoder, condition_key)
     fake_labels = []
     for i in range(n_conditions):
         fake_labels.append(np.zeros(train_labels.shape) + i)

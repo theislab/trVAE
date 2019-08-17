@@ -3,7 +3,7 @@ import logging
 import tensorflow
 from scipy import sparse
 
-from rcvae.models.utils import shuffle_data, label_encoder
+from trvae.models.utils import shuffle_data, label_encoder
 
 log = logging.getLogger(__file__)
 

@@ -7,7 +7,7 @@ import pandas as pd
 import scanpy as sc
 from scipy import sparse
 
-import rcvae
+import trvae
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -85,7 +85,7 @@ def train_network(data_dict=None,
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        data = rcvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+        data = trvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
                                              attr_path="../data/celeba/list_attr_celeba.txt",
                                              landmark_path="../data/celeba/list_landmarks_align_celeba.txt",
                                              gender=gender,
@@ -163,7 +163,7 @@ def train_network(data_dict=None,
         train_data = data_train.copy()
         valid_data = data_valid.copy()
 
-    network = rcvae.RCCVAE(x_dimension=source_images.shape[1:],
+    network = trvae.CtrVAE(x_dimension=source_images.shape[1:],
                            z_dimension=z_dim,
                            mmd_dimension=mmd_dimension,
                            alpha=alpha,
@@ -204,7 +204,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        data = rcvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+        data = trvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
                                              attr_path="../data/celeba/list_attr_celeba.txt",
                                              landmark_path="../data/celeba/list_landmarks_align_celeba.txt",
                                              gender=gender,
@@ -266,7 +266,7 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
     source_data_train = anndata.AnnData(X=source_images_train)
     source_data_valid = anndata.AnnData(X=source_images_valid)
 
-    network = rcvae.RCCVAE(x_dimension=image_shape,
+    network = trvae.CtrVAE(x_dimension=image_shape,
                            z_dimension=z_dim,
                            arch_style=arch_style,
                            model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/")
@@ -446,7 +446,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        data = rcvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+        data = trvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
                                              attr_path="../data/celeba/list_attr_celeba.txt",
                                              landmark_path="../data/celeba/list_landmarks_align_celeba.txt",
                                              gender=gender,
@@ -479,10 +479,10 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
         if preprocess:
             train_images /= 255.0
 
-    train_labels, _ = rcvae.label_encoder(train_data)
+    train_labels, _ = trvae.label_encoder(train_data)
     fake_labels = np.ones(train_labels.shape)
 
-    network = rcvae.RCCVAE(x_dimension=(img_width, img_height, n_channels),
+    network = trvae.CtrVAE(x_dimension=(img_width, img_height, n_channels),
                            z_dimension=z_dim,
                            arch_style=arch_style,
                            model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/", )

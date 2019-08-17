@@ -23,7 +23,7 @@ from ..data_loader import PairedDataSequence
 log = logging.getLogger(__file__)
 
 
-class RCCVAE:
+class CtrVAE:
     """
         Regularized Convolutional C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.
@@ -363,7 +363,7 @@ class RCCVAE:
             return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
         elif method == 'raphy':
             scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(RCCVAE.squared_distance(x, y), 0)
+            squared_dist = K.expand_dims(CtrVAE.squared_distance(x, y), 0)
             scales = K.expand_dims(K.expand_dims(scales, -1), -1)
             weights = K.eval(K.shape(scales)[0])
             weights = K.variable(value=np.asarray(weights))
@@ -373,7 +373,7 @@ class RCCVAE:
             sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
 
             beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = RCCVAE.squared_distance(x, y)
+            distances = CtrVAE.squared_distance(x, y)
             s = K.dot(beta, K.reshape(distances, (1, -1)))
 
             return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
@@ -395,9 +395,9 @@ class RCCVAE:
             # Returns
                 returns the computed MMD between x and y
         """
-        x_kernel = RCCVAE.compute_kernel(x, x, method=kernel_method, **kwargs)
-        y_kernel = RCCVAE.compute_kernel(y, y, method=kernel_method, **kwargs)
-        xy_kernel = RCCVAE.compute_kernel(x, y, method=kernel_method, **kwargs)
+        x_kernel = CtrVAE.compute_kernel(x, x, method=kernel_method, **kwargs)
+        y_kernel = CtrVAE.compute_kernel(y, y, method=kernel_method, **kwargs)
+        xy_kernel = CtrVAE.compute_kernel(x, y, method=kernel_method, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
     def _loss_function(self, compile_gpu_model=True):

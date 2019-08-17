@@ -6,7 +6,7 @@ import numpy as np
 import scanpy as sc
 from scipy import sparse
 
-import rcvae
+import trvae
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -57,7 +57,7 @@ def train_network(data_dict=None,
         net_valid_data = valid_data.copy()[
             ~((valid_data.obs[cell_type_key] == cell_type) & (valid_data.obs['condition'] == target_key))]
 
-        network = rcvae.CVAE(x_dimension=net_train_data.shape[1],
+        network = trvae.CVAE(x_dimension=net_train_data.shape[1],
                              z_dimension=z_dim,
                              mmd_dimension=mmd_dimension,
                              alpha=alpha,
@@ -99,7 +99,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
 
-        network = rcvae.CVAE(x_dimension=data.shape[1],
+        network = trvae.CVAE(x_dimension=data.shape[1],
                              z_dimension=z_dim,
                              model_path=f"../models/CVAE/{data_name}/{cell_type}/{z_dim}/cvae")
 
@@ -110,7 +110,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         feed_data = data.X
 
-        train_labels, _ = rcvae.label_encoder(data)
+        train_labels, _ = trvae.label_encoder(data)
         fake_labels = np.ones(train_labels.shape)
 
         latent_with_true_labels = network.to_latent(feed_data, train_labels)
@@ -139,7 +139,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         cell_type_adata = cell_type_adata.concatenate(pred_adata)
 
-        rcvae.plotting.reg_mean_plot(cell_type_adata,
+        trvae.plotting.reg_mean_plot(cell_type_adata,
                                      top_100_genes=top_100_genes,
                                      gene_list=gene_list,
                                      condition_key='condition',
@@ -152,7 +152,7 @@ def visualize_trained_network_results(data_dict, z_dim=100):
                                      path_to_save=os.path.join(path_to_save,
                                                                f'rcvae_reg_mean_{data_name}_{cell_type}.pdf'))
 
-        rcvae.plotting.reg_var_plot(cell_type_adata,
+        trvae.plotting.reg_var_plot(cell_type_adata,
                                     top_100_genes=top_100_genes,
                                     gene_list=gene_list,
                                     condition_key='condition',

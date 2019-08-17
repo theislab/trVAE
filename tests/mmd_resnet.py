@@ -15,7 +15,7 @@ from keras.models import Model
 from keras.regularizers import l2
 from scipy import sparse
 
-import rcvae
+import trvae
 from .cost_functions import MMD
 
 if not os.getcwd().endswith("tests"):
@@ -190,7 +190,7 @@ for spec_cell_type in spec_cell_types:
                                 ["pred_stim"] * len(pred_stim)
     all_Data.var_names = CD4T.var_names
 
-    rcvae.plotting.reg_var_plot(all_Data,
+    trvae.plotting.reg_var_plot(all_Data,
                                 top_100_genes=top_100_genes,
                                 gene_list=gene_list,
                                 condition_key='condition',
@@ -203,7 +203,7 @@ for spec_cell_type in spec_cell_types:
                                 path_to_save=os.path.join(path_to_save,
                                                           f'mmd_resnet_reg_var_{data_name}_{spec_cell_type}.pdf'))
 
-    rcvae.plotting.reg_var_plot(all_Data,
+    trvae.plotting.reg_var_plot(all_Data,
                                 top_100_genes=top_100_genes,
                                 gene_list=gene_list,
                                 condition_key='condition',

@@ -6,19 +6,21 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
-from keras.layers import Dense, BatchNormalization, Dropout, Input, Lambda, Activation
+from keras.layers import Dense, BatchNormalization, Dropout, Input, Lambda, Reshape, Conv1D, \
+    MaxPooling1D, Flatten, Conv2DTranspose, UpSampling2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
+from keras.utils import multi_gpu_model
 from scipy import sparse
 
-from rcvae.models.utils import label_encoder, shuffle_data
+from trvae.models.utils import shuffle_data
 
 log = logging.getLogger(__file__)
 
 
-class RAE:
+class VAE:
     """
-        Regularized C-VAE vector Network class. This class contains the implementation of Conditional
+        VAE Network class. This class contains the implementation of
         Variational Auto-encoder network.
         # Parameters
             kwargs:
@@ -43,22 +45,23 @@ class RAE:
         self.z_dim = z_dimension
 
         self.lr = kwargs.get("learning_rate", 0.001)
-        self.beta = kwargs.get("beta", 100)
+        self.alpha = kwargs.get("alpha", 0.001)
         self.conditions = kwargs.get("condition_list")
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
-        self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
+        self.n_gpus = kwargs.get("gpus", 1)
+        self.arch_style = kwargs.get("arch_style", 1)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
-        self._loss_function()
+        self._loss_function(compile_gpu_model=True)
 
         self.encoder_model.summary()
         self.decoder_model.summary()
-        self.rae_model.summary()
+        self.vae_model.summary()
 
     def _encoder(self, x, name="encoder"):
         """
@@ -73,17 +76,38 @@ class RAE:
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
-        h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(x)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
-        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(h)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
-        z = Dense(self.z_dim, kernel_initializer=self.init_w, name='mmd')(h)
-        model = Model(inputs=x, outputs=z, name=name)
-        return model
+        if self.arch_style == 1:
+            h = Reshape((self.x_dim, 1))(x)
+
+            h = Conv1D(32, kernel_size=256, activation='relu', padding='valid')(h)
+            # h = Conv1D(32, kernel_size=256, activation='relu', padding='same')(h)
+            h = MaxPooling1D(pool_size=100)(h)
+
+            h = Flatten()(h)
+
+            h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+        elif self.arch_style == 2:
+            h = Dense(4096, kernel_initializer=self.init_w, use_bias=False)(x)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
+            h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
+            h = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
+
+        mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
+        log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
+        z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
+
+        model = Model(inputs=x, outputs=[mean, log_var, z], name=name)
+        return mean, log_var, model
 
     def _decoder(self, z, name="decoder"):
         """
@@ -96,17 +120,63 @@ class RAE:
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
-        h = Dense(400, kernel_initializer=self.init_w, use_bias=False)(z)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dense(700, kernel_initializer=self.init_w, use_bias=False)(h)
-        h = BatchNormalization(axis=1)(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
-        h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-        h = Activation('relu', name="reconstruction_output")(h)
+        if self.arch_style == 1:
+            h = Dense(256, kernel_initializer=self.init_w, use_bias=False)(z)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+
+            h = Reshape((256, 1, 1))(h)
+
+            h = UpSampling2D(size=(16, 1))(h)
+            # h = Conv2DTranspose(32, kernel_size=(256, 1), activation='relu', padding='same',
+            #                     kernel_initializer='he_normal')(h)
+            # h = Conv2DTranspose(64, kernel_size=(512, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
+            # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
+
+            # h = UpSampling2D(size=(2, 1))(h)
+            # h = Conv2DTranspose(64, kernel_size=(256, 1), activation='relu', padding='same',
+            #                     kernel_initializer='he_normal')(h)
+            # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same', kernel_initializer='he_normal')(h)
+            # h = Conv2DTranspose(256, kernel_size=(1024, 1), activation='relu', padding='same')(h)
+
+            # h = UpSampling2D(size=(4, 1))(h)
+            # h = Conv2DTranspose(4, kernel_size=(3152, 1), activation='relu', padding='valid')(h)
+            h = Conv2DTranspose(32, kernel_size=(905, 1), activation='relu', padding='valid')(h)
+            h = Conv2DTranspose(1, kernel_size=(256, 1), activation='relu', padding='same')(h)
+            h = Reshape((self.x_dim,))(h)
+
+        if self.arch_style == 2:
+            h = Dense(512, kernel_initializer=self.init_w, use_bias=False)(z)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
+            h = Dense(4096, kernel_initializer=self.init_w, use_bias=False)(h)
+            h = BatchNormalization()(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
+
+            h = Dense(self.x_dim, activation='relu', kernel_initializer=self.init_w, use_bias=True)(h)
+
         model = Model(inputs=z, outputs=h, name=name)
-        return model
+        return h, model
+
+    @staticmethod
+    def _sample_z(args):
+        """
+            Samples from standard Normal distribution with shape [size, z_dim] and
+            applies re-parametrization trick. It is actually sampling from latent
+            space distributions with N(mu, var) computed in `_encoder` function.
+            # Parameters
+                No parameters are needed.
+            # Returns
+                The computed Tensor of samples with shape [size, z_dim].
+        """
+        mu, log_var = args
+        batch_size = K.shape(mu)[0]
+        z_dim = K.int_shape(mu)[1]
+        eps = K.random_normal(shape=[batch_size, z_dim])
+        return mu + K.exp(log_var / 2) * eps
 
     def _create_network(self):
         """
@@ -121,17 +191,25 @@ class RAE:
                 Nothing will be returned.
         """
 
-        self.encoder_model = self._encoder(self.x, name="encoder")
-        self.decoder_model = self._decoder(self.z, name="decoder")
-
-        decoder_outputs = self.decoder_model(self.encoder_model(self.x))
-        encoder_outputs = self.encoder_model(self.x)
-
+        self.mu, self.log_var, self.encoder_model = self._encoder(self.x, name="encoder")
+        self.x_hat, self.decoder_model = self._decoder(self.z, name="decoder")
+        decoder_outputs = self.decoder_model(self.encoder_model(self.x)[2])
         reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs)
-        mmd_output = Lambda(lambda x: x, name="mmd")(encoder_outputs)
-        self.rae_model = Model(inputs=self.x,
-                               outputs=[reconstruction_output, mmd_output],
-                               name="rae")
+        self.vae_model = Model(inputs=self.x,
+                               outputs=reconstruction_output,
+                               name="vae")
+
+        if self.n_gpus > 1:
+            self.gpu_vae_model = multi_gpu_model(self.vae_model,
+                                                 gpus=self.n_gpus)
+            self.gpu_encoder_model = multi_gpu_model(self.encoder_model,
+                                                     gpus=self.n_gpus)
+            self.gpu_decoder_model = multi_gpu_model(self.decoder_model,
+                                                     gpus=self.n_gpus)
+        else:
+            self.gpu_vae_model = self.vae_model
+            self.gpu_encoder_model = self.encoder_model
+            self.gpu_decoder_model = self.decoder_model
 
     @staticmethod
     def compute_kernel(x, y, kernel='rbf', **kwargs):
@@ -155,7 +233,7 @@ class RAE:
             return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
         elif kernel == 'raphy':
             scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(RAE.squared_distance(x, y), 0)
+            squared_dist = K.expand_dims(VAE.squared_distance(x, y), 0)
             scales = K.expand_dims(K.expand_dims(scales, -1), -1)
             weights = K.eval(K.shape(scales)[0])
             weights = K.variable(value=np.asarray(weights))
@@ -165,7 +243,7 @@ class RAE:
             sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
 
             beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = RAE.squared_distance(x, y)
+            distances = VAE.squared_distance(x, y)
             s = K.dot(beta, K.reshape(distances, (1, -1)))
 
             return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
@@ -187,12 +265,12 @@ class RAE:
             # Returns
                 returns the computed MMD between x and y
         """
-        x_kernel = RAE.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = RAE.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = RAE.compute_kernel(x, y, kernel=kernel, **kwargs)
+        x_kernel = VAE.compute_kernel(x, x, kernel=kernel, **kwargs)
+        y_kernel = VAE.compute_kernel(y, y, kernel=kernel, **kwargs)
+        xy_kernel = VAE.compute_kernel(x, y, kernel=kernel, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
-    def _loss_function(self):
+    def _loss_function(self, compile_gpu_model=True):
         """
             Defines the loss function of C-VAE network after constructing the whole
             network. This will define the KL Divergence and Reconstruction loss for
@@ -204,25 +282,41 @@ class RAE:
                 Nothing will be returned.
         """
 
-        def batch_loss():
-            def reconstruction_loss(y_true, y_pred):
-                recon_loss = K.sum(K.square((y_true - y_pred)), axis=1)
-                return recon_loss
+        def kl_recon_loss(y_true, y_pred):
+            kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
+            # recon_loss = 0.5 * K.sum(K.binary_crossentropy(y_true, y_pred), axis=-1)
+            recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
+            # output_shape = K.shape(y_pred)
+            #
+            # def get_column(tensor, col):
+            #     with tf.variable_scope("gather_cols", reuse=tf.AUTO_REUSE):
+            #         tensor = K.tf.convert_to_tensor(tensor, name='tensor')
+            #         col = K.tf.convert_to_tensor(col, name='column')
+            #
+            #         return tf.transpose(tf.nn.embedding_lookup(tf.transpose(tensor), col))
+            #
+            # def body(i):
+            #     y_true_i = get_column(y_true, i)
+            #     y_pred_i = get_column(y_pred, i)
+            #     bc_loss = K.binary_crossentropy(y_true_i, y_pred_i)
+            #     print(bc_loss)
+            #     return bc_loss
 
-            def mmd_loss(real_labels, y_pred):
-                with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
-                    real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
-                    source_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=2)
-                    loss = self.compute_mmd(source_mmd, dest_mmd, self.kernel_method)
-                    return self.beta * loss
+            # recon_loss = K.sum(K.map_fn(body, K.arange(0, self.x_dim)), axis=0)
+            # recon_loss = K.cast(recon_loss, dtype='float32')
+            # print(recon_loss)
+            # print(kl_loss)
+            return recon_loss + self.alpha * kl_loss
 
-            self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
-            self.rae_model.compile(optimizer=self.cvae_optimizer,
-                                   loss=[reconstruction_loss, mmd_loss],
-                                   metrics={self.rae_model.outputs[0].name: reconstruction_loss,
-                                            self.rae_model.outputs[1].name: mmd_loss})
-
-        batch_loss()
+        self.vae_optimizer = keras.optimizers.Adam(lr=self.lr)
+        if compile_gpu_model:
+            self.gpu_vae_model.compile(optimizer=self.vae_optimizer,
+                                       loss=kl_recon_loss,
+                                       metrics={self.vae_model.outputs[0].name: kl_recon_loss})
+        else:
+            self.vae_model.compile(optimizer=self.vae_optimizer,
+                                   loss=kl_recon_loss,
+                                   metrics={self.vae_model.outputs[0].name: kl_recon_loss})
 
     def to_latent(self, data):
         """
@@ -238,8 +332,29 @@ class RAE:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
-        latent = self.encoder_model.predict(data)
+        latent = self.encoder_model.predict(data)[2]
         return latent
+
+    def to_mmd_layer(self, model, data, encoder_labels, feed_fake=False):
+        """
+            Map `data` in to the pn layer after latent layer. This function will feed data
+            in encoder part of C-VAE and compute the latent space coordinates
+            for each sample in data.
+            # Parameters
+                data: `~anndata.AnnData`
+                    Annotated data matrix to be mapped to latent space. `data.X` has to be in shape [n_obs, n_vars].
+                labels: numpy nd-array
+                    `numpy nd-array` of labels to be fed as CVAE's condition array.
+            # Returns
+                latent: numpy nd-array
+                    returns array containing latent space encoding of 'data'
+        """
+        if feed_fake:
+            decoder_labels = np.ones(shape=encoder_labels.shape)
+        else:
+            decoder_labels = encoder_labels
+        mmd_latent = model.cvae_model.predict([data, encoder_labels, decoder_labels])[1]
+        return mmd_latent
 
     def _reconstruct(self, data, use_data=False):
         """
@@ -296,7 +411,7 @@ class RAE:
                 stim_pred = self._reconstruct(data.X, use_data=True)
             else:
                 stim_pred = self._reconstruct(data.X)
-        return stim_pred
+        return stim_pred[0]
 
     def restore_model(self):
         """
@@ -315,7 +430,7 @@ class RAE:
             network.restore_model()
             ```
         """
-        self.rae_model = load_model(os.path.join(self.model_to_use, 'mmd_rae.h5'), compile=False)
+        self.vae_model = load_model(os.path.join(self.model_to_use, 'vae.h5'), compile=False)
         self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
         self._loss_function()
@@ -373,9 +488,9 @@ class RAE:
 
         if shuffle:
             train_data = shuffle_data(train_data)
-        train_labels, _ = label_encoder(train_data)
+
         x = train_data.X
-        y = [train_data.X, train_labels]
+        y = train_data.X
         if use_validation:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
@@ -383,11 +498,9 @@ class RAE:
             if shuffle:
                 valid_data = shuffle_data(valid_data)
 
-            valid_labels, _ = label_encoder(valid_data)
-
             x_valid = valid_data.X
-            y_valid = [valid_data.X, valid_labels]
-            histories = self.rae_model.fit(
+            y_valid = valid_data.X
+            histories = self.gpu_vae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
@@ -397,7 +510,7 @@ class RAE:
                 callbacks=callbacks,
                 verbose=verbose)
         else:
-            histories = self.rae_model.fit(
+            histories = self.gpu_vae_model.fit(
                 x=x,
                 y=y,
                 epochs=n_epochs,
@@ -407,8 +520,11 @@ class RAE:
                 verbose=verbose)
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
-            self.rae_model.save(os.path.join(self.model_to_use, "mmd_rae.h5"), overwrite=True)
+            self.vae_model.save(os.path.join(self.model_to_use, "vae.h5"), overwrite=True)
             self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
+
+if __name__ == '__main__':
+    VAE(5000, arch_style=1)

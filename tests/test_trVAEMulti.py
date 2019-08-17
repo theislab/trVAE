@@ -6,8 +6,8 @@ import numpy as np
 import scanpy as sc
 from scipy import sparse
 
-import rcvae
-from rcvae.utils import normalize, train_test_split
+import trvae
+from trvae.utils import normalize, train_test_split
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -180,7 +180,7 @@ def train_network(data_dict=None,
             else:
                 use_leaky_relu = False
 
-            network = rcvae.RCVAEMulti(x_dimension=net_train_data.shape[1],
+            network = trvae.trVAEMulti(x_dimension=net_train_data.shape[1],
                                        z_dimension=z_dim,
                                        n_conditions=n_conditions,
                                        mmd_dimension=mmd_dimension,
@@ -243,7 +243,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
 
         n_conditions = len(train_data.obs[condition_key].unique().tolist())
 
-        network = rcvae.RCVAEMulti(x_dimension=data.shape[1],
+        network = trvae.trVAEMulti(x_dimension=data.shape[1],
                                    z_dimension=z_dim,
                                    loss_fn=loss_fn,
                                    n_conditions=n_conditions,
@@ -258,7 +258,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
 
         feed_data = data
 
-        train_labels, _ = rcvae.label_encoder(data, label_encoder, condition_key)
+        train_labels, _ = trvae.label_encoder(data, label_encoder, condition_key)
         fake_labels = []
 
         for i in range(n_conditions):
@@ -419,7 +419,7 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
 
     # adata_to_plot = pred_adata.concatenate(adata_target)
 
-    # rcvae.plotting.reg_mean_plot(adata_to_plot,
+    # trvae.plotting.reg_mean_plot(adata_to_plot,
     #                              top_100_genes=top_100_genes,
     #                              gene_list=gene_list,
     #                              condition_key=condition_key,
@@ -432,7 +432,7 @@ def visualize_multi_perturbation_between(network, adata, pred_adatas,
     #                              path_to_save=os.path.join(path_to_save,
     #                                                        f'rcvae_reg_mean_{data_name}_{source_condition} to {target_condition}.pdf'))
     #
-    # rcvae.plotting.reg_var_plot(adata_to_plot,
+    # trvae.plotting.reg_var_plot(adata_to_plot,
     #                             top_100_genes=top_100_genes,
     #                             gene_list=gene_list,
     #                             condition_key=condition_key,
@@ -483,7 +483,7 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128):
             ~((data.obs[condition_key].isin(target_keys)) & (data.obs[cell_type_key] == cell_type))]
 
         cell_type_adata = data[data.obs[cell_type_key] == cell_type]
-        network = rcvae.RCVAEMulti(x_dimension=data.shape[1],
+        network = trvae.trVAEMulti(x_dimension=data.shape[1],
                                    z_dimension=z_dim,
                                    n_conditions=len(source_keys),
                                    mmd_dimension=mmd_dimension,
@@ -497,7 +497,7 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128):
 
         feed_data = data.X
 
-        train_labels, _ = rcvae.label_encoder(data, label_encoder, condition_key)
+        train_labels, _ = trvae.label_encoder(data, label_encoder, condition_key)
 
         mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=0)
 

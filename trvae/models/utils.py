@@ -18,7 +18,7 @@ def label_encoder(adata, label_encoder=None, condition_key='condition'):
             Array of encoded labels
         Example
         --------
-        >>> import rcvae
+        >>> import trvae
         >>> import scanpy as sc
         >>> train_data = sc.read("./data/train.h5ad")
         >>> train_labels, label_encoder = label_encoder(train_data)

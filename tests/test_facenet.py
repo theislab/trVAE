@@ -5,7 +5,7 @@ import numpy as np
 import scanpy as sc
 from scipy import sparse
 
-import rcvae
+import trvae
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -39,7 +39,7 @@ def train_network(data_dict=None,
 
     if data_name == "celeba":
         gender = data_dict.get('gender', None)
-        data = rcvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
+        data = trvae.prepare_and_load_celeba(file_path="../data/celeba/img_align_celeba.zip",
                                              attr_path="../data/celeba/list_attr_celeba.txt",
                                              landmark_path="../data/celeba/list_landmarks_align_celeba.txt",
                                              gender=gender,
@@ -75,7 +75,7 @@ def train_network(data_dict=None,
     train_data = data[train_idx, :]
     valid_data = data[test_idx, :]
 
-    network = rcvae.FaceNet(x_dimension=(img_width, img_height, n_channels),
+    network = trvae.FaceNet(x_dimension=(img_width, img_height, n_channels),
                             learning_rate=learning_rate,
                             model_path=f"../models/",
                             gpus=gpus,

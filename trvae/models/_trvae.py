@@ -1,26 +1,23 @@
 import logging
 import os
-import sys
 
 import keras
 import numpy as np
-import scanpy as sc
 import tensorflow as tf
 from keras import backend as K
+from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
-from keras.utils import to_categorical
-from matplotlib import pyplot as plt
 from scipy import sparse
-from sklearn.preprocessing import LabelEncoder
+from sklearn.neighbors import NearestNeighbors
 
-from .utils import label_encoder
+from trvae.models.utils import label_encoder, shuffle_data
 
 log = logging.getLogger(__file__)
 
 
-class RCVAEATAC:
+class trVAE:
     """
         Regularized C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.
@@ -42,16 +39,14 @@ class RCVAEATAC:
                 number of latent space dimensions.
     """
 
-    def __init__(self, x_dimension, n_classes, z_dimension=100, **kwargs):
+    def __init__(self, x_dimension, z_dimension=100, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
-        self.n_classes = n_classes
         self.mmd_dim = kwargs.get('mmd_dimension', 128)
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
         self.beta = kwargs.get("beta", 100)
-        self.gamma = kwargs.get("gamma", 1.0)
         self.conditions = kwargs.get("condition_list")
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
@@ -70,7 +65,6 @@ class RCVAEATAC:
         self.encoder_model.summary()
         self.decoder_model.summary()
         self.cvae_model.summary()
-        self.classifier_model.summary()
 
     def _encoder(self, x, y, name="encoder"):
         """
@@ -124,16 +118,8 @@ class RCVAEATAC:
         h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
         h = Activation('relu', name="reconstruction_output")(h)
-
-        h_class = Dense(32, kernel_initializer=self.init_w, use_bias=False)(h_mmd)
-        h_class = BatchNormalization()(h_class)
-        h_class = LeakyReLU()(h_class)
-
-        h_class = Dense(self.n_classes, activation='softmax', name='classifier',
-                        kernel_initializer=self.init_w, use_bias=True)(h_class)
         model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
-        classifier = Model(inputs=[z, y], outputs=[h_class], name='classifier_model')
-        return h, h_mmd, model, classifier
+        return h, h_mmd, model
 
     @staticmethod
     def _sample_z(args):
@@ -167,19 +153,14 @@ class RCVAEATAC:
 
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
         self.mu, self.log_var, self.encoder_model = self._encoder(*inputs[:2], name="encoder")
-        self.x_hat, self.mmd_hl, self.decoder_model, self.classifier_model = self._mmd_decoder(self.z,
-                                                                                               self.decoder_labels,
-                                                                                               name="decoder")
+        self.x_hat, self.mmd_hl, self.decoder_model = self._mmd_decoder(self.z, self.decoder_labels,
+                                                                        name="decoder")
         decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
-        classifier_outputs = self.classifier_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
         reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
-        self.classifier_model = Model(inputs=inputs,
-                                      outputs=classifier_outputs,
-                                      name='classifier')
 
     @staticmethod
     def compute_kernel(x, y, kernel='rbf', **kwargs):
@@ -203,7 +184,7 @@ class RCVAEATAC:
             return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
         elif kernel == 'raphy':
             scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(RCVAEATAC.squared_distance(x, y), 0)
+            squared_dist = K.expand_dims(trVAE.squared_distance(x, y), 0)
             scales = K.expand_dims(K.expand_dims(scales, -1), -1)
             weights = K.eval(K.shape(scales)[0])
             weights = K.variable(value=np.asarray(weights))
@@ -213,7 +194,7 @@ class RCVAEATAC:
             sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
 
             beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = RCVAEATAC.squared_distance(x, y)
+            distances = trVAE.squared_distance(x, y)
             s = K.dot(beta, K.reshape(distances, (1, -1)))
 
             return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
@@ -235,9 +216,9 @@ class RCVAEATAC:
             # Returns
                 returns the computed MMD between x and y
         """
-        x_kernel = RCVAEATAC.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = RCVAEATAC.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = RCVAEATAC.compute_kernel(x, y, kernel=kernel, **kwargs)
+        x_kernel = trVAE.compute_kernel(x, x, kernel=kernel, **kwargs)
+        y_kernel = trVAE.compute_kernel(y, y, kernel=kernel, **kwargs)
+        xy_kernel = trVAE.compute_kernel(x, y, kernel=kernel, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
     def _loss_function(self):
@@ -265,19 +246,16 @@ class RCVAEATAC:
                     loss = self.compute_mmd(source_mmd, dest_mmd, self.kernel_method)
                     return self.beta * loss
 
-            def cce_loss(real_classes, pred_classes):
-                return self.gamma * K.categorical_crossentropy(real_classes, pred_classes)
-
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
-            self.classifier_optimizer = keras.optimizers.Adam(lr=self.lr)
             self.cvae_model.compile(optimizer=self.cvae_optimizer,
                                     loss=[kl_recon_loss, mmd_loss],
                                     metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
-                                             self.cvae_model.outputs[1].name: mmd_loss,
-                                             })
-            self.classifier_model.compile(optimizer=self.classifier_optimizer,
-                                          loss=cce_loss,
-                                          metrics=['acc'])
+                                             self.cvae_model.outputs[1].name: mmd_loss})
+
+            # self.cvae_model.compile(optimizer=self.cvae_optimizer,
+            #                         loss=kl_recon_loss,
+            #                         metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
+            #                                  self.cvae_model.outputs[1].name: mmd_loss})
 
         batch_loss()
 
@@ -402,157 +380,11 @@ class RCVAEATAC:
             ```
         """
         self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False)
-        self.classifier_model = load_model(os.path.join(self.model_to_use, 'classifier.h5'), compile=False)
         self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
         self._loss_function()
 
-    def save_model(self):
-        os.makedirs(self.model_to_use, exist_ok=True)
-        self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
-        self.classifier_model.save(os.path.join(self.model_to_use, "classifier.h5"), overwrite=True)
-        self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
-        self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
-        log.info(f"Model saved in file: {self.model_to_use}. Training finished")
-
-    def train_batch(self, train_data, condition_key, cell_type_key, source_key, use_validation=False, valid_data=None,
-                    n_epochs=25, batch_size=32, early_stop_limit=20,
-                    threshold=0.0025, initial_run=True,
-                    shuffle=True, verbose=2, save=True):
-        """
-            Trains the network `n_epochs` times with given `train_data`
-            and validates the model using validation_data if it was given
-            in the constructor function. This function is using `early stopping`
-            technique to prevent overfitting.
-            # Parameters
-                n_epochs: int
-                    number of epochs to iterate and optimize network weights
-                early_stop_limit: int
-                    number of consecutive epochs in which network loss is not going lower.
-                    After this limit, the network will stop training.
-                threshold: float
-                    Threshold for difference between consecutive validation loss values
-                    if the difference is upper than this `threshold`, this epoch will not
-                    considered as an epoch in early stopping.
-                full_training: bool
-                    if `True`: Network will be trained with all batches of data in each epoch.
-                    if `False`: Network will be trained with a random batch of data in each epoch.
-                initial_run: bool
-                    if `True`: The network will initiate training and log some useful initial messages.
-                    if `False`: Network will resume the training using `restore_model` function in order
-                        to restore last model which has been trained with some training dataset.
-            # Returns
-                Nothing will be returned
-            # Example
-            ```python
-            import scanpy as sc
-            import scgen
-            train_data = sc.read(train_katrain_kang.h5ad           >>> validation_data = sc.read(valid_kang.h5ad)
-            network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
-            network.train(n_epochs=20)
-            ```
-        """
-        if initial_run:
-            log.info("----Training----")
-
-        train_labels, _ = label_encoder(train_data)
-
-        if use_validation and valid_data is None:
-            raise Exception("valid_data is None but use_validation is True.")
-
-        source_data = train_data.copy()[train_data.obs[condition_key] == source_key]
-        source_labels = source_data.obs[cell_type_key].values
-        le = LabelEncoder()
-        source_labels = le.fit_transform(source_labels)
-        source_labels = to_categorical(source_labels, num_classes=self.n_classes)
-
-        n_batches = train_data.shape[0] // batch_size
-
-        def print_message(epoch, cvae_loss, cvae_mmd_loss, cvae_kl_recon_loss,
-                          class_cce_loss, class_accuracy, next_is_valid=False, valid=False):
-            if not valid:
-                if not next_is_valid:
-                    message = f"Epoch {epoch}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}][MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]\r"
-                else:
-                    message = f"Epoch {epoch}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}][MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]"
-                sys.stdout.write(message)
-                sys.stdout.flush()
-            else:
-                message = f'[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}][MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: {class_accuracy_valid}]\n'
-                sys.stdout.write(message)
-
-        for i in range(n_epochs):
-            cvae_loss = 0.0
-            cvae_mmd_loss = 0.0
-            cvae_kl_recon_loss = 0.0
-
-            class_cce_loss = 0.0
-            class_accuracy = 0.0
-            for batch_idx in range(n_batches):
-                cvae_train_data_batch = train_data.X[batch_idx * batch_size: (batch_idx + 1) * batch_size]
-                cvae_train_labels_batch = train_labels[batch_idx * batch_size: (batch_idx + 1) * batch_size]
-                cvae_loss_batch, cvae_kl_recon_loss_batch, cvae_mmd_loss_batch = self.cvae_model.train_on_batch(
-                    x=[cvae_train_data_batch, cvae_train_labels_batch, cvae_train_labels_batch],
-                    y=[cvae_train_data_batch, cvae_train_labels_batch],
-                )
-                class_train_data_batch = source_data.X[batch_idx * batch_size: (batch_idx + 1) * batch_size]
-                class_train_labels_batch = source_labels[batch_idx * batch_size: (batch_idx + 1) * batch_size]
-                class_cce_loss_batch, class_accuracy_batch = self.classifier_model.train_on_batch(
-                    x=[class_train_data_batch, np.zeros(class_train_data_batch.shape[0]),
-                       np.zeros(class_train_data_batch.shape[0])],
-                    y=class_train_labels_batch)
-
-                cvae_loss += cvae_loss_batch / n_batches
-                cvae_kl_recon_loss += cvae_kl_recon_loss_batch / n_batches
-                cvae_mmd_loss += cvae_mmd_loss_batch / n_batches
-
-                class_cce_loss += class_cce_loss_batch / n_batches
-                class_accuracy += class_accuracy_batch / n_batches
-
-                print_message(i, cvae_loss_batch, cvae_mmd_loss_batch, cvae_kl_recon_loss_batch, class_cce_loss_batch,
-                              class_accuracy_batch, next_is_valid=False, valid=False)
-            # print(f"Epoch {i}/{n_epochs}:\t[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
-            #       f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]", end='')
-            print_message(i, cvae_loss, cvae_mmd_loss, cvae_kl_recon_loss, class_cce_loss,
-                          class_accuracy, next_is_valid=True, valid=False)
-            if use_validation:
-                if sparse.issparse(valid_data.X):
-                    valid_data.X = valid_data.X.A
-
-                valid_labels, _ = label_encoder(valid_data)
-
-                source_data = valid_data.copy()[valid_data.obs[condition_key] == source_key]
-                source_labels = source_data.obs[cell_type_key].values
-                le = LabelEncoder()
-                source_labels = le.fit_transform(source_labels)
-                source_labels = to_categorical(source_labels, num_classes=self.n_classes)
-
-                cvae_loss_valid, cvae_kl_recon_loss_valid, cvae_mmd_loss_valid = self.cvae_model.evaluate(
-                    x=[valid_data.X, valid_labels, valid_labels],
-                    y=[valid_data.X, valid_labels], verbose=0)
-
-                class_cce_loss_valid, class_accuracy_valid = self.classifier_model.evaluate(
-                    x=[source_data.X, np.zeros(source_data.shape[0]), np.zeros(source_data.shape[0], )],
-                    y=source_labels, verbose=0)
-
-                # print(f"[CVAE_loss_valid: {cvae_loss_valid}][KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
-                #       f"[MMD_loss: {cvae_mmd_loss_valid}][CCE_Loss: {class_cce_loss_valid}][CCE_Acc: "
-                #       f"{class_accuracy_valid}]")
-                print_message(i, cvae_loss_valid, cvae_mmd_loss_valid, cvae_kl_recon_loss_valid, class_cce_loss_valid,
-                              class_accuracy_valid, next_is_valid=False, valid=True)
-            else:
-                print()
-
-        if save:
-            os.makedirs(self.model_to_use, exist_ok=True)
-            self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
-            self.classifier_model.save(os.path.join(self.model_to_use, "classifier.h5"), overwrite=True)
-            self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
-            self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
-            log.info(f"Model saved in file: {self.model_to_use}. Training finished")
-
-    def train(self, train_data, condition_key, cell_type_key, source_key, le, use_validation=False, valid_data=None,
-              n_epochs=25, batch_size=32, early_stop_limit=20,
+    def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32, early_stop_limit=20,
               threshold=0.0025, initial_run=True,
               shuffle=True, verbose=2, save=True):
         """
@@ -591,172 +423,63 @@ class RCVAEATAC:
         if initial_run:
             log.info("----Training----")
 
-        train_labels, _ = label_encoder(train_data, label_encoder=le, condition_key=condition_key)
+        train_labels, _ = label_encoder(train_data)
+        pseudo_labels = np.ones(shape=train_labels.shape)
 
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
 
-        source_data_train = train_data.copy()[train_data.obs[condition_key] == source_key]
-        source_classes_train = source_data_train.obs[cell_type_key].values
-        label_enc = LabelEncoder()
-        source_classes_train = label_enc.fit_transform(source_classes_train)
-        source_classes_train = to_categorical(source_classes_train, num_classes=self.n_classes)
+        callbacks = [
+            History(),
+            EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
+            CSVLogger(filename="./csv_logger.log")
+        ]
 
+        if sparse.issparse(train_data.X):
+            train_data.X = train_data.X.A
+
+        if shuffle:
+            train_data, train_labels = shuffle_data(train_data, train_labels)
+
+        if self.train_with_fake_labels:
+            x = [train_data.X, train_labels, pseudo_labels]
+            y = [train_data.X, train_labels]
+        else:
+            x = [train_data.X, train_labels, train_labels]
+            y = [train_data.X, train_labels]
         if use_validation:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
 
-            valid_labels, _ = label_encoder(valid_data, label_encoder=le, condition_key=condition_key)
-        best_val_mmd_loss = 100000.0
-        patience = 0
-        for i in range(n_epochs):
-            x_train = [train_data.X, train_labels, train_labels]
-            y_train = [train_data.X, train_labels]
-            if use_validation:
-                x_valid = [valid_data.X, valid_labels, valid_labels]
-                y_valid = [valid_data.X, valid_labels]
-                cvae_history = self.cvae_model.fit(
-                    x=x_train,
-                    y=y_train,
-                    epochs=1,
-                    batch_size=batch_size,
-                    validation_data=(x_valid, y_valid),
-                    verbose=0,
-                )
-            else:
-                cvae_history = self.cvae_model.fit(
-                    x=x_train,
-                    y=y_train,
-                    epochs=1,
-                    batch_size=batch_size,
-                    verbose=0,
-                )
+            valid_labels, _ = label_encoder(valid_data)
 
-            x_train = [source_data_train.X, np.zeros(source_data_train.shape[0]), np.zeros(source_data_train.shape[0])]
-            y_train = source_classes_train
+            if shuffle:
+                valid_data, valid_labels = shuffle_data(valid_data, valid_labels)
 
-            if use_validation:
-                source_data_valid = valid_data.copy()[valid_data.obs[condition_key] == source_key]
-                source_classes_valid = source_data_valid.obs[cell_type_key].values
-                label_enc = LabelEncoder()
-                source_classes_valid = label_enc.fit_transform(source_classes_valid)
-                source_classes_valid = to_categorical(source_classes_valid, num_classes=self.n_classes)
-
-                x_valid = [source_data_valid.X, np.zeros(source_data_valid.shape[0]),
-                           np.zeros(source_data_valid.shape[0], )]
-                y_valid = source_classes_valid
-                class_history = self.classifier_model.fit(
-                    x=x_train,
-                    y=y_train,
-                    epochs=1,
-                    batch_size=batch_size,
-                    validation_data=(x_valid, y_valid),
-                    verbose=0,
-                )
-            else:
-                class_history = self.classifier_model.fit(
-                    x=x_train,
-                    y=y_train,
-                    epochs=1,
-                    batch_size=batch_size,
-                    verbose=0,
-                )
-            cvae_loss = cvae_history.history['loss']
-            cvae_kl_recon_loss = cvae_history.history['kl_reconstruction_loss']
-            cvae_mmd_loss = cvae_history.history['mmd_loss']
-
-            cvae_loss_valid = cvae_history.history['val_loss']
-            cvae_kl_recon_loss_valid = cvae_history.history['val_kl_reconstruction_loss']
-            cvae_mmd_loss_valid = cvae_history.history['val_mmd_loss']
-
-            class_cce_loss = class_history.history['loss']
-            class_accuracy = class_history.history['acc']
-
-            class_cce_loss_valid = class_history.history['val_loss']
-            class_accuracy_valid = class_history.history['val_acc']
-            print(f"Epoch {i + 1}/{n_epochs}:")
-            print(f"[CVAE_loss: {cvae_loss}][KL_Reconstruction_loss: {cvae_kl_recon_loss}]"
-                  f"[MMD_loss: {cvae_mmd_loss}][CCE_Loss: {class_cce_loss}][CCE_Acc: {class_accuracy}]")
-            print(f"[val_CVAE_loss: {cvae_loss_valid}][val_KL_Reconstruction_loss: {cvae_kl_recon_loss_valid}]"
-                  f"[val_MMD_loss: {cvae_mmd_loss_valid}][val_CCE_Loss: {class_cce_loss_valid}]"
-                  f"[val_CCE_Acc: {class_accuracy_valid}]")
-
-            if (i+1) % 5 == 0:
-                path_to_save = f"../results/RCVAEATAC/{self.z_dim}/Visualizations/"
-                os.makedirs(path_to_save, exist_ok=True)
-                sc.settings.figdir = os.path.abspath(path_to_save)
-                feed_data = train_data.X
-                train_labels, _ = label_encoder(train_data, label_encoder=le, condition_key=condition_key)
-                # fake_labels = np.ones(train_labels.shape)
-
-                # train_data.obs['class'] = train_data.obs[cell_type_key].values.tolist()
-                # train_data.obs.loc[train_data.obs[condition_key] != source_key, 'class'] = 'ATAC-unknown'
-
-                # latent_with_true_labels = self.to_latent(feed_data, train_labels)
-                # latent_with_fake_labels = self.to_latent(feed_data, fake_labels)
-                mmd_latent_with_true_labels = self.to_mmd_layer(self, feed_data, train_labels, feed_fake=False)
-                # mmd_latent_with_fake_labels = self.to_mmd_layer(self, feed_data, train_labels, feed_fake=True)
-
-                import matplotlib as mpl
-                mpl.rcParams.update(mpl.rcParamsDefault)
-
-                # latent_with_true_labels = sc.AnnData(X=latent_with_true_labels)
-                # latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
-                # latent_with_true_labels.obs['class'] = train_data.obs['class'].values
-
-                # latent_with_fake_labels = sc.AnnData(X=latent_with_fake_labels)
-                # latent_with_fake_labels.obs[condition_key] = train_data.obs[condition_key].values
-                # latent_with_fake_labels.obs['class'] = train_data.obs['class'].values
-
-                mmd_latent_with_true_labels = sc.AnnData(X=mmd_latent_with_true_labels)
-                mmd_latent_with_true_labels.obs[condition_key] = train_data.obs[condition_key].values
-                # mmd_latent_with_true_labels.obs['class'] = train_data.obs['class'].values
-
-                # mmd_latent_with_fake_labels = sc.AnnData(X=mmd_latent_with_fake_labels)
-                # mmd_latent_with_fake_labels.obs[condition_key] = train_data.obs[condition_key].values
-                # mmd_latent_with_fake_labels.obs['class'] = train_data.obs['class'].values
-
-                color = [condition_key]
-
-                # sc.pp.neighbors(latent_with_true_labels)
-                # sc.tl.umap(latent_with_true_labels)
-                # sc.pl.umap(latent_with_true_labels, color=color,
-                #            save=f"_latent_with_true_labels_at_{i}",
-                #            wspace=0.4,
-                #            show=False)
-
-                # sc.pp.neighbors(latent_with_fake_labels)
-                # sc.tl.umap(latent_with_fake_labels)
-                # sc.pl.umap(latent_with_fake_labels, color=color,
-                #            save=f"_latent_with_fake_labels_at_{i}",
-                #            wspace=0.4,
-                #            show=False)
-
-                sc.pp.neighbors(mmd_latent_with_true_labels)
-                sc.tl.umap(mmd_latent_with_true_labels)
-                sc.pl.umap(mmd_latent_with_true_labels, color=color,
-                           save=f"_mmd_latent_with_true_labels_at_{i+1}.png",
-                           wspace=0.4,
-                           show=False)
-
-                # sc.pp.neighbors(mmd_latent_with_fake_labels)
-                # sc.tl.umap(mmd_latent_with_fake_labels)
-                # sc.pl.umap(mmd_latent_with_fake_labels, color=color,
-                #            save=f"_mmd_latent_with_fake_labels_at_{i}",
-                #            wspace=0.4,
-                #            show=False)
-                plt.close("all")
-            if cvae_mmd_loss_valid[0] > best_val_mmd_loss:
-                patience += 1
-                if patience > early_stop_limit:
-                    break
-            else:
-                best_val_mmd_loss = cvae_mmd_loss_valid
-                patience = 0
+            x_valid = [valid_data.X, valid_labels, valid_labels]
+            y_valid = [valid_data.X, valid_labels]
+            histories = self.cvae_model.fit(
+                x=x,
+                y=y,
+                epochs=n_epochs,
+                batch_size=batch_size,
+                validation_data=(x_valid, y_valid),
+                shuffle=shuffle,
+                callbacks=callbacks,
+                verbose=verbose)
+        else:
+            histories = self.cvae_model.fit(
+                x=x,
+                y=y,
+                epochs=n_epochs,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                callbacks=callbacks,
+                verbose=verbose)
         if save:
             os.makedirs(self.model_to_use, exist_ok=True)
             self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
-            self.classifier_model.save(os.path.join(self.model_to_use, "classifier.h5"), overwrite=True)
             self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
+        return histories

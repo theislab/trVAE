@@ -5,7 +5,7 @@ import numpy as np
 import scanpy as sc
 from scipy import sparse
 
-import rcvae
+import trvae
 from matplotlib import pyplot as plt
 
 if not os.getcwd().endswith("tests"):
@@ -57,7 +57,7 @@ def train_network(data_dict=None,
     net_train_data = train_data.copy()[train_idx, :]
     net_valid_data = train_data.copy()[valid_idx, :]
 
-    network = rcvae.VAE(x_dimension=net_train_data.shape[1],
+    network = trvae.VAE(x_dimension=net_train_data.shape[1],
                         z_dimension=z_dim,
                         alpha=alpha,
                         gpus=gpus,
@@ -98,7 +98,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=None, arch
 
     train_data = data.copy()
 
-    network = rcvae.VAE(x_dimension=data.shape[1],
+    network = trvae.VAE(x_dimension=data.shape[1],
                         z_dimension=z_dim,
                         arch_style=arch_style,
                         model_path=f"../models/VAE/{data_name}-{arch_style}/{z_dim}/", )

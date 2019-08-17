@@ -13,15 +13,15 @@ from keras.utils import to_categorical
 from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
 
-from rcvae.models.activations import disp_activation, mean_activation
-from rcvae.models.layers import SliceLayer, ColwiseMultLayer
-from rcvae.models.losses import ZINB, NB
-from rcvae.models.utils import label_encoder
+from trvae.models.activations import disp_activation, mean_activation
+from trvae.models.layers import SliceLayer, ColwiseMultLayer
+from trvae.models.losses import ZINB, NB
+from trvae.models.utils import label_encoder
 
 log = logging.getLogger(__file__)
 
 
-class RCVAEMulti:
+class trVAEMulti:
     """
         Regularized C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.
@@ -258,7 +258,7 @@ class RCVAEMulti:
             return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
         elif kernel == 'raphy':
             scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(RCVAEMulti.squared_distance(x, y), 0)
+            squared_dist = K.expand_dims(trVAEMulti.squared_distance(x, y), 0)
             scales = K.expand_dims(K.expand_dims(scales, -1), -1)
             weights = K.eval(K.shape(scales)[0])
             weights = K.variable(value=np.asarray(weights))
@@ -268,7 +268,7 @@ class RCVAEMulti:
             sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
 
             beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = RCVAEMulti.squared_distance(x, y)
+            distances = trVAEMulti.squared_distance(x, y)
             s = K.dot(beta, K.reshape(distances, (1, -1)))
 
             return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
@@ -290,9 +290,9 @@ class RCVAEMulti:
             # Returns
                 returns the computed MMD between x and y
         """
-        x_kernel = RCVAEMulti.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = RCVAEMulti.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = RCVAEMulti.compute_kernel(x, y, kernel=kernel, **kwargs)
+        x_kernel = trVAEMulti.compute_kernel(x, x, kernel=kernel, **kwargs)
+        y_kernel = trVAEMulti.compute_kernel(y, y, kernel=kernel, **kwargs)
+        xy_kernel = trVAEMulti.compute_kernel(x, y, kernel=kernel, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
     def _loss_function(self):

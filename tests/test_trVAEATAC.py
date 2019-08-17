@@ -5,7 +5,7 @@ import numpy as np
 import scanpy as sc
 from scipy import sparse
 
-import rcvae
+import trvae
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -49,7 +49,7 @@ def train_network(data_dict=None,
     source_adata = net_train_data[net_train_data.obs[condition_key] == source_key]
     n_classes = len(source_adata.obs[cell_type_key].unique().tolist())
 
-    network = rcvae.RCVAEATAC(x_dimension=net_train_data.shape[1],
+    network = trvae.trVAEATAC(x_dimension=net_train_data.shape[1],
                               z_dimension=z_dim,
                               n_classes=n_classes,
                               mmd_dimension=mmd_dimension,
@@ -89,15 +89,15 @@ def visualize_trained_network_results_multimodal(data_dict, z_dim=100):
     os.makedirs(path_to_save, exist_ok=True)
     sc.settings.figdir = os.path.abspath(path_to_save)
 
-    network = rcvae.RCVAEATAC(x_dimension=data.shape[1],
-                          z_dimension=z_dim,
-                          model_path=f"../models/RCVAE/{data_name}/{z_dim}/", )
+    network = trvae.trVAEATAC(x_dimension=data.shape[1],
+                              z_dimension=z_dim,
+                              model_path=f"../models/RCVAE/{data_name}/{z_dim}/", )
     network.restore_model()
     if sparse.issparse(data.X):
         data.X = data.X.A
 
     feed_data = data.X
-    train_labels, _ = rcvae.label_encoder(data)
+    train_labels, _ = trvae.label_encoder(data)
     fake_labels = np.ones(train_labels.shape)
     latent_with_true_labels = network.to_latent(feed_data, train_labels)
     latent_with_fake_labels = network.to_latent(feed_data, fake_labels)
