@@ -2,7 +2,6 @@ import logging
 import os
 
 import keras
-import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
@@ -50,11 +49,13 @@ class trVAEATAC:
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
         self.beta = kwargs.get("beta", 100)
+        self.prev_beta = kwargs.get("beta", 100)
         self.gamma = kwargs.get("gamma", 1.0)
         self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_path = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
+        self.mmd_computation_way = kwargs.get("mmd_computation_way", "general")
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(self.n_domains,), name="encoder_labels")
@@ -131,10 +132,12 @@ class trVAEATAC:
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
         h = Activation('relu', name="reconstruction_output")(h)
         model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
+        mmd_model = Model(inputs=[z, y], outputs=h_mmd, name='decoder_mmd')
 
-        return h, h_mmd, model
+        return h, h_mmd, model, mmd_model
 
-    def _classifier(self, mmd_latent, name='classifier_from_mmd_latent'):
+    def _classifier(self, name='classifier_from_mmd_latent'):
+        mmd_latent = Input(shape=(self.mmd_dim,))
         h = Dense(64, kernel_initializer=self.init_w, use_bias=False)(mmd_latent)
         h = BatchNormalization()(h)
         h = LeakyReLU()(h)
@@ -143,7 +146,7 @@ class trVAEATAC:
         h = Dense(self.n_labels, activation='softmax', name='classifier_prob',
                   kernel_initializer=self.init_w, use_bias=True)(h)
 
-        model = Model(inputs=[self.z, self.decoder_labels], outputs=h, name=name)
+        model = Model(inputs=mmd_latent, outputs=h, name=name)
         return model
 
     @staticmethod
@@ -179,16 +182,16 @@ class trVAEATAC:
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
 
         self.mu, self.log_var, self.encoder_model = self._encoder(*inputs[:2], name="encoder")
-        self.x_hat, self.mmd_hl, self.decoder_model = self._mmd_decoder(self.z,
-                                                                        self.decoder_labels,
-                                                                        name="decoder")
-        self.classifier_from_mmd_latent_model = self._classifier(self.mmd_hl)
+        self.x_hat, self.mmd_hl, self.decoder_model, self.decoder_mmd_model = self._mmd_decoder(self.z,
+                                                                                                self.decoder_labels,
+                                                                                                name="decoder")
+        self.classifier_from_mmd_latent_model = self._classifier()
 
         decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        decoder_mmd_output = self.decoder_mmd_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
         reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
-        classifier_outputs = self.classifier_from_mmd_latent_model(
-            [self.encoder_model(inputs[:2])[2], self.decoder_labels])
         mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
+        classifier_outputs = self.classifier_from_mmd_latent_model(decoder_mmd_output)
 
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
@@ -279,10 +282,15 @@ class trVAEATAC:
                     real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
                     conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=self.n_domains)
                     loss = 0.0
-
-                    for i in range(len(conditions_mmd)):
-                        for j in range(i):
-                            loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
+                    if self.mmd_computation_way.isdigit():
+                        boundary = int(self.mmd_computation_way)
+                        for i in range(boundary):
+                            for j in range(boundary, self.n_domains):
+                                loss += self.compute_mmd(conditions_mmd[i], conditions_mmd[j], self.kernel_method)
+                    else:
+                        for i in range(len(conditions_mmd)):
+                            for j in range(i):
+                                loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
                     return self.beta * loss
 
             def cce_loss(real_classes, pred_classes):
@@ -408,6 +416,9 @@ class trVAEATAC:
         model = Model(inputs=self.decoder_model.layers[1], outputs=self.decoder_model.outputs)
         return model.predict(data)
 
+    def _make_classifier_trainable(self, trainable):
+        self.classifier_model.layers[-1].trainable = trainable
+
     def restore_model(self):
         """
             restores model weights from `model_to_use`.
@@ -442,7 +453,7 @@ class trVAEATAC:
     def train(self, train_adata, valid_adata,
               domain_key, label_key, source_key, target_key, le,
               n_epochs=25, batch_size=32, early_stop_limit=20,
-              lr_reducer=10, save=True, plot_loss=True):
+              lr_reducer=10, save=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -481,11 +492,11 @@ class trVAEATAC:
         if not isinstance(target_key, list):
             target_key = [target_key]
 
-        train_labels_encode = label_encoder(train_adata, label_encoder=le, condition_key=domain_key)
-        valid_labels_encode = label_encoder(valid_adata, label_encoder=le, condition_key=domain_key)
+        train_labels_encoded, self.domain_enc = label_encoder(train_adata, label_encoder=le, condition_key=domain_key)
+        valid_labels_encoded, _ = label_encoder(valid_adata, label_encoder=le, condition_key=domain_key)
 
-        train_labels_onehot = to_categorical(train_labels_encode, num_classes=self.n_domains)
-        valid_labels_onehot = to_categorical(valid_labels_encode, num_classes=self.n_domains)
+        train_labels_onehot = to_categorical(train_labels_encoded, num_classes=self.n_domains)
+        valid_labels_onehot = to_categorical(valid_labels_encoded, num_classes=self.n_domains)
 
         if sparse.issparse(valid_adata.X):
             valid_adata.X = valid_adata.X.A
@@ -516,15 +527,12 @@ class trVAEATAC:
 
         best_val_loss = 100000.0
         patience = 0
-        history_collector = {"train_accuracy": [], "valid_accuracy": [], "target_accuracy": [], "train_cvae_loss": [],
-                             "train_mmd_loss": [], "valid_cvae_loss": [], "valid_mmd_loss": []}
-
         for i in range(n_epochs):
             x_train = [train_adata.X, train_labels_onehot, train_labels_onehot]
-            y_train = [train_adata.X, train_labels_encode]
+            y_train = [train_adata.X, train_labels_encoded]
 
             x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
-            y_valid = [valid_adata.X, valid_labels_encode]
+            y_valid = [valid_adata.X, valid_labels_encoded]
 
             cvae_history = self.cvae_model.fit(
                 x=x_train,
@@ -560,28 +568,20 @@ class trVAEATAC:
             y_target = target_classes_train
 
             _, target_acc = self.classifier_model.evaluate(x_target, y_target, verbose=0)
-            history_collector["target_accuracy"].append(target_acc)
 
             cvae_loss = cvae_history.history['loss'][0]
             cvae_kl_recon_loss = cvae_history.history['kl_reconstruction_loss'][0]
             cvae_mmd_loss = cvae_history.history['mmd_loss'][0]
-            history_collector["train_cvae_loss"].append(cvae_kl_recon_loss)
-            history_collector["train_mmd_loss"].append(cvae_mmd_loss)
 
             cvae_loss_valid = cvae_history.history['val_loss'][0]
             cvae_kl_recon_loss_valid = cvae_history.history['val_kl_reconstruction_loss'][0]
             cvae_mmd_loss_valid = cvae_history.history['val_mmd_loss'][0]
-            history_collector["valid_cvae_loss"].append(cvae_kl_recon_loss_valid)
-            history_collector["valid_mmd_loss"].append(cvae_mmd_loss_valid)
 
             class_cce_loss = class_history.history['loss'][0]
             class_accuracy = class_history.history['acc'][0]
-            history_collector["train_accuracy"].append(class_accuracy)
 
             class_cce_loss_valid = class_history.history['val_loss'][0]
             class_accuracy_valid = class_history.history['val_acc'][0]
-            history_collector["valid_accuracy"].append(class_accuracy_valid)
-
             print(f"Epoch {i + 1}/{n_epochs}:")
             print(f'loss: {cvae_loss:.4f} - KL_Recon_loss: {cvae_kl_recon_loss:.4f}'
                   f" - MMD_loss: {cvae_mmd_loss:.4f} - CCE_Loss: {class_cce_loss:.4f} - CCE_Acc: {class_accuracy:.3f}"
@@ -608,25 +608,3 @@ class trVAEATAC:
             self.encoder_model.save(os.path.join(self.model_path, "encoder.h5"), overwrite=True)
             self.decoder_model.save(os.path.join(self.model_path, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_path}. Training finished")
-        if plot_loss:
-            # classification loss
-            x = np.arange(n_epochs)
-            plt.plot(x, history_collector['train_accuracy'])
-            plt.plot(x, history_collector['valid_accuracy'])
-            plt.plot(x, history_collector['target_accuracy'])
-            plt.title('Model accuracy')
-            plt.ylabel('Accuracy')
-            plt.xlabel('Epoch')
-            plt.legend(['Train', 'validation', "target"], loc='upper left')
-            plt.show()
-            plt.close()
-            # trVAE loss
-            plt.plot(x, history_collector['train_cvae_loss'])
-            plt.plot(x, history_collector['train_mmd_loss'])
-            plt.plot(x, history_collector['valid_cvae_loss'])
-            plt.plot(x, history_collector['valid_mmd_loss'])
-            plt.title('Model loss')
-            plt.ylabel('Loss')
-            plt.xlabel('Epoch')
-            plt.legend(['train_recons+kl', 'train_mmd', "valid_recons+kl", 'valid_mmd'], loc='upper left')
-            plt.show()
