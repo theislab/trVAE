@@ -1,7 +1,8 @@
 import logging
 import os
-import matplotlib.pyplot as plt
+
 import keras
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
@@ -17,7 +18,7 @@ from .utils import label_encoder
 log = logging.getLogger(__file__)
 
 
-class trVAE:
+class trVAEATAC:
     """
         Regularized C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.
@@ -218,7 +219,7 @@ class trVAE:
             return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
         elif kernel == 'raphy':
             scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(trVAE.squared_distance(x, y), 0)
+            squared_dist = K.expand_dims(trVAEATAC.squared_distance(x, y), 0)
             scales = K.expand_dims(K.expand_dims(scales, -1), -1)
             weights = K.eval(K.shape(scales)[0])
             weights = K.variable(value=np.asarray(weights))
@@ -228,7 +229,7 @@ class trVAE:
             sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
 
             beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = trVAE.squared_distance(x, y)
+            distances = trVAEATAC.squared_distance(x, y)
             s = K.dot(beta, K.reshape(distances, (1, -1)))
 
             return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
@@ -250,9 +251,9 @@ class trVAE:
             # Returns
                 returns the computed MMD between x and y
         """
-        x_kernel = trVAE.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = trVAE.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = trVAE.compute_kernel(x, y, kernel=kernel, **kwargs)
+        x_kernel = trVAEATAC.compute_kernel(x, x, kernel=kernel, **kwargs)
+        y_kernel = trVAEATAC.compute_kernel(y, y, kernel=kernel, **kwargs)
+        xy_kernel = trVAEATAC.compute_kernel(x, y, kernel=kernel, **kwargs)
         return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
     def _loss_function(self):
@@ -515,7 +516,7 @@ class trVAE:
 
         best_val_loss = 100000.0
         patience = 0
-        history_collector= {}
+        history_collector = {}
         history_collector["train_accuracy"] = []
         history_collector["valid_accuracy"] = []
         history_collector["target_accuracy"] = []
@@ -524,10 +525,6 @@ class trVAE:
         history_collector["valid_cvae_loss"] = []
         history_collector["valid_mmd_loss"] = []
 
-
-
-    
-        
         for i in range(n_epochs):
             x_train = [train_adata.X, train_labels_onehot, train_labels_onehot]
             y_train = [train_adata.X, train_labels_encode]
@@ -571,23 +568,17 @@ class trVAE:
             _, target_acc = self.classifier_model.evaluate(x_target, y_target, verbose=0)
             history_collector["target_accuracy"].append(target_acc)
 
-
             cvae_loss = cvae_history.history['loss'][0]
             cvae_kl_recon_loss = cvae_history.history['kl_reconstruction_loss'][0]
             cvae_mmd_loss = cvae_history.history['mmd_loss'][0]
             history_collector["train_cvae_loss"].append(cvae_kl_recon_loss)
             history_collector["train_mmd_loss"].append(cvae_mmd_loss)
 
-            
-
-
             cvae_loss_valid = cvae_history.history['val_loss'][0]
             cvae_kl_recon_loss_valid = cvae_history.history['val_kl_reconstruction_loss'][0]
             cvae_mmd_loss_valid = cvae_history.history['val_mmd_loss'][0]
             history_collector["valid_cvae_loss"].append(cvae_kl_recon_loss_valid)
             history_collector["valid_mmd_loss"].append(cvae_mmd_loss_valid)
-
-
 
             class_cce_loss = class_history.history['loss'][0]
             class_accuracy = class_history.history['acc'][0]
@@ -624,32 +615,24 @@ class trVAE:
             self.decoder_model.save(os.path.join(self.model_path, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_path}. Training finished")
         if plot_loss:
-            #classification loss
+            # classification loss
             x = np.arange(n_epochs)
-            plt.plot(x,history_collector['train_accuracy'])
-            plt.plot(x,history_collector['valid_accuracy'])
-            plt.plot(x,history_collector['target_accuracy'])
+            plt.plot(x, history_collector['train_accuracy'])
+            plt.plot(x, history_collector['valid_accuracy'])
+            plt.plot(x, history_collector['target_accuracy'])
             plt.title('Model accuracy')
             plt.ylabel('Accuracy')
             plt.xlabel('Epoch')
             plt.legend(['Train', 'validation', "target"], loc='upper left')
             plt.show()
             plt.close()
-            #trVAE loss 
-            plt.plot(x,history_collector['train_cvae_loss'])
-            plt.plot(x,history_collector['train_mmd_loss'])
-            plt.plot(x,history_collector['valid_cvae_loss'])
-            plt.plot(x,history_collector['valid_mmd_loss'])
+            # trVAE loss
+            plt.plot(x, history_collector['train_cvae_loss'])
+            plt.plot(x, history_collector['train_mmd_loss'])
+            plt.plot(x, history_collector['valid_cvae_loss'])
+            plt.plot(x, history_collector['valid_mmd_loss'])
             plt.title('Model loss')
             plt.ylabel('Loss')
             plt.xlabel('Epoch')
-            plt.legend(['train_recons+kl', 'train_mmd', "valid_recons+kl",'valid_mmd' ], loc='upper left')
+            plt.legend(['train_recons+kl', 'train_mmd', "valid_recons+kl", 'valid_mmd'], loc='upper left')
             plt.show()
-            
-            
-            
-
-            
-            
-    
-        
