@@ -516,14 +516,8 @@ class trVAEATAC:
 
         best_val_loss = 100000.0
         patience = 0
-        history_collector = {}
-        history_collector["train_accuracy"] = []
-        history_collector["valid_accuracy"] = []
-        history_collector["target_accuracy"] = []
-        history_collector["train_cvae_loss"] = []
-        history_collector["train_mmd_loss"] = []
-        history_collector["valid_cvae_loss"] = []
-        history_collector["valid_mmd_loss"] = []
+        history_collector = {"train_accuracy": [], "valid_accuracy": [], "target_accuracy": [], "train_cvae_loss": [],
+                             "train_mmd_loss": [], "valid_cvae_loss": [], "valid_mmd_loss": []}
 
         for i in range(n_epochs):
             x_train = [train_adata.X, train_labels_onehot, train_labels_onehot]
