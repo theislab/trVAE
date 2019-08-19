@@ -2,7 +2,6 @@ import logging
 import os
 
 import keras
-import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
@@ -11,7 +10,8 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from scipy import sparse
 
-from trvae.models._utils import label_encoder, shuffle_data, compute_mmd
+from trvae.models._utils import compute_mmd
+from trvae.utils import label_encoder
 
 log = logging.getLogger(__file__)
 
@@ -312,17 +312,12 @@ class trAE:
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
 
-        if shuffle:
-            train_data = shuffle_data(train_data)
         train_labels, _ = label_encoder(train_data)
         x = train_data.X
         y = [train_data.X, train_labels]
         if use_validation:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
-
-            if shuffle:
-                valid_data = shuffle_data(valid_data)
 
             valid_labels, _ = label_encoder(valid_data)
 
