@@ -84,3 +84,8 @@ def label_encoder(adata, label_encoder=None, condition_key='condition'):
             labels[adata.obs[condition_key] == condition] = label
     return labels.reshape(-1, 1), le
 
+
+def remove_sparsity(adata):
+    if sparse.issparse(adata.X):
+        adata.X = adata.X.A
+    return adata

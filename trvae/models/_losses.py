@@ -23,18 +23,31 @@ def kl_loss(mu, log_var, alpha=0.1):
     return kl_recon_loss
 
 
-def mmd(n_conditions, beta, kernel_method='multi-scale-rbf'):
+def mmd(n_conditions, beta, kernel_method='multi-scale-rbf', computation_way="general"):
     def mmd_loss(real_labels, y_pred):
         with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
             real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
             conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=n_conditions)
             loss = 0.0
-            for i in range(len(conditions_mmd)):
-                for j in range(i):
-                    loss += compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], kernel_method)
+            if computation_way.isdigit():
+                boundary = int(computation_way)
+                for i in range(boundary):
+                    for j in range(boundary, n_conditions):
+                        loss += compute_mmd(conditions_mmd[i], conditions_mmd[j], kernel_method)
+            else:
+                for i in range(len(conditions_mmd)):
+                    for j in range(i):
+                        loss += compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], kernel_method)
             return beta * loss
 
     return mmd_loss
+
+
+def categrical_crossentropy(gamma):
+    def cce_loss(real_classes, pred_classes):
+        return gamma * K.categorical_crossentropy(real_classes, pred_classes)
+
+    return cce_loss
 
 
 def perceptual_loss(x_dim):
@@ -173,6 +186,7 @@ def zinb_loss(pi, disp, mu, log_var, ridge=0.1, alpha=0.1):
 LOSSES = {
     "mse": kl_recon,
     "mmd": mmd,
+    "cce": categrical_crossentropy,
     "nb": nb_loss,
     "zinb": zinb_loss,
     "perceptual": perceptual_loss,

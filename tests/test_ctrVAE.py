@@ -339,12 +339,12 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
         source_sample_train = anndata.AnnData(X=source_sample_train)
         source_sample_valid = anndata.AnnData(X=source_sample_valid)
 
-        pred_sample_train = network.predict(data=source_sample_train,
+        pred_sample_train = network.predict(adata=source_sample_train,
                                             encoder_labels=np.zeros((k, 1)),
                                             decoder_labels=np.ones((k, 1)))
         pred_sample_train = np.reshape(pred_sample_train, newshape=(-1, *image_shape))
 
-        pred_sample_valid = network.predict(data=source_sample_valid,
+        pred_sample_valid = network.predict(adata=source_sample_valid,
                                             encoder_labels=np.zeros((k, 1)),
                                             decoder_labels=np.ones((k, 1)))
         pred_sample_valid = np.reshape(pred_sample_valid, newshape=(-1, *image_shape))

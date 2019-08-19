@@ -1,10 +1,9 @@
 import logging
 import os
 
+import anndata
 import keras
 import numpy as np
-import tensorflow as tf
-from keras import backend as K
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -12,7 +11,9 @@ from keras.utils import to_categorical
 from scipy import sparse
 from sklearn.preprocessing import LabelEncoder
 
-from ._utils import label_encoder, sample_z
+from trvae.models._losses import LOSSES
+from trvae.utils import remove_sparsity, label_encoder
+from ._utils import sample_z
 
 log = logging.getLogger(__file__)
 
@@ -133,10 +134,10 @@ class trVAEATAC:
         h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
         h = Activation('relu', name="reconstruction_output")(h)
-        model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
+        decoder_model = Model(inputs=[z, y], outputs=h, name=name)
         mmd_model = Model(inputs=[z, y], outputs=h_mmd, name='decoder_mmd')
 
-        return h, h_mmd, model, mmd_model
+        return decoder_model, mmd_model
 
     def _classifier(self, name='classifier_from_mmd_latent'):
         mmd_latent = Input(shape=(self.mmd_dim,))
@@ -167,22 +168,24 @@ class trVAEATAC:
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
 
         self.mu, self.log_var, self.encoder_model = self._encoder(*inputs[:2], name="encoder")
-        self.x_hat, self.mmd_hl, self.decoder_model, self.decoder_mmd_model = self._mmd_decoder(self.z,
-                                                                                                self.decoder_labels,
-                                                                                                name="decoder")
+        self.decoder_model, self.decoder_mmd_model = self._mmd_decoder(self.z,
+                                                                       self.decoder_labels,
+                                                                       name="decoder")
         self.classifier_from_mmd_latent_model = self._classifier()
 
-        decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        decoder_output = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
         decoder_mmd_output = self.decoder_mmd_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
-        reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
-        mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
-        classifier_outputs = self.classifier_from_mmd_latent_model(decoder_mmd_output)
+
+        reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_output)
+        mmd_output = Lambda(lambda x: x, name="mmd")(decoder_mmd_output)
+
+        classifier_output = self.classifier_from_mmd_latent_model(decoder_mmd_output)
 
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
         self.classifier_model = Model(inputs=inputs,
-                                      outputs=classifier_outputs,
+                                      outputs=classifier_output,
                                       name='classifier')
 
     def _loss_function(self):
@@ -198,44 +201,25 @@ class trVAEATAC:
         """
 
         def batch_loss():
-            def kl_recon_loss(y_true, y_pred):
-                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-                recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
-                return self.eta * recon_loss + self.alpha * kl_loss
-
-            def mmd_loss(real_labels, y_pred):
-                with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
-                    real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
-                    conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=self.n_domains)
-                    loss = 0.0
-                    if self.mmd_computation_way.isdigit():
-                        boundary = int(self.mmd_computation_way)
-                        for i in range(boundary):
-                            for j in range(boundary, self.n_domains):
-                                loss += compute_mmd(conditions_mmd[i], conditions_mmd[j], self.kernel_method)
-                    else:
-                        for i in range(len(conditions_mmd)):
-                            for j in range(i):
-                                loss += compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
-                    return self.beta * loss
-
-            def cce_loss(real_classes, pred_classes):
-                return self.gamma * K.categorical_crossentropy(real_classes, pred_classes)
-
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
             self.classifier_optimizer = keras.optimizers.Adam(lr=self.lr)
             self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                    loss=[kl_recon_loss, mmd_loss],
-                                    metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
-                                             self.cvae_model.outputs[1].name: mmd_loss,
+                                    loss=[LOSSES['mse'](self.mu, self.log_var, self.alpha, self.eta),
+                                          LOSSES['mmd'](self.n_domains, self.beta, self.kernel_method,
+                                                        self.mmd_computation_way)],
+                                    metrics={self.cvae_model.outputs[0].name: LOSSES['mse'](self.mu, self.log_var,
+                                                                                            self.alpha, self.eta),
+                                             self.cvae_model.outputs[1].name: LOSSES['mmd'](self.n_domains, self.beta,
+                                                                                            self.kernel_method,
+                                                                                            self.mmd_computation_way),
                                              })
             self.classifier_model.compile(optimizer=self.classifier_optimizer,
-                                          loss=cce_loss,
+                                          loss=LOSSES['cce'](self.gamma),
                                           metrics=['acc'])
 
         batch_loss()
 
-    def to_latent(self, data, labels):
+    def to_latent(self, adata, encoder_labels):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -249,11 +233,17 @@ class trVAEATAC:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
-        labels = to_categorical(labels, num_classes=self.n_domains)
-        latent = self.encoder_model.predict([data, labels])[2]
-        return latent
+        adata = remove_sparsity(adata)
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_domains)
+        latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
 
-    def to_mmd_layer(self, model, data, encoder_labels, feed_fake=False):
+        latent_adata = anndata.AnnData(X=latent)
+        latent_adata.obs = adata.obs.copy(deep=True)
+        latent_adata.var_names = adata.var_names
+
+        return latent_adata
+
+    def to_mmd_layer(self, adata, encoder_labels, feed_fake=0):
         """
             Map `data` in to the pn layer after latent layer. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -267,40 +257,21 @@ class trVAEATAC:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
-        if feed_fake:
-            decoder_labels = np.ones(shape=encoder_labels.shape)
+        if feed_fake > 0:
+            decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
         else:
             decoder_labels = encoder_labels
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_domains)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_domains)
 
-        mmd_latent = model.cvae_model.predict([data, encoder_labels, decoder_labels])[1]
-        return mmd_latent
+        adata = remove_sparsity(adata)
+        mmd_latent = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[1]
+        mmd_latent_adata = anndata.AnnData(X=mmd_latent)
+        mmd_latent_adata.obs = adata.obs.copy(deep=True)
 
-    def _reconstruct(self, data, encoder_labels, decoder_labels, use_data=False):
-        """
-            Map back the latent space encoding via the decoder.
-            # Parameters
-                data: `~anndata.AnnData`
-                    Annotated data matrix whether in latent space or primary space.
-                labels: numpy nd-array
-                    `numpy nd-array` of labels to be fed as CVAE's condition array.
-                use_data: bool
-                    this flag determines whether the `data` is already in latent space or not.
-                    if `True`: The `data` is in latent space (`data.X` is in shape [n_obs, z_dim]).
-                    if `False`: The `data` is not in latent space (`data.X` is in shape [n_obs, n_vars]).
-            # Returns
-                rec_data: 'numpy nd-array'
-                    returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
-        """
-        if use_data:
-            latent = data
-        else:
-            latent = self.to_latent(data, encoder_labels)
-        rec_data = self.decoder_model.predict([latent, decoder_labels])
-        return rec_data
+        return mmd_latent_adata
 
-    def predict(self, data, encoder_labels, decoder_labels, data_space='None'):
+    def predict(self, adata, encoder_labels, decoder_labels):
         """
             Predicts the cell type provided by the user in stimulated condition.
             # Parameters
@@ -322,25 +293,13 @@ class trVAEATAC:
             prediction = network.predict('CD4T', obs_key={"cell_type": ["CD8T", "NK"]})
             ```
         """
-        if sparse.issparse(data.X):
-            if data_space == 'latent':
-                stim_pred = self._reconstruct(data.X.A, encoder_labels, decoder_labels, use_data=True)
-            elif data_space == 'mmd':
-                stim_pred = self._reconstruct_from_mmd(data.X.A)
-            else:
-                stim_pred = self._reconstruct(data.X.A, encoder_labels, decoder_labels)
-        else:
-            if data_space == 'latent':
-                stim_pred = self._reconstruct(data.X, encoder_labels, decoder_labels, use_data=True)
-            elif data_space == 'mmd':
-                stim_pred = self._reconstruct_from_mmd(data.X)
-            else:
-                stim_pred = self._reconstruct(data.X, encoder_labels, decoder_labels)
-        return stim_pred[0]
+        adata = remove_sparsity(adata)
+        reconstructed = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[0]
+        reconstructed_adata = anndata.AnnData(X=reconstructed)
+        reconstructed_adata.obs = adata.obs.copy(deep=True)
+        reconstructed_adata.var_names = adata.var_names
 
-    def _reconstruct_from_mmd(self, data):
-        model = Model(inputs=self.decoder_model.layers[1], outputs=self.decoder_model.outputs)
-        return model.predict(data)
+        return reconstructed_adata
 
     def _make_classifier_trainable(self, trainable):
         self.classifier_model.layers[-1].trainable = trainable
@@ -366,6 +325,7 @@ class trVAEATAC:
         self.classifier_model = load_model(os.path.join(self.model_path, 'classifier.h5'), compile=False)
         self.encoder_model = load_model(os.path.join(self.model_path, 'encoder.h5'), compile=False)
         self.decoder_model = load_model(os.path.join(self.model_path, 'decoder.h5'), compile=False)
+        self.decoder_mmd_model = load_model(os.path.join(self.model_path, 'decoder_mmd.h5'), compile=False)
         self._loss_function()
 
     def save_model(self):
@@ -374,10 +334,10 @@ class trVAEATAC:
         self.classifier_model.save(os.path.join(self.model_path, "classifier.h5"), overwrite=True)
         self.encoder_model.save(os.path.join(self.model_path, "encoder.h5"), overwrite=True)
         self.decoder_model.save(os.path.join(self.model_path, "decoder.h5"), overwrite=True)
-        log.info(f"Model saved in file: {self.model_path}. Training finished")
+        self.decoder_mmd_model.save(os.path.join(self.model_path, "decoder_mmd.h5"), overwrite=True)
 
     def train(self, train_adata, valid_adata,
-              domain_key, label_key, source_key, target_key, le,
+              domain_key, label_key, source_key, target_key, domain_encoder,
               n_epochs=25, batch_size=32, early_stop_limit=20,
               lr_reducer=10, save=True):
         """
@@ -408,7 +368,8 @@ class trVAEATAC:
             ```python
             import scanpy as sc
             import scgen
-            train_data = sc.read(train_katrain_kang.h5ad           >>> validation_data = sc.read(valid_kang.h5ad)
+            train_data = sc.read(train_kang.h5ad)
+            validation_data = sc.read(valid_kang.h5ad)
             network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
             network.train(n_epochs=20)
             ```
@@ -418,38 +379,35 @@ class trVAEATAC:
         if not isinstance(target_key, list):
             target_key = [target_key]
 
-        train_labels_encoded, self.domain_enc = label_encoder(train_adata, label_encoder=le, condition_key=domain_key)
-        valid_labels_encoded, _ = label_encoder(valid_adata, label_encoder=le, condition_key=domain_key)
+        train_labels_encoded, self.domain_enc = label_encoder(train_adata, label_encoder=domain_encoder, condition_key=domain_key)
+        valid_labels_encoded, _ = label_encoder(valid_adata, label_encoder=domain_encoder, condition_key=domain_key)
 
         train_labels_onehot = to_categorical(train_labels_encoded, num_classes=self.n_domains)
         valid_labels_onehot = to_categorical(valid_labels_encoded, num_classes=self.n_domains)
 
-        if sparse.issparse(valid_adata.X):
-            valid_adata.X = valid_adata.X.A
-
-        if sparse.issparse(train_adata.X):
-            train_adata.X = train_adata.X.A
+        train_adata = remove_sparsity(train_adata)
+        valid_adata = remove_sparsity(valid_adata)
 
         source_adata_train = train_adata.copy()[train_adata.obs[domain_key].isin(source_key)]
         source_classes_train = source_adata_train.obs[label_key].values
         source_classes_train = self.label_enc.fit_transform(source_classes_train)
         source_classes_train = to_categorical(source_classes_train, num_classes=self.n_labels)
-        source_labels_train_encode = np.zeros(source_adata_train.shape[0])
-        source_labels_train_onehot = to_categorical(source_labels_train_encode, num_classes=self.n_domains)
+        source_domains_train_encoded = np.zeros(source_adata_train.shape[0])
+        source_domains_train_onehot = to_categorical(source_domains_train_encoded, num_classes=self.n_domains)
 
         target_adata_train = train_adata.copy()[train_adata.obs[domain_key].isin(target_key)]
         target_classes_train = target_adata_train.obs[label_key].values
         target_classes_train = self.label_enc.transform(target_classes_train)
         target_classes_train = to_categorical(target_classes_train, num_classes=self.n_labels)
-        target_labels_encode = np.ones(target_adata_train.shape[0])
-        target_labels_onehot = to_categorical(target_labels_encode, num_classes=self.n_domains)
+        target_domains_encoded = np.ones(target_adata_train.shape[0])
+        target_domains_onehot = to_categorical(target_domains_encoded, num_classes=self.n_domains)
 
         source_adata_valid = valid_adata.copy()[valid_adata.obs[domain_key].isin(source_key)]
         source_classes_valid = source_adata_valid.obs[label_key].values
         source_classes_valid = self.label_enc.transform(source_classes_valid)
         source_classes_valid = to_categorical(source_classes_valid, num_classes=self.n_labels)
-        source_labels_valid_encode = np.zeros(source_adata_valid.shape[0])
-        source_labels_valid_onehot = to_categorical(source_labels_valid_encode, num_classes=self.n_domains)
+        source_domains_valid_encoded = np.zeros(source_adata_valid.shape[0])
+        source_domains_valid_onehot = to_categorical(source_domains_valid_encoded, num_classes=self.n_domains)
 
         best_val_loss = 100000.0
         patience = 0
@@ -470,13 +428,13 @@ class trVAEATAC:
             )
 
             x_train = [source_adata_train.X,
-                       source_labels_train_onehot,
-                       source_labels_train_onehot]
+                       source_domains_train_onehot,
+                       source_domains_train_onehot]
             y_train = source_classes_train
 
             x_valid = [source_adata_valid.X,
-                       source_labels_valid_onehot,
-                       source_labels_valid_onehot]
+                       source_domains_valid_onehot,
+                       source_domains_valid_onehot]
             y_valid = source_classes_valid
 
             class_history = self.classifier_model.fit(
@@ -489,8 +447,8 @@ class trVAEATAC:
             )
 
             x_target = [target_adata_train.X,
-                        target_labels_onehot,
-                        target_labels_onehot]
+                        target_domains_onehot,
+                        target_domains_onehot]
             y_target = target_classes_train
 
             _, target_acc = self.classifier_model.evaluate(x_target, y_target, verbose=0)
@@ -528,9 +486,4 @@ class trVAEATAC:
                 self._loss_function()
                 print(f"Epoch {i}: learning rate reduced to {self.lr}")
         if save:
-            os.makedirs(self.model_path, exist_ok=True)
-            self.cvae_model.save(os.path.join(self.model_path, "mmd_cvae.h5"), overwrite=True)
-            self.classifier_model.save(os.path.join(self.model_path, "classifier.h5"), overwrite=True)
-            self.encoder_model.save(os.path.join(self.model_path, "encoder.h5"), overwrite=True)
-            self.decoder_model.save(os.path.join(self.model_path, "decoder.h5"), overwrite=True)
-            log.info(f"Model saved in file: {self.model_path}. Training finished")
+            self.save_model()
