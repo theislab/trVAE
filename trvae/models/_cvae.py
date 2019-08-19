@@ -3,7 +3,7 @@ import logging
 import tensorflow
 from scipy import sparse
 
-from trvae.models._utils import shuffle_data, label_encoder
+from trvae.utils import label_encoder
 
 log = logging.getLogger(__file__)
 
@@ -327,8 +327,6 @@ class CVAE:
         if not initial_run:
             self.saver.restore(self.sess, self.model_to_use)
         train_labels, le = label_encoder(train_data)
-        if shuffle:
-            train_data, train_labels = shuffle_data(train_data, train_labels)
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
         if use_validation:
