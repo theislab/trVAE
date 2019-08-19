@@ -12,7 +12,7 @@ from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from scipy import sparse
 
-from trvae.models._utils import shuffle_data, sample_z
+from trvae.models._utils import sample_z
 
 log = logging.getLogger(__file__)
 
@@ -409,17 +409,11 @@ class VAE:
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
 
-        if shuffle:
-            train_data = shuffle_data(train_data)
-
         x = train_data.X
         y = train_data.X
         if use_validation:
             if sparse.issparse(valid_data.X):
                 valid_data.X = valid_data.X.A
-
-            if shuffle:
-                valid_data = shuffle_data(valid_data)
 
             x_valid = valid_data.X
             y_valid = valid_data.X
