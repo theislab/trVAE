@@ -15,6 +15,7 @@ from trvae.models._activations import disp_activation, mean_activation
 from trvae.models._losses import LOSSES
 from trvae.models._utils import sample_z
 from trvae.models.layers import SliceLayer, ColwiseMultLayer
+from trvae.utils import label_encoder
 
 log = logging.getLogger(__file__)
 
