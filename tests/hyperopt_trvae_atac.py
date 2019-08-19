@@ -72,7 +72,7 @@ def create_model(net_train_adata, net_valid_adata,
                   source_key="RNA-seq",
                   target_key="ATAC-seq",
                   domain_encoder=domain_encoder,
-                  n_epochs=1000,
+                  n_epochs=10000,
                   batch_size=batch_size_choices,
                   early_stop_limit=250,
                   lr_reducer=100,
@@ -88,7 +88,7 @@ def create_model(net_train_adata, net_valid_adata,
                                                     label_encoder=domain_encoder)
     target_adata_domains_onehot = to_categorical(target_adata_domains_encoded, num_classes=n_domains)
 
-    target_adata_classes_encoded, _ = network.label_enc.transform(target_adata.obs[label_key].values)
+    target_adata_classes_encoded = network.label_enc.transform(target_adata.obs[label_key].values)
     target_adata_classes_onehot = to_categorical(target_adata_classes_encoded, num_classes=n_labels)
 
     x_target = [target_adata.X,
