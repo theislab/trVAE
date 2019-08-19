@@ -3,7 +3,6 @@ import os
 
 import keras
 import numpy as np
-import tensorflow as tf
 from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping
 from keras.layers import Dense, BatchNormalization, Dropout, Input, Lambda, Reshape, Conv1D, \
@@ -13,7 +12,7 @@ from keras.models import Model, load_model
 from keras.utils import multi_gpu_model
 from scipy import sparse
 
-from trvae.models.utils import shuffle_data
+from trvae.models._utils import shuffle_data, sample_z
 
 log = logging.getLogger(__file__)
 
@@ -104,7 +103,7 @@ class VAE:
 
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
-        z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
+        z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
 
         model = Model(inputs=x, outputs=[mean, log_var, z], name=name)
         return mean, log_var, model
@@ -161,23 +160,6 @@ class VAE:
         model = Model(inputs=z, outputs=h, name=name)
         return h, model
 
-    @staticmethod
-    def _sample_z(args):
-        """
-            Samples from standard Normal distribution with shape [size, z_dim] and
-            applies re-parametrization trick. It is actually sampling from latent
-            space distributions with N(mu, var) computed in `_encoder` function.
-            # Parameters
-                No parameters are needed.
-            # Returns
-                The computed Tensor of samples with shape [size, z_dim].
-        """
-        mu, log_var = args
-        batch_size = K.shape(mu)[0]
-        z_dim = K.int_shape(mu)[1]
-        eps = K.random_normal(shape=[batch_size, z_dim])
-        return mu + K.exp(log_var / 2) * eps
-
     def _create_network(self):
         """
             Constructs the whole C-VAE network. It is step-by-step constructing the C-VAE
@@ -210,65 +192,6 @@ class VAE:
             self.gpu_vae_model = self.vae_model
             self.gpu_encoder_model = self.encoder_model
             self.gpu_decoder_model = self.decoder_model
-
-    @staticmethod
-    def compute_kernel(x, y, kernel='rbf', **kwargs):
-        """
-            Computes RBF kernel between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed RBF kernel between x and y
-        """
-        scales = kwargs.get("scales", [])
-        if kernel == "rbf":
-            x_size = K.shape(x)[0]
-            y_size = K.shape(y)[0]
-            dim = K.shape(x)[1]
-            tiled_x = K.tile(K.reshape(x, K.stack([x_size, 1, dim])), K.stack([1, y_size, 1]))
-            tiled_y = K.tile(K.reshape(y, K.stack([1, y_size, dim])), K.stack([x_size, 1, 1]))
-            return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
-        elif kernel == 'raphy':
-            scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(VAE.squared_distance(x, y), 0)
-            scales = K.expand_dims(K.expand_dims(scales, -1), -1)
-            weights = K.eval(K.shape(scales)[0])
-            weights = K.variable(value=np.asarray(weights))
-            weights = K.expand_dims(K.expand_dims(weights, -1), -1)
-            return K.sum(weights * K.exp(-squared_dist / (K.pow(scales, 2))), 0)
-        elif kernel == "multi-scale-rbf":
-            sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
-
-            beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = VAE.squared_distance(x, y)
-            s = K.dot(beta, K.reshape(distances, (1, -1)))
-
-            return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
-
-    @staticmethod
-    def squared_distance(x, y):  # returns the pairwise euclidean distance
-        r = K.expand_dims(x, axis=1)
-        return K.sum(K.square(r - y), axis=-1)
-
-    @staticmethod
-    def compute_mmd(x, y, kernel, **kwargs):  # [batch_size, z_dim] [batch_size, z_dim]
-        """
-            Computes Maximum Mean Discrepancy(MMD) between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed MMD between x and y
-        """
-        x_kernel = VAE.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = VAE.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = VAE.compute_kernel(x, y, kernel=kernel, **kwargs)
-        return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
     def _loss_function(self, compile_gpu_model=True):
         """
@@ -525,6 +448,3 @@ class VAE:
             self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
             log.info(f"Model saved in file: {self.model_to_use}. Training finished")
         return histories
-
-if __name__ == '__main__':
-    VAE(5000, arch_style=1)

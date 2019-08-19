@@ -96,19 +96,19 @@ def create_model(train_data, valid_data, data_name):
     batch_size_choices = {{choice([256, 512, 1024])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
 
-    network = trvae.CtrVAE(x_dimension=(64, 64, 3),
-                           z_dimension=z_dim_choices,
-                           mmd_dimension=mmd_dim_choices,
-                           alpha=alpha_choices,
-                           beta=beta_choices,
-                           gamma=0,
-                           kernel='rbf',
-                           arch_style=3,
-                           train_with_fake_labels=False,
-                           learning_rate=0.001,
-                           model_path=f"./models/RCCVAE/hyperopt/{data_name}-{64}x{64}-{True}/{3}-{z_dim_choices}/",
-                           gpus=4,
-                           dropout_rate=dropout_rate_choices)
+    network = trvae.DCtrVAE(x_dimension=(64, 64, 3),
+                            z_dimension=z_dim_choices,
+                            mmd_dimension=mmd_dim_choices,
+                            alpha=alpha_choices,
+                            beta=beta_choices,
+                            gamma=0,
+                            kernel='rbf',
+                            arch_style=3,
+                            train_with_fake_labels=False,
+                            learning_rate=0.001,
+                            model_path=f"./models/RCCVAE/hyperopt/{data_name}-{64}x{64}-{True}/{3}-{z_dim_choices}/",
+                            gpus=4,
+                            dropout_rate=dropout_rate_choices)
 
     history = network.train(train_data,
                             use_validation=True,

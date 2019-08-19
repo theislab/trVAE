@@ -12,7 +12,7 @@ from keras.utils import to_categorical
 from scipy import sparse
 from sklearn.preprocessing import LabelEncoder
 
-from .utils import label_encoder
+from ._utils import label_encoder, sample_z
 
 log = logging.getLogger(__file__)
 
@@ -56,6 +56,7 @@ class trVAEATAC:
         self.model_path = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.mmd_computation_way = kwargs.get("mmd_computation_way", "general")
+        self.print_summary = kwargs.get("print_summary", True)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(self.n_domains,), name="encoder_labels")
@@ -69,10 +70,11 @@ class trVAEATAC:
         self._create_network()
         self._loss_function()
 
-        self.encoder_model.summary()
-        self.decoder_model.summary()
-        self.cvae_model.summary()
-        self.classifier_model.summary()
+        if self.print_summary:
+            self.encoder_model.summary()
+            self.decoder_model.summary()
+            self.cvae_model.summary()
+            self.classifier_model.summary()
 
     def _encoder(self, x, y, name="encoder"):
         """
@@ -102,7 +104,7 @@ class trVAEATAC:
         h = Dropout(self.dr_rate)(h)
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
-        z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
+        z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
         model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
         return mean, log_var, model
 
@@ -149,23 +151,6 @@ class trVAEATAC:
         model = Model(inputs=mmd_latent, outputs=h, name=name)
         return model
 
-    @staticmethod
-    def _sample_z(args):
-        """
-            Samples from standard Normal distribution with shape [size, z_dim] and
-            applies re-parametrization trick. It is actually sampling from latent
-            space distributions with N(mu, var) computed in `_encoder` function.
-            # Parameters
-                No parameters are needed.
-            # Returns
-                The computed Tensor of samples with shape [size, z_dim].
-        """
-        mu, log_var = args
-        batch_size = K.shape(mu)[0]
-        z_dim = K.int_shape(mu)[1]
-        eps = K.random_normal(shape=[batch_size, z_dim])
-        return mu + K.exp(log_var / 2) * eps
-
     def _create_network(self):
         """
             Constructs the whole C-VAE network. It is step-by-step constructing the C-VAE
@@ -200,65 +185,6 @@ class trVAEATAC:
                                       outputs=classifier_outputs,
                                       name='classifier')
 
-    @staticmethod
-    def compute_kernel(x, y, kernel='rbf', **kwargs):
-        """
-            Computes RBF kernel between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed RBF kernel between x and y
-        """
-        scales = kwargs.get("scales", [])
-        if kernel == "rbf":
-            x_size = K.shape(x)[0]
-            y_size = K.shape(y)[0]
-            dim = K.shape(x)[1]
-            tiled_x = K.tile(K.reshape(x, K.stack([x_size, 1, dim])), K.stack([1, y_size, 1]))
-            tiled_y = K.tile(K.reshape(y, K.stack([1, y_size, dim])), K.stack([x_size, 1, 1]))
-            return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
-        elif kernel == 'raphy':
-            scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(trVAEATAC.squared_distance(x, y), 0)
-            scales = K.expand_dims(K.expand_dims(scales, -1), -1)
-            weights = K.eval(K.shape(scales)[0])
-            weights = K.variable(value=np.asarray(weights))
-            weights = K.expand_dims(K.expand_dims(weights, -1), -1)
-            return K.sum(weights * K.exp(-squared_dist / (K.pow(scales, 2))), 0)
-        elif kernel == "multi-scale-rbf":
-            sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
-
-            beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = trVAEATAC.squared_distance(x, y)
-            s = K.dot(beta, K.reshape(distances, (1, -1)))
-
-            return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
-
-    @staticmethod
-    def squared_distance(x, y):  # returns the pairwise euclidean distance
-        r = K.expand_dims(x, axis=1)
-        return K.sum(K.square(r - y), axis=-1)
-
-    @staticmethod
-    def compute_mmd(x, y, kernel, **kwargs):  # [batch_size, z_dim] [batch_size, z_dim]
-        """
-            Computes Maximum Mean Discrepancy(MMD) between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed MMD between x and y
-        """
-        x_kernel = trVAEATAC.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = trVAEATAC.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = trVAEATAC.compute_kernel(x, y, kernel=kernel, **kwargs)
-        return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
-
     def _loss_function(self):
         """
             Defines the loss function of C-VAE network after constructing the whole
@@ -286,11 +212,11 @@ class trVAEATAC:
                         boundary = int(self.mmd_computation_way)
                         for i in range(boundary):
                             for j in range(boundary, self.n_domains):
-                                loss += self.compute_mmd(conditions_mmd[i], conditions_mmd[j], self.kernel_method)
+                                loss += compute_mmd(conditions_mmd[i], conditions_mmd[j], self.kernel_method)
                     else:
                         for i in range(len(conditions_mmd)):
                             for j in range(i):
-                                loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
+                                loss += compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
                     return self.beta * loss
 
             def cce_loss(real_classes, pred_classes):

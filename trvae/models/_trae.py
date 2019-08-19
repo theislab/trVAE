@@ -11,7 +11,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from scipy import sparse
 
-from trvae.models.utils import label_encoder, shuffle_data
+from trvae.models._utils import label_encoder, shuffle_data, compute_mmd
 
 log = logging.getLogger(__file__)
 
@@ -133,65 +133,6 @@ class trAE:
                                outputs=[reconstruction_output, mmd_output],
                                name="rae")
 
-    @staticmethod
-    def compute_kernel(x, y, kernel='rbf', **kwargs):
-        """
-            Computes RBF kernel between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed RBF kernel between x and y
-        """
-        scales = kwargs.get("scales", [])
-        if kernel == "rbf":
-            x_size = K.shape(x)[0]
-            y_size = K.shape(y)[0]
-            dim = K.shape(x)[1]
-            tiled_x = K.tile(K.reshape(x, K.stack([x_size, 1, dim])), K.stack([1, y_size, 1]))
-            tiled_y = K.tile(K.reshape(y, K.stack([1, y_size, dim])), K.stack([x_size, 1, 1]))
-            return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
-        elif kernel == 'raphy':
-            scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(trAE.squared_distance(x, y), 0)
-            scales = K.expand_dims(K.expand_dims(scales, -1), -1)
-            weights = K.eval(K.shape(scales)[0])
-            weights = K.variable(value=np.asarray(weights))
-            weights = K.expand_dims(K.expand_dims(weights, -1), -1)
-            return K.sum(weights * K.exp(-squared_dist / (K.pow(scales, 2))), 0)
-        elif kernel == "multi-scale-rbf":
-            sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
-
-            beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = trAE.squared_distance(x, y)
-            s = K.dot(beta, K.reshape(distances, (1, -1)))
-
-            return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
-
-    @staticmethod
-    def squared_distance(x, y):  # returns the pairwise euclidean distance
-        r = K.expand_dims(x, axis=1)
-        return K.sum(K.square(r - y), axis=-1)
-
-    @staticmethod
-    def compute_mmd(x, y, kernel, **kwargs):  # [batch_size, z_dim] [batch_size, z_dim]
-        """
-            Computes Maximum Mean Discrepancy(MMD) between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed MMD between x and y
-        """
-        x_kernel = trAE.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = trAE.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = trAE.compute_kernel(x, y, kernel=kernel, **kwargs)
-        return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
-
     def _loss_function(self):
         """
             Defines the loss function of C-VAE network after constructing the whole
@@ -213,7 +154,7 @@ class trAE:
                 with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
                     real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
                     source_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=2)
-                    loss = self.compute_mmd(source_mmd, dest_mmd, self.kernel_method)
+                    loss = compute_mmd(source_mmd, dest_mmd, self.kernel_method)
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)

@@ -1,6 +1,7 @@
 import numpy as np
 import scanpy as sc
 from scipy import sparse
+from sklearn.preprocessing import LabelEncoder
 
 
 def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True, n_top_genes=2000):
@@ -53,3 +54,33 @@ def train_test_split(adata, train_frac=0.85):
     valid_data = adata[test_idx, :]
 
     return train_data, valid_data
+
+
+def label_encoder(adata, label_encoder=None, condition_key='condition'):
+    """
+        Encode labels of Annotated `adata` matrix using sklearn.preprocessing.LabelEncoder class.
+        Parameters
+        ----------
+        adata: `~anndata.AnnData`
+            Annotated data matrix.
+        Returns
+        -------
+        labels: numpy nd-array
+            Array of encoded labels
+        Example
+        --------
+        >>> import trvae
+        >>> import scanpy as sc
+        >>> train_data = sc.read("./data/train.h5ad")
+        >>> train_labels, label_encoder = label_encoder(train_data)
+    """
+    if label_encoder is None:
+        le = LabelEncoder()
+        labels = le.fit_transform(adata.obs[condition_key].tolist())
+    else:
+        le = label_encoder
+        labels = np.zeros(adata.shape[0])
+        for condition, label in label_encoder.items():
+            labels[adata.obs[condition_key] == condition] = label
+    return labels.reshape(-1, 1), le
+

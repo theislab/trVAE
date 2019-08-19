@@ -17,13 +17,16 @@ from keras.utils import multi_gpu_model
 from keras_vggface.vggface import VGGFace
 from scipy import sparse
 
-from .utils import label_encoder
+from trvae.models._utils import compute_mmd, sample_z
+from trvae.utils import label_encoder
 from ..data_loader import PairedDataSequence
+from ._losses import LOSSES
+from ._activations import ACTIVATIONS
 
 log = logging.getLogger(__file__)
 
 
-class CtrVAE:
+class DCtrVAE:
     """
         Regularized Convolutional C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.
@@ -46,7 +49,6 @@ class CtrVAE:
     """
 
     def __init__(self, x_dimension, z_dimension=100, **kwargs):
-        # tf.reset_default_graph()
         self.x_dim = x_dimension if isinstance(x_dimension, tuple) else (x_dimension,)
         self.z_dim = z_dimension
         self.image_shape = x_dimension
@@ -115,7 +117,7 @@ class CtrVAE:
             h = Dropout(self.dr_rate)(h)
             mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
-            z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
+            z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
             model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
             model.summary()
             return mean, log_var, model
@@ -136,7 +138,7 @@ class CtrVAE:
             h = Dropout(self.dr_rate)(h)
             mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
-            z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
+            z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
             model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
             model.summary()
             return mean, log_var, model
@@ -181,7 +183,7 @@ class CtrVAE:
             mean = Dense(self.z_dim, kernel_initializer=self.init_w)(self.enc_dense)
             log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(self.enc_dense)
 
-            z = Lambda(self._sample_z, output_shape=(self.z_dim,))([mean, log_var])
+            z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
             model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
             # if self.x_dim[0] > 48:
             #     for layer_name in self.vggface_layers[1:]:
@@ -286,23 +288,6 @@ class CtrVAE:
             model.summary()
             return h, h_mmd, model
 
-    @staticmethod
-    def _sample_z(args):
-        """
-            Samples from standard Normal distribution with shape [size, z_dim] and
-            applies re-parametrization trick. It is actually sampling from latent
-            space distributions with N(mu, var) computed in `_encoder` function.
-            # Parameters
-                No parameters are needed.
-            # Returns
-                The computed Tensor of samples with shape [size, z_dim].
-        """
-        mu, log_var = args
-        batch_size = K.shape(mu)[0]
-        z_dim = K.int_shape(mu)[1]
-        eps = K.random_normal(shape=[batch_size, z_dim])
-        return mu + K.exp(log_var / 2) * eps
-
     def _create_network(self):
         """
             Constructs the whole C-VAE network. It is step-by-step constructing the C-VAE
@@ -340,65 +325,6 @@ class CtrVAE:
             self.gpu_cvae_model = self.cvae_model
             self.gpu_encoder_model = self.encoder_model
             self.gpu_decoder_model = self.decoder_model
-
-    @staticmethod
-    def compute_kernel(x, y, method='rbf', **kwargs):
-        """
-            Computes RBF kernel between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed RBF kernel between x and y
-        """
-        scales = kwargs.get("scales", [])
-        if method == "rbf":
-            x_size = K.shape(x)[0]
-            y_size = K.shape(y)[0]
-            dim = K.shape(x)[1]
-            tiled_x = K.tile(K.reshape(x, K.stack([x_size, 1, dim])), K.stack([1, y_size, 1]))
-            tiled_y = K.tile(K.reshape(y, K.stack([1, y_size, dim])), K.stack([x_size, 1, 1]))
-            return K.exp(-K.mean(K.square(tiled_x - tiled_y), axis=2) / K.cast(dim, tf.float32))
-        elif method == 'raphy':
-            scales = K.variable(value=np.asarray(scales))
-            squared_dist = K.expand_dims(CtrVAE.squared_distance(x, y), 0)
-            scales = K.expand_dims(K.expand_dims(scales, -1), -1)
-            weights = K.eval(K.shape(scales)[0])
-            weights = K.variable(value=np.asarray(weights))
-            weights = K.expand_dims(K.expand_dims(weights, -1), -1)
-            return K.sum(weights * K.exp(-squared_dist / (K.pow(scales, 2))), 0)
-        elif method == "multi-scale-rbf":
-            sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
-
-            beta = 1. / (2. * (K.expand_dims(sigmas, 1)))
-            distances = CtrVAE.squared_distance(x, y)
-            s = K.dot(beta, K.reshape(distances, (1, -1)))
-
-            return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
-
-    @staticmethod
-    def squared_distance(x, y):  # returns the pairwise euclidean distance
-        r = K.expand_dims(x, axis=1)
-        return K.sum(K.square(r - y), axis=-1)
-
-    @staticmethod
-    def compute_mmd(x, y, kernel_method, **kwargs):  # [batch_size, z_dim] [batch_size, z_dim]
-        """
-            Computes Maximum Mean Discrepancy(MMD) between x and y.
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-            # Returns
-                returns the computed MMD between x and y
-        """
-        x_kernel = CtrVAE.compute_kernel(x, x, method=kernel_method, **kwargs)
-        y_kernel = CtrVAE.compute_kernel(y, y, method=kernel_method, **kwargs)
-        xy_kernel = CtrVAE.compute_kernel(x, y, method=kernel_method, **kwargs)
-        return K.mean(x_kernel) + K.mean(y_kernel) - 2 * K.mean(xy_kernel)
 
     def _loss_function(self, compile_gpu_model=True):
         """
@@ -460,7 +386,7 @@ class CtrVAE:
                 with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
                     real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
                     source_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=2)
-                    loss = self.compute_mmd(source_mmd, dest_mmd, self.kernel_method)
+                    loss = compute_mmd(source_mmd, dest_mmd, self.kernel_method)
                     return self.beta * loss
 
             self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
@@ -532,10 +458,7 @@ class CtrVAE:
                     returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
         """
         latent = self.to_latent(data, encoder_labels)
-        # if self.arch_style < 3:
         rec_data = self.decoder_model.predict([latent, decoder_labels])
-        # else:
-        #     rec_data = self.decoder_model.predict([data, latent, encoder_labels, decoder_labels])
         return rec_data
 
     def predict(self, data, encoder_labels, decoder_labels, data_space='None'):
@@ -600,7 +523,7 @@ class CtrVAE:
     def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32,
               early_stop_limit=20,
               threshold=0.0025, initial_run=True,
-              shuffle=True, verbose=2, save=True, paired=False):  # TODO: Write minibatches for each source and destination
+              shuffle=True, verbose=2, save=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -649,53 +572,15 @@ class CtrVAE:
             EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
             CSVLogger(filename="./csv_logger.log")
         ]
-        if paired:
-            xA_train = train_data[train_data.obs['condition'] == 0].X
-            xB_train = train_data[train_data.obs['condition'] == 1].X
-
-            xA_train = np.reshape(xA_train, newshape=(-1, *self.x_dim))
-            xB_train = np.reshape(xB_train, newshape=(-1, *self.x_dim))
-
-            x_train = np.concatenate([xA_train, xA_train, ], axis=0)
-            y_train = np.concatenate([xA_train, xB_train, ], axis=0)
-            encoder_labels_train = np.concatenate([np.zeros(xA_train.shape[0]), np.zeros(xA_train.shape[0]),
-                                                   ])
-
-            decoder_labels_train = np.concatenate([np.zeros(xA_train.shape[0]), np.ones(xA_train.shape[0]),
-                                                   ])
-
-            x = [x_train, encoder_labels_train, decoder_labels_train]
-            y = [y_train, encoder_labels_train]
-
-        else:
-            x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
-            x = [x_train, train_labels, train_labels]
-            y = [x_train, train_labels]
+        x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
+        x = [x_train, train_labels, train_labels]
+        y = [x_train, train_labels]
 
         if use_validation:
-            if paired:
-                xA_test = valid_data[valid_data.obs['condition'] == 0].X
-                xB_test = valid_data[valid_data.obs['condition'] == 1].X
-
-                xA_test = np.reshape(xA_test, newshape=(-1, *self.x_dim))
-                xB_test = np.reshape(xB_test, newshape=(-1, *self.x_dim))
-
-                x_test = np.concatenate([xA_test, xA_test, ], axis=0)
-                y_test = np.concatenate([xA_test, xB_test, ], axis=0)
-
-                encoder_labels_test = np.concatenate([np.zeros(xA_test.shape[0]), np.zeros(xA_test.shape[0]),
-                                                      ])
-
-                decoder_labels_test = np.concatenate([np.zeros(xA_test.shape[0]), np.ones(xA_test.shape[0]),
-                                                      ])
-
-                x_test = [x_test, encoder_labels_test, decoder_labels_test]
-                y_test = [y_test, encoder_labels_test]
-            else:
-                x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
-                valid_labels, _ = label_encoder(valid_data)
-                x_test = [x_valid, valid_labels, valid_labels]
-                y_test = [x_valid, valid_labels]
+            x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
+            valid_labels, _ = label_encoder(valid_data)
+            x_test = [x_valid, valid_labels, valid_labels]
+            y_test = [x_valid, valid_labels]
 
             histories = self.gpu_cvae_model.fit(x=x,
                                                 y=y,

@@ -6,8 +6,8 @@ import tensorflow as tf
 from keras.utils import to_categorical
 from scipy import sparse
 
-from trvae.models.utils import label_encoder
-from trvae.models.utils import shuffle_data
+from trvae.models._utils import compute_mmd
+from trvae.utils import label_encoder
 
 log = logging.getLogger(__file__)
 
@@ -16,7 +16,6 @@ class trVAEMultiTF:
     """
         C-VAE vector Network class. This class contains the implementation of Conditional
         Variational Auto-encoder network.
-
         # Parameters
             kwargs:
                 key: `dropout_rate`: float
@@ -74,10 +73,8 @@ class trVAEMultiTF:
             Constructs the encoder sub-network of C-VAE. This function implements the
             encoder part of Variational Auto-encoder. It will transform primary
             data in the `n_vars` dimension-space to the `z_dimension` latent space.
-
             # Parameters
                 No parameters are needed.
-
             # Returns
                 mean: Tensor
                     A dense layer consists of means of gaussian distributions of latent space dimensions.
@@ -106,14 +103,11 @@ class trVAEMultiTF:
             Constructs the decoder sub-network of C-VAE. This function implements the
             decoder part of Variational Auto-encoder. It will transform constructed
             latent space to the previous space of data with n_dimensions = n_vars.
-
             # Parameters
                 No parameters are needed.
-
             # Returns
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
-
         """
         with tf.variable_scope("decoder", reuse=tf.AUTO_REUSE):
             xy = tf.concat([self.z_mean, self.decoder_labels], axis=1)
@@ -139,10 +133,8 @@ class trVAEMultiTF:
             Samples from standard Normal distribution with shape [size, z_dim] and
             applies re-parametrization trick. It is actually sampling from latent
             space distributions with N(mu, var) computed in `_encoder` function.
-
             # Parameters
                 No parameters are needed.
-
             # Returns
                 The computed Tensor of samples with shape [size, z_dim].
         """
@@ -157,10 +149,8 @@ class trVAEMultiTF:
             latent space. Second, It will sample from the latent space to feed the
             decoder part in next step. Finally, It will reconstruct the data by
             constructing decoder part of C-VAE.
-
             # Parameters
                 No parameters are needed.
-
             # Returns
                 Nothing will be returned.
         """
@@ -168,71 +158,14 @@ class trVAEMultiTF:
         self.z_mean = self._sample_z()
         self.x_hat, self.mmd_hl = self._mmd_decoder()
 
-    @staticmethod
-    def compute_kernel(x, y, kernel, **kwargs):
-        """
-            Computes RBF kernel between x and y.
-
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-
-            # Returns
-                returns the computed RBF kernel between x and y
-        """
-        if kernel == "rbf":
-            x_size = tf.shape(x)[0]
-            y_size = tf.shape(y)[0]
-            dim = tf.shape(x)[1]
-            tiled_x = tf.tile(tf.reshape(x, tf.stack([x_size, 1, dim])), tf.stack([1, y_size, 1]))
-            tiled_y = tf.tile(tf.reshape(y, tf.stack([1, y_size, dim])), tf.stack([x_size, 1, 1]))
-            return tf.exp(-tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2) / tf.cast(dim, tf.float32))
-        elif kernel == "multi-scale-rbf":
-            sigmas = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 5, 10, 15, 20, 25, 30, 35, 100, 1e3, 1e4, 1e5, 1e6]
-
-            beta = 1. / (2. * (tf.expand_dims(sigmas, 1)))
-            distances = trVAEMultiTF.squared_distance(x, y)
-            s = tf.matmul(beta, tf.reshape(distances, (1, -1)))
-
-            return tf.reshape(tf.reduce_sum(tf.exp(-s), 0), tf.shape(distances)) / len(sigmas)
-
-    @staticmethod
-    def squared_distance(x, y):  # returns the pairwise euclidean distance
-        r = tf.expand_dims(x, axis=1)
-        return tf.reduce_sum(tf.square(r - y), axis=-1)
-
-    @staticmethod
-    def compute_mmd(x, y, kernel, **kwargs):  # [batch_size, z_dim] [batch_size, z_dim]
-        """
-            Computes Maximum Mean Discrepancy(MMD) between x and y.
-
-            # Parameters
-                x: Tensor
-                    Tensor with shape [batch_size, z_dim]
-                y: Tensor
-                    Tensor with shape [batch_size, z_dim]
-
-            # Returns
-                returns the computed MMD between x and y
-        """
-        x_kernel = trVAEMultiTF.compute_kernel(x, x, kernel=kernel, **kwargs)
-        y_kernel = trVAEMultiTF.compute_kernel(y, y, kernel=kernel, **kwargs)
-        xy_kernel = trVAEMultiTF.compute_kernel(x, y, kernel=kernel, **kwargs)
-        return tf.reduce_mean(x_kernel) + tf.reduce_mean(y_kernel) - 2 * tf.reduce_mean(
-            xy_kernel)
-
     def _loss_function(self):
         """
             Defines the loss function of C-VAE network after constructing the whole
             network. This will define the KL Divergence and Reconstruction loss for
             C-VAE and also defines the Optimization algorithm for network. The C-VAE Loss
             will be weighted sum of reconstruction loss and KL Divergence loss.
-
             # Parameters
                 No parameters are needed.
-
             # Returns
                 Nothing will be returned.
         """
@@ -249,7 +182,7 @@ class trVAEMultiTF:
             loss = 0.0
             for i in range(len(conditions_mmd)):
                 for j in range(i):
-                    loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
+                    loss += compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
             self.mmd_loss = self.beta * loss
 
         self.trvae_loss = self.mmd_loss + self.kl_recon_loss
@@ -261,13 +194,11 @@ class trVAEMultiTF:
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
             for each sample in data.
-
             # Parameters
                 data: `~anndata.AnnData`
                     Annotated data matrix to be mapped to latent space. `data.X` has to be in shape [n_obs, n_vars].
                 labels: numpy nd-array
                     `numpy nd-array` of labels to be fed as CVAE's condition array.
-
             # Returns
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
@@ -285,13 +216,11 @@ class trVAEMultiTF:
                     Map `data` in to the pn layer after latent layer. This function will feed data
                     in encoder part of C-VAE and compute the latent space coordinates
                     for each sample in data.
-
                     # Parameters
                         data: `~anndata.AnnData`
                             Annotated data matrix to be mapped to latent space. `data.X` has to be in shape [n_obs, n_vars].
                         labels: numpy nd-array
                             `numpy nd-array` of labels to be fed as CVAE's condition array.
-
                     # Returns
                         latent: numpy nd-array
                             returns array containing latent space encoding of 'data'
@@ -316,19 +245,15 @@ class trVAEMultiTF:
     def _reconstruct(self, data, encoder_labels, decoder_labels, size_factor=None):
         """
             Map back the latent space encoding via the decoder.
-
             # Parameters
                 data: `~anndata.AnnData`
                     Annotated data matrix whether in latent space or primary space.
-
                 labels: numpy nd-array
                     `numpy nd-array` of labels to be fed as CVAE's condition array.
-
                 use_data: bool
                     this flag determines whether the `data` is already in latent space or not.
                     if `True`: The `data` is in latent space (`data.X` is in shape [n_obs, z_dim]).
                     if `False`: The `data` is not in latent space (`data.X` is in shape [n_obs, n_vars]).
-
             # Returns
                 rec_data: 'numpy nd-array'
                     returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
@@ -342,18 +267,14 @@ class trVAEMultiTF:
     def predict(self, adata, encoder_labels, decoder_labels, size_factor=None):
         """
             Predicts the cell type provided by the user in stimulated condition.
-
             # Parameters
                 data: `~anndata.AnnData`
                     Annotated data matrix whether in primary space.
-
                 labels: numpy nd-array
                     `numpy nd-array` of labels to be fed as CVAE's condition array.
-
             # Returns
                 stim_pred: numpy nd-array
                     `numpy nd-array` of predicted cells in primary space.
-
             # Example
             ```python
             import scanpy as sc
@@ -378,13 +299,10 @@ class trVAEMultiTF:
     def restore_model(self):
         """
             restores model weights from `model_to_use`.
-
             # Parameters
                 No parameters are needed.
-
             # Returns
                 Nothing will be returned.
-
             # Example
             ```python
             import scanpy as sc
@@ -405,7 +323,6 @@ class trVAEMultiTF:
             and validates the model using validation_data if it was given
             in the constructor function. This function is using `early stopping`
             technique to prevent overfitting.
-
             # Parameters
                 n_epochs: int
                     number of epochs to iterate and optimize network weights
@@ -423,11 +340,8 @@ class trVAEMultiTF:
                     if `True`: The network will initiate training and log some useful initial messages.
                     if `False`: Network will resume the training using `restore_model` function in order
                         to restore last model which has been trained with some training dataset.
-
-
             # Returns
                 Nothing will be returned
-
             # Example
             ```python
             import scanpy as sc
@@ -444,8 +358,6 @@ class trVAEMultiTF:
         if not initial_run:
             self.saver.restore(self.sess, self.model_to_use)
         train_labels, le = label_encoder(train_data, label_encoder=le, condition_key=condition_key)
-        if shuffle:
-            train_data, train_labels = shuffle_data(train_data, train_labels)
         if use_validation and valid_data is None:
             raise Exception("valid_data is None but use_validation is True.")
         if use_validation:

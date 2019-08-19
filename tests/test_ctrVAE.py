@@ -163,19 +163,19 @@ def train_network(data_dict=None,
         train_data = data_train.copy()
         valid_data = data_valid.copy()
 
-    network = trvae.CtrVAE(x_dimension=source_images.shape[1:],
-                           z_dimension=z_dim,
-                           mmd_dimension=mmd_dimension,
-                           alpha=alpha,
-                           beta=beta,
-                           gamma=gamma,
-                           kernel=kernel,
-                           arch_style=arch_style,
-                           train_with_fake_labels=False,
-                           learning_rate=learning_rate,
-                           model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/",
-                           gpus=gpus,
-                           dropout_rate=dropout_rate)
+    network = trvae.DCtrVAE(x_dimension=source_images.shape[1:],
+                            z_dimension=z_dim,
+                            mmd_dimension=mmd_dimension,
+                            alpha=alpha,
+                            beta=beta,
+                            gamma=gamma,
+                            kernel=kernel,
+                            arch_style=arch_style,
+                            train_with_fake_labels=False,
+                            learning_rate=learning_rate,
+                            model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/",
+                            gpus=gpus,
+                            dropout_rate=dropout_rate)
 
     print(train_data.shape, valid_data.shape)
     network.train(train_data,
@@ -266,10 +266,10 @@ def evaluate_network(data_dict=None, z_dim=100, n_files=5, k=5, arch_style=1, pr
     source_data_train = anndata.AnnData(X=source_images_train)
     source_data_valid = anndata.AnnData(X=source_images_valid)
 
-    network = trvae.CtrVAE(x_dimension=image_shape,
-                           z_dimension=z_dim,
-                           arch_style=arch_style,
-                           model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/")
+    network = trvae.DCtrVAE(x_dimension=image_shape,
+                            z_dimension=z_dim,
+                            arch_style=arch_style,
+                            model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/")
 
     network.restore_model()
 
@@ -482,10 +482,10 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
     train_labels, _ = trvae.label_encoder(train_data)
     fake_labels = np.ones(train_labels.shape)
 
-    network = trvae.CtrVAE(x_dimension=(img_width, img_height, n_channels),
-                           z_dimension=z_dim,
-                           arch_style=arch_style,
-                           model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/", )
+    network = trvae.DCtrVAE(x_dimension=(img_width, img_height, n_channels),
+                            z_dimension=z_dim,
+                            arch_style=arch_style,
+                            model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/", )
 
     network.restore_model()
 
