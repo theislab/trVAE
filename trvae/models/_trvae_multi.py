@@ -3,8 +3,6 @@ import os
 
 import keras
 import numpy as np
-import tensorflow as tf
-from keras import backend as K
 from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
 from keras.layers.advanced_activations import LeakyReLU
@@ -14,9 +12,9 @@ from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
 
 from trvae.models._activations import disp_activation, mean_activation
+from trvae.models._losses import LOSSES
+from trvae.models._utils import sample_z
 from trvae.models.layers import SliceLayer, ColwiseMultLayer
-from trvae.models.losses import ZINB, NB
-from trvae.models._utils import label_encoder, sample_z
 
 log = logging.getLogger(__file__)
 
@@ -59,6 +57,7 @@ class trVAEMulti:
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.loss_fn = kwargs.get("loss_fn", 'mse')
         self.ridge = kwargs.get('ridge', 0.1)
+        self.scale_factor = kwargs.get('scale_factor', 1.0)
         self.clip_value = kwargs.get('clip_value', 3.0)
 
         self.x = Input(shape=(self.x_dim,), name="data")
@@ -219,6 +218,18 @@ class trVAEMulti:
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
 
+    def _calculate_loss(self):
+        if self.loss_fn == 'nb':
+            loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha)
+        elif self.loss_fn == 'zinb':
+            loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha)
+        else:
+            loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
+
+        mmd_loss = LOSSES['mmd'](LOSSES['mmd'](self.n_conditions, self.beta, self.kernel_method, "general"))
+
+        return loss, mmd_loss
+
     def _loss_function(self):
         """
             Defines the loss function of C-VAE network after constructing the whole
@@ -230,64 +241,12 @@ class trVAEMulti:
             # Returns
                 Nothing will be returned.
         """
-
-        def batch_loss():
-            def zinb_loss(pi, disp, ridge):
-                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-
-                def zinb(y_true, y_pred):
-                    zinb_obj = ZINB(pi, theta=disp, ridge_lambda=ridge)
-                    return zinb_obj.loss(y_true, y_pred) + self.alpha * kl_loss
-
-                return zinb
-
-            def nb_loss(disp):
-                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-
-                def nb(y_true, y_pred):
-                    nb_obj = NB(theta=disp, masking=True, scale_factor=1.0)
-                    return nb_obj.loss(y_true, y_pred) + self.alpha * kl_loss
-
-                return nb
-
-            def kl_recon_loss(y_true, y_pred):
-                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-                recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
-                return K.mean(self.eta * recon_loss + self.alpha * kl_loss)
-
-            def mmd_loss(real_labels, y_pred):
-                with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
-                    real_labels = K.argmax(real_labels, axis=1)
-                    real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
-                    conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=self.n_conditions)
-                    loss = 0.0
-
-                    for i in range(len(conditions_mmd)):
-                        for j in range(i):
-                            loss += self.compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], self.kernel_method)
-                    return self.beta * loss
-
-            self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value)
-            if self.loss_fn == 'mse':
-                self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[kl_recon_loss, mmd_loss],
-                                        metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
-                                                 self.cvae_model.outputs[1].name: mmd_loss})
-            elif self.loss_fn == 'nb':
-                self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[nb_loss(self.disp_output), mmd_loss],
-                                        metrics={
-                                            self.cvae_model.outputs[0].name: nb_loss(self.disp_output),
-                                            self.cvae_model.outputs[1].name: mmd_loss})
-            elif self.loss_fn == 'zinb':
-                self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[zinb_loss(self.pi_output, self.disp_output, ridge=self.ridge), mmd_loss],
-                                        metrics={
-                                            self.cvae_model.outputs[0].name: zinb_loss(self.pi_output, self.disp_output,
-                                                                                       ridge=self.ridge),
-                                            self.cvae_model.outputs[1].name: mmd_loss})
-
-        batch_loss()
+        loss, mmd_loss = self._calculate_loss()
+        self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value)
+        self.cvae_model.compile(optimizer=self.cvae_optimizer,
+                                loss=[loss, mmd_loss],
+                                metrics={self.cvae_model.outputs[0].name: loss,
+                                         self.cvae_model.outputs[1].name: mmd_loss})
 
     def to_latent(self, adata, labels):
         """

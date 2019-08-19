@@ -362,9 +362,6 @@ class trVAE:
         if sparse.issparse(train_data.X):
             train_data.X = train_data.X.A
 
-        if shuffle:
-            train_data, train_labels = shuffle_data(train_data, train_labels)
-
         if self.train_with_fake_labels:
             x = [train_data.X, train_labels, pseudo_labels]
             y = [train_data.X, train_labels]
@@ -376,9 +373,6 @@ class trVAE:
                 valid_data.X = valid_data.X.A
 
             valid_labels, _ = label_encoder(valid_data)
-
-            if shuffle:
-                valid_data, valid_labels = shuffle_data(valid_data, valid_labels)
 
             x_valid = [valid_data.X, valid_labels, valid_labels]
             y_valid = [valid_data.X, valid_labels]
