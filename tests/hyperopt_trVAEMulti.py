@@ -94,7 +94,7 @@ def create_model(train_adata,
                   net_valid_adata,
                   condition_encoder,
                   condition_key,
-                  n_epochs=1,
+                  n_epochs=10000,
                   batch_size=batch_size_choices,
                   verbose=2,
                   early_stop_limit=250,
@@ -253,8 +253,9 @@ if __name__ == '__main__':
             pred_adatas = pred_adata
         else:
             pred_adatas = pred_adatas.concatenate(pred_adata)
-    os.makedirs(f"./data/reconstructed/RCVAEMulti/hyperopt/{data_name}/{cell_type}/", exist_ok=True)
-    pred_adatas.write_h5ad(filename=f"./data/reconstructed/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{target_keys[0]}.h5ad")
+    path_to_save = f"./data/reconstructed/trVAEMulti/hyperopt/{data_name}/{cell_type}/"
+    os.makedirs(path_to_save, exist_ok=True)
+    pred_adatas.write_h5ad(filename=os.path.join(path_to_save, f"{target_keys[0]}.h5ad"))
 
     best_network.save_model()
     print("All Done!")
