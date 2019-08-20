@@ -29,36 +29,37 @@ def data():
     cell_type = ["Tuft"]
 
     data_dict = DATASETS[data_key]
+
     data_name = data_dict['name']
     condition_key = data_dict['condition_key']
     cell_type_key = data_dict['cell_type_key']
-    target_keys = data_dict['target_conditions']
-    label_encoder = data_dict['condition_encoder']
+    target_conditions = data_dict['target_conditions']
+    condition_encoder = data_dict['condition_encoder']
 
     adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
-    train_data, valid_data = train_test_split(adata, 0.80)
+    train_adata, valid_adata = train_test_split(adata, 0.80)
 
-    if cell_type and target_keys:
-        net_train_adata = train_data.copy()[~((train_data.obs[cell_type_key].isin(cell_type)) &
-                                              (train_data.obs[condition_key].isin(target_keys)))]
-        net_valid_adata = valid_data.copy()[~((valid_data.obs[cell_type_key].isin(cell_type)) &
-                                              (valid_data.obs[condition_key].isin(target_keys)))]
-    elif target_keys:
-        net_train_adata = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
-        net_valid_adata = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
+    if cell_type and target_conditions:
+        net_train_adata = train_adata.copy()[~((train_adata.obs[cell_type_key].isin(cell_type)) &
+                                              (train_adata.obs[condition_key].isin(target_conditions)))]
+        net_valid_adata = valid_adata.copy()[~((valid_adata.obs[cell_type_key].isin(cell_type)) &
+                                              (valid_adata.obs[condition_key].isin(target_conditions)))]
+    elif target_conditions:
+        net_train_adata = train_adata.copy()[~(train_adata.obs[condition_key].isin(target_conditions))]
+        net_valid_adata = valid_adata.copy()[~(valid_adata.obs[condition_key].isin(target_conditions))]
 
     else:
-        net_train_adata = train_data.copy()
-        net_valid_adata = valid_data.copy()
+        net_train_adata = train_adata.copy()
+        net_valid_adata = valid_adata.copy()
 
     source_condition, target_condition, _ = data_dict['transition']
 
-    return net_train_adata, net_valid_adata, condition_key, cell_type_key, cell_type[0], label_encoder, data_name, source_condition, target_condition
+    return net_train_adata, net_valid_adata, condition_key, cell_type_key, cell_type[0], condition_encoder, data_name, source_condition, target_condition
 
 
 def create_model(net_train_adata, net_valid_adata,
                  condition_key, cell_type_key,
-                 cell_type, label_encoder,
+                 cell_type, condition_encoder,
                  data_name, source_condition, target_condition):
 
     n_conditions = len(net_train_adata.obs[condition_key].unique().tolist())
@@ -90,7 +91,7 @@ def create_model(net_train_adata, net_valid_adata,
 
     network.train(net_train_adata,
                   net_valid_adata,
-                  label_encoder,
+                  condition_encoder,
                   condition_key,
                   n_epochs=10000,
                   batch_size=batch_size_choices,
@@ -116,12 +117,16 @@ def create_model(net_train_adata, net_valid_adata,
                             groups=[source_condition],
                             reference=target_condition,
                             n_genes=10)
+
     up_genes = cell_type_adata.uns['up_reg_genes']['names'][target_condition].tolist()
     down_genes = cell_type_adata.uns['down_reg_genes']['names'][source_condition].tolist()
 
     top_genes = up_genes + down_genes
 
     source_adata = cell_type_adata.copy()[cell_type_adata.obs[condition_key] == source_condition]
+
+    source_label = condition_encoder[source_condition]
+    target_label = condition_encoder[target_condition]
 
     source_labels = np.zeros(source_adata.shape[0]) + source_label
     target_labels = np.zeros(source_adata.shape[0]) + target_label
