@@ -208,7 +208,7 @@ if __name__ == '__main__':
                   'transition': [
                       ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10'),
                       ('Hpoly.Day3', 'Hpoly.Day10', 'Hpoly.Day3_to_Hpoly.Day10'),
-                      ('Control_to_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10'),
+                      ('Control_to_Hpoly.Day3', 'Hpoly.Day10', 'Control_to_Hpoly.Day3_to_Hpoly.Day10'),
                   ],
                   'condition_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
                   'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10', 'Salmonella'],
@@ -241,6 +241,8 @@ if __name__ == '__main__':
     pred_adatas = None
     for source, target, name, in perturbation_list:
         print(source, target, name)
+        if len(source.split("_to_")) > 1:
+            source = source.split("_to_")[-1]
         source_label = label_encoder[source]
         target_label = label_encoder[target]
         pred_adata = predict_between_conditions(best_network, cell_type_adata, pred_adatas,
