@@ -1,6 +1,7 @@
 import logging
 import os
 
+import anndata
 import keras
 import numpy as np
 from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback
@@ -8,14 +9,12 @@ from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate,
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
-from keras.utils.generic_utils import get_custom_objects
 from scipy import sparse
 
-from trvae.models._activations import disp_activation, mean_activation
 from trvae.models._losses import LOSSES
-from trvae.models._utils import sample_z
-from trvae.models.layers import SliceLayer, ColwiseMultLayer
-from trvae.utils import label_encoder
+from trvae.models._activations import ACTIVATIONS
+from trvae.models._utils import sample_z, print_message
+from trvae.utils import label_encoder, remove_sparsity
 
 log = logging.getLogger(__file__)
 
@@ -56,7 +55,6 @@ class trVAEMulti:
         self.model_to_use = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.output_activation = kwargs.get("output_activation", 'relu')
-        self.loss_fn = kwargs.get("loss_fn", 'mse')
         self.ridge = kwargs.get('ridge', 0.1)
         self.scale_factor = kwargs.get('scale_factor', 1.0)
         self.clip_value = kwargs.get('clip_value', 3.0)
@@ -66,9 +64,6 @@ class trVAEMulti:
         self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
-        if self.loss_fn != "mse":
-            self.size_factor = Input(shape=(1,), name='size_factor')
-
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
         self._loss_function()
@@ -77,7 +72,7 @@ class trVAEMulti:
         self.decoder_model.summary()
         self.cvae_model.summary()
 
-    def _encoder(self, x, y, name="encoder"):
+    def _encoder(self, name="encoder"):
         """
             Constructs the encoder sub-network of C-VAE. This function implements the
             encoder part of Variational Auto-encoder. It will transform primary
@@ -90,7 +85,7 @@ class trVAEMulti:
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
-        xy = concatenate([x, y], axis=1)
+        xy = concatenate([self.x, self.encoder_labels], axis=1)
         h = Dense(800, kernel_initializer=self.init_w, use_bias=False)(xy)
         h = BatchNormalization(axis=1, scale=True)(h)
         h = LeakyReLU()(h)
@@ -106,10 +101,10 @@ class trVAEMulti:
         mean = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
-        model = Model(inputs=[x, y], outputs=[mean, log_var, z], name=name)
+        model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
         return mean, log_var, model
 
-    def _mmd_decoder(self, z, y, name="decoder"):
+    def _mmd_decoder(self, name="decoder"):
         """
             Constructs the decoder sub-network of C-VAE. This function implements the
             decoder part of Variational Auto-encoder. It will transform constructed
@@ -120,7 +115,7 @@ class trVAEMulti:
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
-        zy = concatenate([z, y], axis=1)
+        zy = concatenate([self.z, self.decoder_labels], axis=1)
         h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
         h = BatchNormalization(axis=1, scale=True)(h)
         h_mmd = LeakyReLU(name="mmd")(h)
@@ -134,39 +129,12 @@ class trVAEMulti:
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
 
-        if self.loss_fn == 'mse':
-            h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-            if self.output_activation == 'leaky_relu':
-                h = LeakyReLU(name='reconstruction_output')(h)
-            else:
-                h = Activation(self.output_activation, name="reconstruction_output")(h)
+        h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
+        h = ACTIVATIONS[self.output_activation](h)
 
-        elif self.loss_fn == 'nb':
-            h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           use_bias=True)(h)
-            h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
-
-            h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           use_bias=True)(h)
-            h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
-        elif self.loss_fn == 'zinb':
-            h_pi = Dense(self.x_dim, activation='sigmoid', kernel_initializer=self.init_w, use_bias=True,
-                         name='decoder_pi')(h)
-            h_mean = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           use_bias=True)(h)
-            h_mean = Activation(mean_activation, name='decoder_mean')(h_mean)
-
-            h_disp = Dense(self.x_dim, activation=None, kernel_initializer=self.init_w,
-                           use_bias=True)(h)
-            h_disp = Activation(disp_activation, name='decoder_disp')(h_disp)
-
-        if self.loss_fn == "mse":
-            model = Model(inputs=[z, y], outputs=[h, h_mmd], name=name)
-        elif self.loss_fn == 'nb':
-            model = Model(inputs=[z, y], outputs=[h_mean, h_mmd, h_disp], name=name)
-        elif self.loss_fn == 'zinb':
-            model = Model(inputs=[z, y], outputs=[h_mean, h_mmd, h_pi, h_disp], name=name)
-        return h, h_mmd, model
+        decoder_model = Model(inputs=[self.z, self.decoder_labels], outputs=h, name=name)
+        decoder_mmd_model = Model(inputs=[self.z, self.decoder_labels], outputs=h_mmd, name='decoder_mmd')
+        return decoder_model, decoder_mmd_model
 
     def _create_network(self):
         """
@@ -182,51 +150,20 @@ class trVAEMulti:
         """
 
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
-        self.mu, self.log_var, self.encoder_model = self._encoder(*inputs[:2], name="encoder")
-        self.x_hat, self.mmd_hl, self.decoder_model = self._mmd_decoder(self.z, self.decoder_labels,
-                                                                        name="decoder")
-        decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
-        if self.loss_fn == 'mse':
-            reconstruction_output = Lambda(lambda x: x, name="kl_mse")(decoder_outputs[0])
-        elif self.loss_fn == 'nb':
-            self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
-            self.mean_output = ColwiseMultLayer()([self.mean_output, self.size_factor])
-            self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[2])
-            reconstruction_output = SliceLayer(0, name='kl_nb')([self.mean_output, self.disp_output])
+        self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
+        self.decoder_model, self.decoder_mmd_model = self._mmd_decoder(name="decoder")
+        decoder_output = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        mmd_output = self.decoder_mmd_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
 
-            inputs += [self.size_factor]
+        reconstruction_output = Lambda(lambda x: x, name="kl_mse")(decoder_output)
+        mmd_output = Lambda(lambda x: x, name="mmd")(mmd_output)
 
-            get_custom_objects().update({'mean_activation': Activation(mean_activation),
-                                         'disp_activation': Activation(disp_activation),
-                                         'SliceLayer': SliceLayer,
-                                         'ColwiseMultLayer': ColwiseMultLayer})
-        elif self.loss_fn == 'zinb':
-            self.mean_output = Lambda(lambda x: x, name="mean_output")(decoder_outputs[0])
-            self.mean_output = ColwiseMultLayer()([self.mean_output, self.size_factor])
-            self.pi_output = Lambda(lambda x: x, name='pi_output')(decoder_outputs[2])
-            self.disp_output = Lambda(lambda x: x, name='disp_output')(decoder_outputs[3])
-            reconstruction_output = SliceLayer(0, name='kl_zinb')([self.mean_output, self.pi_output, self.disp_output])
-
-            inputs += [self.size_factor]
-
-            get_custom_objects().update({'mean_activation': Activation(mean_activation),
-                                         'disp_activation': Activation(disp_activation),
-                                         'SliceLayer': SliceLayer,
-                                         'ColwiseMultLayer': ColwiseMultLayer})
-
-        mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
 
     def _calculate_loss(self):
-        if self.loss_fn == 'nb':
-            loss = LOSSES[self.loss_fn](self.disp_output, self.mu, self.log_var, self.scale_factor, self.alpha)
-        elif self.loss_fn == 'zinb':
-            loss = LOSSES[self.loss_fn](self.pi_output, self.disp_output, self.mu, self.log_var, self.ridge, self.alpha)
-        else:
-            loss = LOSSES[self.loss_fn](self.mu, self.log_var, self.alpha, self.eta)
-
+        loss = LOSSES['mse'](self.mu, self.log_var, self.alpha, self.eta)
         mmd_loss = LOSSES['mmd'](LOSSES['mmd'](self.n_conditions, self.beta, self.kernel_method, "general"))
 
         return loss, mmd_loss
@@ -249,7 +186,7 @@ class trVAEMulti:
                                 metrics={self.cvae_model.outputs[0].name: loss,
                                          self.cvae_model.outputs[1].name: mmd_loss})
 
-    def to_latent(self, adata, labels):
+    def to_latent(self, adata, encoder_labels):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -263,12 +200,14 @@ class trVAEMulti:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
-        if sparse.issparse(adata.X):
-            adata.X = adata.X.A
+        adata = remove_sparsity(adata)
 
-        labels = to_categorical(labels, num_classes=self.n_conditions)
-        latent = self.encoder_model.predict([adata.X, labels])[2]
-        return latent
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
+        latent_adata = anndata.AnnData(X=latent)
+        latent_adata.obs = adata.obs.copy(deep=True)
+
+        return latent_adata
 
     def to_mmd_layer(self, adata, encoder_labels, feed_fake=0):
         """
@@ -292,43 +231,17 @@ class trVAEMulti:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        if sparse.issparse(adata.X):
-            adata.X = adata.X.A
+        adata = remove_sparsity(adata)
 
-        if self.loss_fn == 'mse':
-            x = [adata.X, encoder_labels, decoder_labels]
-        else:
-            x = [adata.X, encoder_labels, decoder_labels, adata.obs['size_factors'].values]
+        x = [adata.X, encoder_labels, decoder_labels]
         mmd_latent = self.cvae_model.predict(x)[1]
-        return mmd_latent
 
-    def _reconstruct(self, data, encoder_labels, decoder_labels, size_factor=None):
-        """
-            Map back the latent space encoding via the decoder.
-            # Parameters
-                data: `~anndata.AnnData`
-                    Annotated data matrix whether in latent space or primary space.
-                labels: numpy nd-array
-                    `numpy nd-array` of labels to be fed as CVAE's condition array.
-                use_data: bool
-                    this flag determines whether the `data` is already in latent space or not.
-                    if `True`: The `data` is in latent space (`data.X` is in shape [n_obs, z_dim]).
-                    if `False`: The `data` is not in latent space (`data.X` is in shape [n_obs, n_vars]).
-            # Returns
-                rec_data: 'numpy nd-array'
-                    returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
-        """
-        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
-        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+        mmd_adata = anndata.AnnData(X=mmd_latent)
+        mmd_adata.obs = adata.obs.copy(deep=True)
 
-        if self.loss_fn == 'mse':
-            x = [data, encoder_labels, decoder_labels]
-        else:
-            x = [data, encoder_labels, decoder_labels, size_factor]
-        rec_data = self.cvae_model.predict(x)[0]
-        return rec_data
+        return mmd_adata
 
-    def predict(self, data, encoder_labels, decoder_labels, size_factor=None, data_space='None'):
+    def predict(self, adata, encoder_labels, decoder_labels):
         """
             Predicts the cell type provided by the user in stimulated condition.
             # Parameters
@@ -350,18 +263,18 @@ class trVAEMulti:
             prediction = network.predict('CD4T', obs_key={"cell_type": ["CD8T", "NK"]})
             ```
         """
-        if sparse.issparse(data.X):
-            data.X = data.X.A
+        adata = remove_sparsity(adata)
 
-        if data_space == 'mmd':
-            stim_pred = self._reconstruct_from_mmd(data.X)
-        else:
-            stim_pred = self._reconstruct(data.X, encoder_labels, decoder_labels, size_factor)
-        return stim_pred
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-    def _reconstruct_from_mmd(self, data):
-        model = Model(inputs=self.decoder_model.layers[1], outputs=self.decoder_model.outputs)
-        return model.predict(data)[0]
+        reconstructed = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[0]
+
+        reconstructed_adata = anndata.AnnData(X=reconstructed)
+        reconstructed_adata.obs = adata.obs.copy(deep=True)
+        reconstructed_adata.var_names = adata.var_names
+
+        return reconstructed_adata
 
     def restore_model(self):
         """
@@ -380,17 +293,10 @@ class trVAEMulti:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False,
-                                     custom_objects={'mean_activation': mean_activation,
-                                                     'disp_activation': disp_activation,
-                                                     'SliceLayer': SliceLayer,
-                                                     'ColwiseMultLayer': ColwiseMultLayer})
+        self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False)
         self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
-        self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False,
-                                        custom_objects={'mean_activation': mean_activation,
-                                                        'disp_activation': disp_activation,
-                                                        'SliceLayer': SliceLayer,
-                                                        'ColwiseMultLayer': ColwiseMultLayer})
+        self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
+        self.decoder_mmd_model = load_model(os.path.join(self.model_to_use, 'decoder_mmd.h5'), compile=False)
         self._loss_function()
 
     def save_model(self):
@@ -398,11 +304,12 @@ class trVAEMulti:
         self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
         self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
         self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
-        log.info(f"Model saved in file: {self.model_to_use}. Training finished")
+        self.decoder_mmd_model.save(os.path.join(self.model_to_use, "decoder_mmd.h5"), overwrite=True)
 
-    def train(self, train_data, le=None, condition_key='condition', use_validation=False, valid_data=None, n_epochs=25,
-              batch_size=32, early_stop_limit=20, lr_reducer=10,
-              threshold=0.0025, initial_run=True, monitor='val_loss',
+    def train(self, train_adata, valid_adata=None,
+              condition_encoder=None, condition_key='condition',
+              n_epochs=25, batch_size=32,
+              early_stop_limit=20, lr_reducer=10, threshold=0.0025, monitor='val_loss',
               shuffle=True, verbose=2, save=True):
         """
             Trains the network `n_epochs` times with given `train_data`
@@ -437,19 +344,14 @@ class trVAEMulti:
             network.train(n_epochs=20)
             ```
         """
-        if initial_run:
-            log.info("----Training----")
-
-        train_labels, _ = label_encoder(train_data, le, condition_key)
-        train_labels = to_categorical(train_labels, num_classes=self.n_conditions)
-
-        if use_validation and valid_data is None:
-            raise Exception("valid_data is None but use_validation is True.")
+        train_labels_encoded, _ = label_encoder(train_adata, condition_encoder, condition_key)
+        train_labels_onehot = to_categorical(train_labels_encoded, num_classes=self.n_conditions)
 
         callbacks = [
             History(),
             CSVLogger(filename="./csv_logger.log"),
         ]
+
         if early_stop_limit > 0:
             callbacks.append(EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold))
 
@@ -458,68 +360,42 @@ class trVAEMulti:
 
         if verbose > 2:
             callbacks.append(
-                LambdaCallback(on_epoch_end=lambda epoch, logs: self._print_message(epoch, logs, n_epochs, verbose)))
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_message(epoch, logs, n_epochs, verbose)))
             fit_verbose = 0
         else:
             fit_verbose = verbose
 
-        if sparse.issparse(train_data.X):
-            train_data.X = train_data.X.A
+        if sparse.issparse(train_adata.X):
+            train_adata.X = train_adata.X.A
 
-        if self.loss_fn in ['nb', 'zinb']:
-            if train_data.raw is not None and sparse.issparse(train_data.raw.X):
-                train_data.raw.X = train_data.raw.X.A
+        x = [train_adata.X, train_labels_onehot, train_labels_onehot]
+        y = [train_adata.X, train_labels_encoded]
 
-        if self.loss_fn != 'mse':
-            x = [train_data.X, train_labels, train_labels, train_data.obs['size_factors'].values]
-            y = [train_data.raw.X, train_labels]
+        if valid_adata is not None:
+            if sparse.issparse(valid_adata.X):
+                valid_adata.X = valid_adata.X.A
+
+            valid_labels_encoded, _ = label_encoder(valid_adata, condition_encoder, condition_key)
+            valid_labels_onehot = to_categorical(valid_labels_encoded, num_classes=self.n_conditions)
+
+            x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
+            y_valid = [valid_adata.X, valid_labels_encoded]
+
+            self.cvae_model.fit(x=x,
+                                y=y,
+                                epochs=n_epochs,
+                                batch_size=batch_size,
+                                validation_data=(x_valid, y_valid),
+                                shuffle=shuffle,
+                                callbacks=callbacks,
+                                verbose=fit_verbose)
         else:
-            x = [train_data.X, train_labels, train_labels]
-            y = [train_data.X, train_labels]
-
-        if use_validation:
-            if sparse.issparse(valid_data.X):
-                valid_data.X = valid_data.X.A
-
-            valid_labels, _ = label_encoder(valid_data, le, condition_key)
-            valid_labels = to_categorical(valid_labels, num_classes=self.n_conditions)
-
-            if self.loss_fn != 'mse':
-                x_valid = [valid_data.X, valid_labels, valid_labels, valid_data.obs['size_factors'].values]
-                y_valid = [valid_data.raw.X, valid_labels]
-            else:
-                x_valid = [valid_data.X, valid_labels, valid_labels]
-                y_valid = [valid_data.X, valid_labels]
-
-            histories = self.cvae_model.fit(
-                x=x,
-                y=y,
-                epochs=n_epochs,
-                batch_size=batch_size,
-                validation_data=(x_valid, y_valid),
-                shuffle=shuffle,
-                callbacks=callbacks,
-                verbose=fit_verbose)
-        else:
-            histories = self.cvae_model.fit(
-                x=x,
-                y=y,
-                epochs=n_epochs,
-                batch_size=batch_size,
-                shuffle=shuffle,
-                callbacks=callbacks,
-                verbose=fit_verbose)
+            self.cvae_model.fit(x=x,
+                                y=y,
+                                epochs=n_epochs,
+                                batch_size=batch_size,
+                                shuffle=shuffle,
+                                callbacks=callbacks,
+                                verbose=fit_verbose)
         if save:
-            os.makedirs(self.model_to_use, exist_ok=True)
-            self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
-            self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
-            self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
-            log.info(f"Model saved in file: {self.model_to_use}. Training finished")
-        return histories
-
-    def _print_message(self, epoch, logs, n_epochs=10000, duration=50):
-        if epoch % duration == 0:
-            print(f"Epoch {epoch + 1}/{n_epochs}:")
-            print(f" - loss: {logs['loss']:.4f} - kl_sse_loss: {logs['kl_mse_loss']:.4f}"
-                  f" - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f}"
-                  f" - val_kl_sse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
+            self.save_model()
