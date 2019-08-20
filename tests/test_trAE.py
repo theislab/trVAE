@@ -63,7 +63,7 @@ def train_network(data_dict=None,
 
         network.train(net_train_data,
                       use_validation=True,
-                      valid_data=net_valid_data,
+                      valid_adata=net_valid_data,
                       n_epochs=n_epochs,
                       batch_size=batch_size,
                       early_stop_limit=100,

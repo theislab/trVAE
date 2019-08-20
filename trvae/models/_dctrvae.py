@@ -3,25 +3,17 @@ import os
 
 import keras
 import numpy as np
-import tensorflow as tf
-from keras import backend as K
-from keras.applications.imagenet_utils import preprocess_input
-# from keras.applications.vgg16 import VGG16
-from keras.callbacks import CSVLogger, History, EarlyStopping
+from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback
 from keras.layers import Activation
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Conv2D, \
     Flatten, Reshape, Conv2DTranspose, UpSampling2D, MaxPooling2D
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
-from keras.utils import multi_gpu_model
-from keras_vggface.vggface import VGGFace
-from scipy import sparse
+from keras.utils import multi_gpu_model, to_categorical
 
-from trvae.models._utils import compute_mmd, sample_z
-from trvae.utils import label_encoder
-from ..data_loader import PairedDataSequence
+from trvae.models._utils import sample_z, print_message
+from trvae.utils import label_encoder, remove_sparsity
 from ._losses import LOSSES
-from ._activations import ACTIVATIONS
 
 log = logging.getLogger(__file__)
 
@@ -53,29 +45,23 @@ class DCtrVAE:
         self.z_dim = z_dimension
         self.image_shape = x_dimension
 
+        self.n_conditions = kwargs.get("n_conditions", 2)
         self.mmd_dim = kwargs.get("mmd_dimension", 128)
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
         self.beta = kwargs.get("beta", 100)
         self.gamma = kwargs.get("gamma", 1.0)
-        self.conditions = kwargs.get("condition_list")
+        self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
-        self.model_to_use = kwargs.get("model_path", "./")
-        self.train_with_fake_labels = kwargs.get("train_with_fake_labels", False)
+        self.model_path = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.arch_style = kwargs.get("arch_style", 1)
         self.n_gpus = kwargs.get("gpus", 1)
 
         self.x = Input(shape=self.x_dim, name="data")
-        self.encoder_labels = Input(shape=(1,), name="encoder_labels")
-        self.decoder_labels = Input(shape=(1,), name="decoder_labels")
+        self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_labels")
+        self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
-
-        if self.x_dim[0] > 48 and self.gamma > 0:
-            self.vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
-            self.vggface_layers = ["conv1_1", 'conv1_2',
-                                   'conv2_1', 'conv2_2',
-                                   'conv3_1', 'conv3_2', 'conv3_3']
 
         self.init_w = keras.initializers.glorot_normal()
         self._create_network()
@@ -185,9 +171,6 @@ class DCtrVAE:
 
             z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
             model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
-            # if self.x_dim[0] > 48:
-            #     for layer_name in self.vggface_layers[1:]:
-            #         model.get_layer(layer_name).set_weights(self.vggface.get_layer(layer_name).get_weights())
             model.summary()
             return mean, log_var, model
 
@@ -220,9 +203,10 @@ class DCtrVAE:
             h = Conv2DTranspose(64, kernel_size=(4, 4), padding='same')(h)
             h = LeakyReLU()(h)
             h = Conv2DTranspose(self.x_dim[-1], kernel_size=(4, 4), padding='same', activation="relu")(h)
-            model = Model(inputs=[self.z, self.decoder_labels], outputs=[h, h_mmd], name=name)
-            model.summary()
-            return h, h_mmd, model
+            decoder_model = Model(inputs=[self.z, self.decoder_labels], outputs=h, name=name)
+            decoder_mmd_model = Model(inputs=[self.z, self.decoder_labels], outputs=h_mmd, name='deocder_mmd')
+            return decoder_model, decoder_mmd_model
+
         elif self.arch_style == 2:  # FCN
             zy = concatenate([self.z, self.decoder_labels], axis=1)
             h = Dense(self.mmd_dim, kernel_initializer=self.init_w, use_bias=False)(zy)
@@ -240,16 +224,13 @@ class DCtrVAE:
             h = Dense(np.prod(self.x_dim), kernel_initializer=self.init_w, use_bias=True)(h)
             h = Activation('relu', name="reconstruction_output")(h)
             h = Reshape(target_shape=self.x_dim)(h)
-            model = Model(inputs=[self.z, self.decoder_labels], outputs=[h, h_mmd], name=name)
-            model.summary()
-            return h, h_mmd, model
+            decoder_model = Model(inputs=[self.z, self.decoder_labels], outputs=h, name=name)
+            decoder_mmd_model = Model(inputs=[self.z, self.decoder_labels], outputs=h_mmd, name='deocder_mmd')
+            return decoder_model, decoder_mmd_model
         else:
             encode_y = Dense(64, activation='relu')(self.decoder_labels)
             zy = concatenate([self.z, encode_y], axis=1)
             zy = Activation('relu')(zy)
-
-            # zy = concatenate([zy, self.enc_dense], axis=1)
-            # zy = Activation('relu')(zy)
 
             h = Dense(self.mmd_dim, activation="linear", kernel_initializer='he_normal')(zy)
             h_mmd = Activation('relu', name="mmd")(h)
@@ -283,10 +264,9 @@ class DCtrVAE:
 
             conv10 = Conv2D(self.x_dim[-1], 1, activation='relu')(conv9)
 
-            model = Model(inputs=[self.z, self.decoder_labels], outputs=[conv10, h_mmd],
-                          name=name)
-            model.summary()
-            return h, h_mmd, model
+            decoder_model = Model(inputs=[self.z, self.decoder_labels], outputs=h, name=name)
+            decoder_mmd_model = Model(inputs=[self.z, self.decoder_labels], outputs=h_mmd, name='deocder_mmd')
+            return decoder_model, decoder_mmd_model
 
     def _create_network(self):
         """
@@ -303,14 +283,14 @@ class DCtrVAE:
 
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
-        self.x_hat, self.mmd_hl, self.decoder_model = self._mmd_decoder(name="decoder")
-        # if self.arch_style < 3:
-        decoder_outputs = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
-        # else:
-        #     decoder_outputs = self.decoder_model(
-        #         [self.x, self.encoder_model(inputs[:2])[2], self.encoder_labels, self.decoder_labels])
-        reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_outputs[0])
-        mmd_output = Lambda(lambda x: x, name="mmd")(decoder_outputs[1])
+        self.decoder_model, self.decoder_mmd_model = self._mmd_decoder(name="decoder")
+
+        decoder_output = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        mmd_output = self.decoder_mmd_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+
+        reconstruction_output = Lambda(lambda x: x, name="kl_reconstruction")(decoder_output)
+        mmd_output = Lambda(lambda x: x, name="mmd")(mmd_output)
+
         self.cvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
@@ -326,6 +306,11 @@ class DCtrVAE:
             self.gpu_encoder_model = self.encoder_model
             self.gpu_decoder_model = self.decoder_model
 
+    def _calculate_loss(self):
+        loss = LOSSES['mse'](self.mu, self.log_var, self.alpha, self.eta)
+        mmd_loss = LOSSES['mmd'](LOSSES['mmd'](self.n_conditions, self.beta, self.kernel_method, "general"))
+        return loss, mmd_loss
+
     def _loss_function(self, compile_gpu_model=True):
         """
             Defines the loss function of C-VAE network after constructing the whole
@@ -338,72 +323,20 @@ class DCtrVAE:
                 Nothing will be returned.
         """
 
-        def batch_loss():
-            def perceptual_loss(input_image, reconstructed_image):
-                vggface = VGGFace(include_top=False, input_shape=self.x_dim, model='vgg16')
-                vgg_layers = ['conv1_1']
-                outputs = [vggface.get_layer(l).output for l in vgg_layers]
-                model = Model(inputs=vggface.input, outputs=outputs)
-
-                for layer in model.layers:
-                    layer.trainable = False
-
-                input_image *= 255.0
-                reconstructed_image *= 255.0
-
-                input_image = preprocess_input(input_image, mode='tf', data_format='channels_last')
-                reconstructed_image = preprocess_input(reconstructed_image, mode='tf', data_format='channels_last')
-
-                h1_list = model(input_image)
-                h2_list = model(reconstructed_image)
-
-                if not isinstance(h1_list, list):
-                    h1_list = [h1_list]
-                    h2_list = [h2_list]
-
-                p_loss = 0.0
-                for h1, h2 in zip(h1_list, h2_list):
-                    h1 = K.batch_flatten(h1)
-                    h2 = K.batch_flatten(h2)
-                    p_loss += K.mean(K.square(h1 - h2), axis=-1)
-
-                return p_loss
-
-            def kl_recon_loss(y_true, y_pred):
-                y_pred = K.reshape(y_pred, (-1, *self.x_dim))
-                y_true = K.reshape(y_true, (-1, *self.x_dim))
-
-                kl_loss = 0.5 * K.mean(K.exp(self.log_var) + K.square(self.mu) - 1. - self.log_var, 1)
-                recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=[1, 2, 3])
-                if self.gamma > 0:
-                    p_loss = perceptual_loss(y_true, y_pred)
-                else:
-                    p_loss = 0.0
-                return self.alpha * kl_loss + self.gamma * p_loss + recon_loss
-
-            def mmd_loss(real_labels, y_pred):
-                y_pred = K.reshape(y_pred, (-1, self.mmd_dim))
-                with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
-                    real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
-                    source_mmd, dest_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=2)
-                    loss = compute_mmd(source_mmd, dest_mmd, self.kernel_method)
-                    return self.beta * loss
-
-            self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
-            if compile_gpu_model:
-                self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
-                                            loss=[kl_recon_loss, mmd_loss],
-                                            metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
-                                                     self.cvae_model.outputs[1].name: mmd_loss})
-            else:
-                self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                        loss=[kl_recon_loss, mmd_loss],
-                                        metrics={self.cvae_model.outputs[0].name: kl_recon_loss,
+        mse_loss, mmd_loss = self._calculate_loss()
+        self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
+        if compile_gpu_model:
+            self.gpu_cvae_model.compile(optimizer=self.cvae_optimizer,
+                                        loss=[mse_loss, mmd_loss],
+                                        metrics={self.cvae_model.outputs[0].name: mse_loss,
                                                  self.cvae_model.outputs[1].name: mmd_loss})
+        else:
+            self.cvae_model.compile(optimizer=self.cvae_optimizer,
+                                    loss=[mse_loss, mmd_loss],
+                                    metrics={self.cvae_model.outputs[0].name: mse_loss,
+                                             self.cvae_model.outputs[1].name: mmd_loss})
 
-        batch_loss()
-
-    def to_latent(self, data, labels):
+    def to_latent(self, adata, encoder_labels):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -417,10 +350,15 @@ class DCtrVAE:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
-        latent = self.encoder_model.predict([data, labels])[2]
+        adata = remove_sparsity(adata)
+
+        images = np.reshape(adata.X, (-1, *self.x_dim))
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+
+        latent = self.encoder_model.predict([images, encoder_labels])[2]
         return latent
 
-    def to_mmd_layer(self, model, data, encoder_labels, feed_fake=False):
+    def to_mmd_layer(self, adata, encoder_labels, feed_fake=0):
         """
             Map `data` in to the pn layer after latent layer. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -434,34 +372,20 @@ class DCtrVAE:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
-        if feed_fake:
-            decoder_labels = np.ones(shape=encoder_labels.shape)
+        if feed_fake > 0:
+            decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
         else:
             decoder_labels = encoder_labels
-        mmd_latent = model.cvae_model.predict([data, encoder_labels, decoder_labels])[1]
+        adata = remove_sparsity(adata)
+
+        images = np.reshape(adata.X, (-1, *self.x_dim))
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
+
+        mmd_latent = self.cvae_model.predict([images, encoder_labels, decoder_labels])[1]
         return mmd_latent
 
-    def _reconstruct(self, data, encoder_labels, decoder_labels):
-        """
-            Map back the latent space encoding via the decoder.
-            # Parameters
-                data: `~anndata.AnnData`
-                    Annotated data matrix whether in latent space or primary space.
-                labels: numpy nd-array
-                    `numpy nd-array` of labels to be fed as CVAE's condition array.
-                use_data: bool
-                    this flag determines whether the `data` is already in latent space or not.
-                    if `True`: The `data` is in latent space (`data.X` is in shape [n_obs, z_dim]).
-                    if `False`: The `data` is not in latent space (`data.X` is in shape [n_obs, n_vars]).
-            # Returns
-                rec_data: 'numpy nd-array'
-                    returns 'numpy nd-array` containing reconstructed 'data' in shape [n_obs, n_vars].
-        """
-        latent = self.to_latent(data, encoder_labels)
-        rec_data = self.decoder_model.predict([latent, decoder_labels])
-        return rec_data
-
-    def predict(self, data, encoder_labels, decoder_labels, data_space='None'):
+    def predict(self, adata, encoder_labels, decoder_labels, data_space='None'):
         """
             Predicts the cell type provided by the user in stimulated condition.
             # Parameters
@@ -483,20 +407,13 @@ class DCtrVAE:
             prediction = network.predict('CD4T', obs_key={"cell_type": ["CD8T", "NK"]})
             ```
         """
-        if sparse.issparse(data.X):
-            data.X = data.X.A
+        adata = remove_sparsity(adata)
 
-        input_data = np.reshape(data.X, (-1, *self.x_dim))
+        images = np.reshape(adata.X, (-1, *self.x_dim))
+        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
+        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        if data_space == 'mmd':
-            stim_pred = self._reconstruct_from_mmd(input_data)
-        else:
-            stim_pred = self._reconstruct(input_data, encoder_labels, decoder_labels)
-        return stim_pred[0]
-
-    def _reconstruct_from_mmd(self, data):
-        model = Model(inputs=self.decoder_model.layers[1], outputs=self.decoder_model.outputs)
-        return model.predict(data)
+        return self.cvae_model.predict([images, encoder_labels, decoder_labels])[0]
 
     def restore_model(self):
         """
@@ -515,14 +432,24 @@ class DCtrVAE:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False)
-        self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
-        self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
+        self.cvae_model = load_model(os.path.join(self.model_path, 'mmd_cvae.h5'), compile=False)
+        self.encoder_model = load_model(os.path.join(self.model_path, 'encoder.h5'), compile=False)
+        self.decoder_model = load_model(os.path.join(self.model_path, 'decoder.h5'), compile=False)
+        self.decoder_mmd_model = load_model(os.path.join(self.model_path, 'decoder_mmd.h5'), compile=False)
         self._loss_function(compile_gpu_model=False)
 
-    def train(self, train_data, use_validation=False, valid_data=None, n_epochs=25, batch_size=32,
-              early_stop_limit=20,
-              threshold=0.0025, initial_run=True,
+    def save_model(self):
+        os.makedirs(self.model_path, exist_ok=True)
+        self.cvae_model.save(os.path.join(self.model_path, "mmd_cvae.h5"), overwrite=True)
+        self.encoder_model.save(os.path.join(self.model_path, "encoder.h5"), overwrite=True)
+        self.decoder_model.save(os.path.join(self.model_path, "decoder.h5"), overwrite=True)
+        self.decoder_model.save(os.path.join(self.model_path, "decoder_mmd.h5"), overwrite=True)
+        log.info(f"Model saved in file: {self.model_path}. Training finished")
+
+    def train(self, train_adata, valid_adata=None,
+              condition_encoder=None, condition_key='condition',
+              n_epochs=25, batch_size=32,
+              early_stop_limit=20, lr_reducer=10, threshold=0.0025, monitor='val_loss',
               shuffle=True, verbose=2, save=True):
         """
             Trains the network `n_epochs` times with given `train_data`
@@ -557,134 +484,60 @@ class DCtrVAE:
             network.train(n_epochs=20)
             ```
         """
-        if initial_run:
-            log.info("----Training----")
-        train_labels, _ = label_encoder(train_data)
+        train_adata = remove_sparsity(train_adata)
 
-        if sparse.issparse(train_data.X):
-            train_data.X = train_data.X.A
-
-        if use_validation and valid_data is None:
-            raise Exception("valid_data is None but use_validation is True.")
+        train_labels, self.condition_encoder = label_encoder(train_adata, condition_encoder, condition_key)
+        train_labels = to_categorical(train_labels, num_classes=self.n_conditions)
 
         callbacks = [
             History(),
-            EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
-            CSVLogger(filename="./csv_logger.log")
+            CSVLogger(filename="./csv_logger.log"),
         ]
-        x_train = np.reshape(train_data.X, newshape=(-1, *self.x_dim))
-        x = [x_train, train_labels, train_labels]
-        y = [x_train, train_labels]
+        if early_stop_limit > 0:
+            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold))
 
-        if use_validation:
-            x_valid = np.reshape(valid_data.X, newshape=(-1, *self.x_dim))
-            valid_labels, _ = label_encoder(valid_data)
-            x_test = [x_valid, valid_labels, valid_labels]
-            y_test = [x_valid, valid_labels]
+        if lr_reducer > 0:
+            callbacks.append(ReduceLROnPlateau(monitor=monitor, patience=lr_reducer, verbose=verbose))
 
-            histories = self.gpu_cvae_model.fit(x=x,
-                                                y=y,
-                                                epochs=n_epochs,
-                                                batch_size=batch_size,
-                                                validation_data=(x_test, y_test),
-                                                shuffle=shuffle,
-                                                callbacks=callbacks,
-                                                verbose=verbose,
-                                                )
+        if verbose > 2:
+            callbacks.append(
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_message(epoch, logs, n_epochs, verbose)))
+            fit_verbose = 0
         else:
-            histories = self.gpu_cvae_model.fit(x=x,
-                                                y=y,
-                                                epochs=n_epochs,
-                                                batch_size=batch_size,
-                                                shuffle=shuffle,
-                                                callbacks=callbacks,
-                                                verbose=verbose,
-                                                )
-        if save:
-            os.makedirs(self.model_to_use, exist_ok=True)
-            self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
-            self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
-            self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
-            log.info(f"Model saved in file: {self.model_to_use}. Training finished")
-        return histories
+            fit_verbose = verbose
 
-    def train_paired(self, train_path, use_validation=False, valid_path=None, n_epochs=25, batch_size=32,
-                     early_stop_limit=20,
-                     threshold=0.0025, initial_run=True,
-                     shuffle=True, verbose=2, save=True):
+        train_images = np.reshape(train_adata.X, (-1, *self.x_dim))
 
-        """
-                    Trains the network `n_epochs` times with given `train_data`
-                    and validates the model using validation_data if it was given
-                    in the constructor function. This function is using `early stopping`
-                    technique to prevent overfitting.
-                    # Parameters
-                        n_epochs: int
-                            number of epochs to iterate and optimize network weights
-                        early_stop_limit: int
-                            number of consecutive epochs in which network loss is not going lower.
-                            After this limit, the network will stop training.
-                        threshold: float
-                            Threshold for difference between consecutive validation loss values
-                            if the difference is upper than this `threshold`, this epoch will not
-                            considered as an epoch in early stopping.
-                        full_training: bool
-                            if `True`: Network will be trained with all batches of data in each epoch.
-                            if `False`: Network will be trained with a random batch of data in each epoch.
-                        initial_run: bool
-                            if `True`: The network will initiate training and log some useful initial messages.
-                            if `False`: Network will resume the training using `restore_model` function in order
-                                to restore last model which has been trained with some training dataset.
-                    # Returns
-                        Nothing will be returned
-                    # Example
-                    ```python
-                    import scanpy as sc
-                    import scgen
-                    train_data = sc.read(train_katrain_kang.h5ad           >>> validation_data = sc.read(valid_kang.h5ad)
-                    network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
-                    network.train(n_epochs=20)
-                    ```
-                """
-        if initial_run:
-            log.info("----Training----")
+        x = [train_images, train_labels, train_labels]
+        y = [train_images, train_labels]
 
-        callbacks = [
-            History(),
-            EarlyStopping(patience=early_stop_limit, monitor='val_loss', min_delta=threshold),
-            CSVLogger(filename="./csv_logger.log")
-        ]
+        if valid_adata is not None:
+            valid_adata = remove_sparsity(valid_adata)
 
-        train_image_filepaths = [os.path.join(train_path, filepath) for filepath in os.listdir(train_path) if filepath.endswith('.jpg')]
-        train_generator = PairedDataSequence(train_image_filepaths, batch_size=batch_size)
-        if use_validation:
-            valid_image_filepaths = [os.path.join(valid_path, filepath) for filepath in os.listdir(valid_path) if filepath.endswith('.jpg')]
-            valid_generator = PairedDataSequence(valid_image_filepaths, batch_size=batch_size)
-            histories = self.gpu_cvae_model.fit_generator(generator=train_generator,
-                                                          steps_per_epoch=50,
-                                                          workers=8,
-                                                          use_multiprocessing=True,
-                                                          epochs=n_epochs,
-                                                          validation_data=valid_generator,
-                                                          validation_steps=5,
-                                                          shuffle=shuffle,
-                                                          callbacks=callbacks,
-                                                          verbose=verbose,
-                                                          )
+            valid_labels, _ = label_encoder(valid_adata, condition_encoder, condition_key)
+            valid_labels = to_categorical(valid_labels, num_classes=self.n_conditions)
+
+            valid_images = np.reshape(valid_adata.X, (-1, *self.x_dim))
+
+            x_valid = [valid_images, valid_labels, valid_labels]
+            y_valid = [valid_images, valid_labels]
+
+            self.cvae_model.fit(x=x,
+                                y=y,
+                                epochs=n_epochs,
+                                batch_size=batch_size,
+                                validation_data=(x_valid, y_valid),
+                                shuffle=shuffle,
+                                callbacks=callbacks,
+                                verbose=fit_verbose)
         else:
-            histories = self.gpu_cvae_model.fit_generator(generator=train_generator,
-                                                          steps_per_epoch=50,
-                                                          workers=8,
-                                                          use_multiprocessing=True,
-                                                          epochs=n_epochs,
-                                                          shuffle=shuffle,
-                                                          callbacks=callbacks,
-                                                          verbose=verbose,
-                                                          )
+            self.cvae_model.fit(x=x,
+                                y=y,
+                                epochs=n_epochs,
+                                batch_size=batch_size,
+                                shuffle=shuffle,
+                                callbacks=callbacks,
+                                verbose=fit_verbose)
         if save:
-            os.makedirs(self.model_to_use, exist_ok=True)
-            self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
-            self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
-            self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
-            log.info(f"Model saved in file: {self.model_to_use}. Training finished")
-        return histories
+            self.save_model()
+

@@ -112,7 +112,7 @@ def create_model(train_data, valid_data, data_name):
 
     history = network.train(train_data,
                             use_validation=True,
-                            valid_data=valid_data,
+                            valid_adata=valid_data,
                             n_epochs=10000,
                             batch_size=batch_size_choices,
                             verbose=2,

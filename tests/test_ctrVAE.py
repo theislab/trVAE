@@ -163,24 +163,24 @@ def train_network(data_dict=None,
         train_data = data_train.copy()
         valid_data = data_valid.copy()
 
-    network = trvae.DCtrVAE(x_dimension=source_images.shape[1:],
-                            z_dimension=z_dim,
-                            mmd_dimension=mmd_dimension,
-                            alpha=alpha,
-                            beta=beta,
-                            gamma=gamma,
-                            kernel=kernel,
-                            arch_style=arch_style,
-                            train_with_fake_labels=False,
-                            learning_rate=learning_rate,
-                            model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/",
-                            gpus=gpus,
-                            dropout_rate=dropout_rate)
+    network = trvae.archs.DCtrVAE(x_dimension=source_images.shape[1:],
+                                  z_dimension=z_dim,
+                                  mmd_dimension=mmd_dimension,
+                                  alpha=alpha,
+                                  beta=beta,
+                                  gamma=gamma,
+                                  kernel=kernel,
+                                  arch_style=arch_style,
+                                  train_with_fake_labels=False,
+                                  learning_rate=learning_rate,
+                                  model_path=f"../models/RCCVAE/{data_name}-{img_width}x{img_height}-{preprocess}/{arch_style}-{z_dim}/",
+                                  gpus=gpus,
+                                  dropout_rate=dropout_rate)
 
     print(train_data.shape, valid_data.shape)
     network.train(train_data,
                   use_validation=True,
-                  valid_data=valid_data,
+                  valid_adata=valid_data,
                   n_epochs=n_epochs,
                   batch_size=batch_size,
                   verbose=2,

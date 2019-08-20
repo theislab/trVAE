@@ -50,7 +50,7 @@ def categrical_crossentropy(gamma):
     return cce_loss
 
 
-def perceptual_loss(x_dim):
+def perceptual_loss(x_dim, gamma=1.0):
     def percept_loss(input_image, reconstructed_image):
         vggface = VGGFace(include_top=False, input_shape=x_dim, model='vgg16')
         vgg_layers = ['conv1_1']
@@ -79,7 +79,7 @@ def perceptual_loss(x_dim):
             h2 = K.batch_flatten(h2)
             p_loss += K.mean(K.square(h1 - h2), axis=-1)
 
-        return p_loss
+        return gamma * p_loss
 
     return percept_loss
 
