@@ -53,8 +53,7 @@ def data():
 
     source_condition, target_condition, _ = data_dict['transition']
 
-    return net_train_adata, net_valid_adata, condition_key, cell_type_key, cell_type[
-        0], label_encoder, data_name, source_condition, target_condition
+    return net_train_adata, net_valid_adata, condition_key, cell_type_key, cell_type[0], label_encoder, data_name, source_condition, target_condition
 
 
 def create_model(net_train_adata, net_valid_adata,
