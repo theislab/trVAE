@@ -69,7 +69,7 @@ def create_model(net_train_adata, net_valid_adata,
     alpha_choices = {{choice([0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([1, 5, 10, 20, 40, 50, 100])}}
     eta_choices = {{choice([1, 2, 5, 10, 50])}}
-    batch_size_choices = {{choice([128, 256, 512, 1024, 1500, 2048])}}
+    batch_size_choices = {{choice([128, 256, 512, 1024, 1500])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5])}}
 
     network = trvae.archs.trVAEMulti(x_dimension=net_train_adata.shape[1],
@@ -200,10 +200,9 @@ if __name__ == '__main__':
                   'source_conditions': ['Control', 'Hpoly.Day3', 'Salmonella'],
                   'target_conditions': ['Hpoly.Day10'],
                   'transition': [
-                      ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10', 0, 2),
-                      ('Hpoly.Day3', 'Hpoly.Day10', 'Hpoly.Day3_to_Hpoly.Day10', 1, 2),
-                      ('Control_to_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10', 1,
-                       2),
+                      ('Control', 'Hpoly.Day10', 'Control_to_Hpoly.Day10'),
+                      ('Hpoly.Day3', 'Hpoly.Day10', 'Hpoly.Day3_to_Hpoly.Day10'),
+                      ('Control_to_Hpoly.Day3', 'Hpoly.Day10', '(Control_to_Hpoly.Day3)_to_Hpoly.Day10'),
                   ],
                   'condition_encoder': {'Control': 0, 'Hpoly.Day3': 1, 'Hpoly.Day10': 2, 'Salmonella': 3},
                   'conditions': ['Control', 'Hpoly.Day3', 'Hpoly.Day10', 'Salmonella'],
@@ -238,28 +237,18 @@ if __name__ == '__main__':
 
     if cell_type:
         cell_type = cell_type[0]
-    else:
-        cell_type = 'all'
-
-    path_to_save = f"./results/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{best_network.z_dim}/Visualizations/"
-    os.makedirs(path_to_save, exist_ok=True)
-    sc.settings.figdir = os.path.abspath(path_to_save)
 
     n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
 
     train_labels, _ = trvae.utils.label_encoder(train_data, label_encoder, condition_key)
-    fake_labels = []
-    for i in range(n_conditions):
-        fake_labels.append(np.zeros(train_labels.shape) + i)
-
-    feed_data = train_data.copy()
-
     cell_type_adata = train_data[train_data.obs[cell_type_key] == cell_type]
 
     perturbation_list = data_dict.get("transition", [])
     pred_adatas = None
-    for source, dest, name, source_label, target_label in perturbation_list:
-        print(source, dest, name)
+    for source, target, name, in perturbation_list:
+        print(source, target, name)
+        source_label = label_encoder[source]
+        target_label = label_encoder[target]
         pred_adata = predict_between_conditions(best_network, cell_type_adata, pred_adatas,
                                                 source_condition=source, source_label=source_label,
                                                 target_label=target_label,
@@ -268,8 +257,8 @@ if __name__ == '__main__':
             pred_adatas = pred_adata
         else:
             pred_adatas = pred_adatas.concatenate(pred_adata)
-
-    pred_adatas.write_h5ad(filename=f"./data/reconstructed/RCVAEMulti/{data_name}_{cell_type}.h5ad")
+    os.makedirs(f"./data/reconstructed/RCVAEMulti/hyperopt/{data_name}/{cell_type}/", exist_ok=True)
+    pred_adatas.write_h5ad(filename=f"./data/reconstructed/RCVAEMulti/hyperopt/{data_name}/{cell_type}/{target_keys[0]}.h5ad")
 
     best_network.save_model()
     print("All Done!")
