@@ -392,7 +392,7 @@ class DCtrVAE:
 
         return mmd_adata
 
-    def predict(self, adata, encoder_labels, decoder_labels, data_space='None'):
+    def predict(self, adata, encoder_labels, decoder_labels):
         """
             Predicts the cell type provided by the user in stimulated condition.
             # Parameters
