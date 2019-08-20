@@ -54,10 +54,11 @@ def data():
 
     source_condition, target_condition, _ = data_dict['transition']
 
-    return net_train_adata, net_valid_adata, condition_key, cell_type_key, cell_type[0], condition_encoder, data_name, source_condition, target_condition
+    return train_adata, net_train_adata, net_valid_adata, condition_key, cell_type_key, cell_type[0], condition_encoder, data_name, source_condition, target_condition
 
 
-def create_model(net_train_adata, net_valid_adata,
+def create_model(train_adata,
+                 net_train_adata, net_valid_adata,
                  condition_key, cell_type_key,
                  cell_type, condition_encoder,
                  data_name, source_condition, target_condition):
@@ -93,7 +94,7 @@ def create_model(net_train_adata, net_valid_adata,
                   net_valid_adata,
                   condition_encoder,
                   condition_key,
-                  n_epochs=10000,
+                  n_epochs=1,
                   batch_size=batch_size_choices,
                   verbose=2,
                   early_stop_limit=250,
@@ -102,7 +103,7 @@ def create_model(net_train_adata, net_valid_adata,
                   shuffle=True,
                   save=False)
 
-    cell_type_adata = train_data.copy()[train_data.obs[cell_type_key] == cell_type]
+    cell_type_adata = train_adata.copy()[train_adata.obs[cell_type_key] == cell_type]
 
     sc.tl.rank_genes_groups(cell_type_adata,
                             key_added='up_reg_genes',
@@ -226,27 +227,15 @@ if __name__ == '__main__':
     data = sc.read(f"./data/{data_name}/{data_name}.h5ad")
     if conditions:
         data = data[data.obs[condition_key].isin(conditions)]
-    train_data, valid_data = train_test_split(data, 0.80)
-
-    if cell_type and target_keys:
-        net_train_data = train_data.copy()[~((train_data.obs[cell_type_key].isin(cell_type)) &
-                                             (train_data.obs[condition_key].isin(target_keys)))]
-        net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key].isin(cell_type)) &
-                                             (valid_data.obs[condition_key].isin(target_keys)))]
-    elif target_keys:
-        net_train_data = train_data.copy()[~(train_data.obs[condition_key].isin(target_keys))]
-        net_valid_data = valid_data.copy()[~(valid_data.obs[condition_key].isin(target_keys))]
-    else:
-        net_train_data = train_data.copy()
-        net_valid_data = valid_data.copy()
+    train_adata, valid_adata = train_test_split(data, 0.80)
 
     if cell_type:
         cell_type = cell_type[0]
 
-    n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
+    n_conditions = len(train_adata.obs[condition_key].unique().tolist())
 
-    train_labels, _ = trvae.utils.label_encoder(train_data, label_encoder, condition_key)
-    cell_type_adata = train_data[train_data.obs[cell_type_key] == cell_type]
+    train_labels, _ = trvae.utils.label_encoder(train_adata, label_encoder, condition_key)
+    cell_type_adata = train_adata[train_adata.obs[cell_type_key] == cell_type]
 
     perturbation_list = data_dict.get("transition", [])
     pred_adatas = None
