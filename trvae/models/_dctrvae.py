@@ -308,7 +308,7 @@ class DCtrVAE:
 
     def _calculate_loss(self):
         loss = LOSSES['mse'](self.mu, self.log_var, self.alpha, self.eta)
-        mmd_loss = LOSSES['mmd'](LOSSES['mmd'](self.n_conditions, self.beta, self.kernel_method, "general"))
+        mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta, self.kernel_method, "general")
         return loss, mmd_loss
 
     def _loss_function(self, compile_gpu_model=True):
