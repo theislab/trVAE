@@ -486,8 +486,8 @@ class DCtrVAE:
         """
         train_adata = remove_sparsity(train_adata)
 
-        train_labels, self.condition_encoder = label_encoder(train_adata, condition_encoder, condition_key)
-        train_labels = to_categorical(train_labels, num_classes=self.n_conditions)
+        train_labels_encoded, self.condition_encoder = label_encoder(train_adata, condition_encoder, condition_key)
+        train_labels_onehot = to_categorical(train_labels_encoded, num_classes=self.n_conditions)
 
         callbacks = [
             History(),
@@ -508,19 +508,19 @@ class DCtrVAE:
 
         train_images = np.reshape(train_adata.X, (-1, *self.x_dim))
 
-        x = [train_images, train_labels, train_labels]
-        y = [train_images, train_labels]
+        x = [train_images, train_labels_onehot, train_labels_onehot]
+        y = [train_images, train_labels_encoded]
 
         if valid_adata is not None:
             valid_adata = remove_sparsity(valid_adata)
 
-            valid_labels, _ = label_encoder(valid_adata, condition_encoder, condition_key)
-            valid_labels = to_categorical(valid_labels, num_classes=self.n_conditions)
+            valid_labels_encoded, _ = label_encoder(valid_adata, condition_encoder, condition_key)
+            valid_labels_onehot = to_categorical(valid_labels_encoded, num_classes=self.n_conditions)
 
             valid_images = np.reshape(valid_adata.X, (-1, *self.x_dim))
 
-            x_valid = [valid_images, valid_labels, valid_labels]
-            y_valid = [valid_images, valid_labels]
+            x_valid = [valid_images, valid_labels_onehot, valid_labels_onehot]
+            y_valid = [valid_images, valid_labels_encoded]
 
             self.cvae_model.fit(x=x,
                                 y=y,
