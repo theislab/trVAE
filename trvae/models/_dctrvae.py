@@ -1,6 +1,7 @@
 import logging
 import os
 
+import anndata
 import keras
 import numpy as np
 from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback
@@ -50,7 +51,6 @@ class DCtrVAE:
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 0.001)
         self.beta = kwargs.get("beta", 100)
-        self.gamma = kwargs.get("gamma", 1.0)
         self.eta = kwargs.get("eta", 1.0)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_path = kwargs.get("model_path", "./")
@@ -264,7 +264,7 @@ class DCtrVAE:
 
             conv10 = Conv2D(self.x_dim[-1], 1, activation='relu')(conv9)
 
-            decoder_model = Model(inputs=[self.z, self.decoder_labels], outputs=h, name=name)
+            decoder_model = Model(inputs=[self.z, self.decoder_labels], outputs=conv10, name=name)
             decoder_mmd_model = Model(inputs=[self.z, self.decoder_labels], outputs=h_mmd, name='deocder_mmd')
             return decoder_model, decoder_mmd_model
 
@@ -356,7 +356,11 @@ class DCtrVAE:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
 
         latent = self.encoder_model.predict([images, encoder_labels])[2]
-        return latent
+
+        latent_adata = anndata.AnnData(X=latent)
+        latent_adata.obs = adata.obs.copy(deep=True)
+
+        return latent_adata
 
     def to_mmd_layer(self, adata, encoder_labels, feed_fake=0):
         """
@@ -383,7 +387,10 @@ class DCtrVAE:
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
         mmd_latent = self.cvae_model.predict([images, encoder_labels, decoder_labels])[1]
-        return mmd_latent
+        mmd_adata = anndata.AnnData(X=mmd_latent)
+        mmd_adata.obs = adata.obs.copy(deep=True)
+
+        return mmd_adata
 
     def predict(self, adata, encoder_labels, decoder_labels, data_space='None'):
         """
@@ -413,7 +420,14 @@ class DCtrVAE:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        return self.cvae_model.predict([images, encoder_labels, decoder_labels])[0]
+        reconstructed = self.cvae_model.predict([images, encoder_labels, decoder_labels])[0]
+        reconstructed = np.reshape(reconstructed, (-1, np.prod(self.x_dim)))
+
+        reconstructed_adata = anndata.AnnData(X=reconstructed)
+        reconstructed_adata.obs = adata.obs.copy(deep=True)
+        reconstructed_adata.var_names = adata.var_names
+
+        return reconstructed_adata
 
     def restore_model(self):
         """
