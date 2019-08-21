@@ -38,7 +38,7 @@ def mmd(n_conditions, beta, kernel_method='multi-scale-rbf', computation_way="ge
                 for i in range(len(conditions_mmd)):
                     for j in range(i):
                         loss += compute_mmd(conditions_mmd[j], conditions_mmd[j + 1], kernel_method)
-            return _nan2inf(beta * loss)
+            return _nan2zero(beta * loss)
 
     return mmd_loss
 
