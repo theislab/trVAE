@@ -223,7 +223,7 @@ class trVAEMulti:
                 latent: numpy nd-array
                     returns array containing latent space encoding of 'data'
         """
-        if feed_fake > 0:
+        if feed_fake >= 0:
             decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
         else:
             decoder_labels = encoder_labels

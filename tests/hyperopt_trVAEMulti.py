@@ -160,7 +160,7 @@ def create_model(train_adata,
     print(f'Mean diff: {best_mean_diff}, Var_diff: {best_var_diff}')
     print(
         f'alpha = {network.alpha}, beta = {network.beta}, eta={network.eta}, z_dim = {network.z_dim}, mmd_dim = {network.mmd_dim}, batch_size = {batch_size_choices}, dropout_rate = {network.dr_rate}, lr = {network.lr}')
-    return {'loss': objective, 'status': STATUS_OK, 'model': network}
+    return {'loss': -objective, 'status': STATUS_OK, 'model': network}
 
 
 def predict_between_conditions(network, adata, pred_adatas, source_condition, source_label, target_label,
