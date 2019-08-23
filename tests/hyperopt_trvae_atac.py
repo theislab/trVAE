@@ -18,8 +18,12 @@ def data():
                  'domain_encoder': {'RNA-seq': 0, 'ATAC-seq': 1},
                  'domain': 'modality',
                  'label': 'cell_subclass'},
+        "PBMC_ATAC": {'name': 'pbmc_atac', 'need_merge': False,
+                      'domain_encoder': {'RNA-seq': 0, 'ATAC-seq': 1},
+                      'domain': 'domain',
+                      'label': 'cell_type'},
     }
-    data_key = "ATAC"
+    data_key = "PBMC_ATAC"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     domain_key = data_dict['domain']
@@ -43,10 +47,10 @@ def create_model(net_train_adata, net_valid_adata,
 
     alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([1, 100, 500, 1000, 1500, 2000, 5000])}}
-    gamma_choices = {{choice([1, 5, 50, 100, 500, 1000, 2000, 5000])}}
-    eta_choices = {{choice([0.1, 1, 2, 5, 7, 10])}}
-    batch_size_choices = {{choice([128, 256, 512, 1024, 1500, 2048])}}
-    dropout_rate_choices = {{choice([0.1, 0.2, 0.5, 0.75])}}
+    gamma_choices = {{choice([1, 10])}}
+    eta_choices = {{choice([0.01, 0.1, 1, 2, 5, 7, 10, 20, 50])}}
+    batch_size_choices = {{choice([128, 256, 512, 1024, 1500])}}
+    dropout_rate_choices = {{choice([0.1, 0.2, 0.5])}}
 
     n_labels = len(net_train_adata.obs[label_key].unique().tolist())
     n_domains = len(net_train_adata.obs[domain_key].unique().tolist())
@@ -65,7 +69,7 @@ def create_model(net_train_adata, net_valid_adata,
                                     dropout_rate=dropout_rate_choices
                                     )
 
-    network.train(net_valid_adata,
+    network.train(net_train_adata,
                   net_valid_adata,
                   domain_key,
                   label_key,
