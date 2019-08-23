@@ -16,18 +16,30 @@ def data():
     DATASETS = {
         "ATAC": {'name': 'multimodal', 'need_merge': False,
                  'domain_encoder': {'RNA-seq': 0, 'ATAC-seq': 1},
+                 'source_domains': ['RNA-seq'],
+                 'target_domains': ['ATAC-seq'],
                  'domain': 'modality',
                  'label': 'cell_subclass'},
         "PBMC_ATAC": {'name': 'pbmc_atac', 'need_merge': False,
                       'domain_encoder': {'RNA-seq': 0, 'ATAC-seq': 1},
+                      'source_domains': ['RNA-seq'],
+                      'target_domains': ['ATAC-seq'],
                       'domain': 'domain',
                       'label': 'cell_type'},
+        "Pancreas": {'name': 'pancreas', 'need_merge': False,
+                     'domain_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
+                     'source_domains': ['Baron'],
+                     'target_domains': ['Muraro', 'Wang', 'Segerstolpe'],
+                     'domain': 'sample',
+                     'label': 'celltype'},
     }
-    data_key = "PBMC_ATAC"
+    data_key = "Pancreas"
     data_dict = DATASETS[data_key]
     data_name = data_dict['name']
     domain_key = data_dict['domain']
     label_key = data_dict['label']
+    source_domains = data_dict['source_domains']
+    target_domains = data_dict['target_domains']
     domain_encoder = data_dict['domain_encoder']
 
     adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
@@ -36,11 +48,12 @@ def data():
     net_train_adata = train_adata.copy()
     net_valid_adata = valid_adata.copy()
 
-    return net_train_adata, net_valid_adata, domain_key, label_key, domain_encoder
+    return net_train_adata, net_valid_adata, domain_key, label_key, source_domains, target_domains, domain_encoder
 
 
 def create_model(net_train_adata, net_valid_adata,
                  domain_key, label_key,
+                 source_domains, target_domains,
                  domain_encoder):
     z_dim_choices = {{choice([20, 40, 50, 60, 80, 100])}}
     mmd_dim_choices = {{choice([64, 128, 256])}}
@@ -63,9 +76,11 @@ def create_model(net_train_adata, net_valid_adata,
                                     beta=beta_choices,
                                     gamma=gamma_choices,
                                     eta=eta_choices,
-                                    model_path=f"./models/trVAEATAC/hyperopt/ATAC/",
+                                    model_path=f"./models/trVAEATAC/hyperopt/Pancreas/",
                                     n_labels=n_labels,
                                     n_domains=n_domains,
+                                    output_activation='leaky_relu',
+                                    mmd_computation_way="1",
                                     dropout_rate=dropout_rate_choices
                                     )
 
@@ -73,8 +88,8 @@ def create_model(net_train_adata, net_valid_adata,
                   net_valid_adata,
                   domain_key,
                   label_key,
-                  source_key="RNA-seq",
-                  target_key="ATAC-seq",
+                  source_key=source_domains,
+                  target_key=target_domains,
                   domain_encoder=domain_encoder,
                   n_epochs=10000,
                   batch_size=batch_size_choices,
@@ -82,8 +97,8 @@ def create_model(net_train_adata, net_valid_adata,
                   lr_reducer=0,
                   )
 
-    target_adata_train = net_train_adata.copy()[net_train_adata.obs[domain_key] == "ATAC-seq"]
-    target_adata_valid = net_valid_adata.copy()[net_valid_adata.obs[domain_key] == "ATAC-seq"]
+    target_adata_train = net_train_adata.copy()[net_train_adata.obs[domain_key].isin(target_domains)]
+    target_adata_valid = net_valid_adata.copy()[net_valid_adata.obs[domain_key].isin(target_domains)]
 
     target_adata = target_adata_train.concatenate(target_adata_valid)
     target_adata = remove_sparsity(target_adata)
