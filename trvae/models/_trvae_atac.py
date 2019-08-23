@@ -12,6 +12,7 @@ from scipy import sparse
 from sklearn.preprocessing import LabelEncoder
 
 from trvae.models._losses import LOSSES
+from trvae.models._activations import ACTIVATIONS
 from trvae.utils import remove_sparsity, label_encoder
 from ._utils import sample_z
 
@@ -56,6 +57,7 @@ class trVAEATAC:
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_path = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
+        self.output_activation = kwargs.get("output_activation", 'relu')
         self.mmd_computation_way = kwargs.get("mmd_computation_way", "general")
         self.print_summary = kwargs.get("print_summary", True)
 
@@ -133,7 +135,7 @@ class trVAEATAC:
         h = LeakyReLU()(h)
         h = Dropout(self.dr_rate)(h)
         h = Dense(self.x_dim, kernel_initializer=self.init_w, use_bias=True)(h)
-        h = Activation('relu', name="reconstruction_output")(h)
+        h = ACTIVATIONS[self.output_activation](h)
         decoder_model = Model(inputs=[z, y], outputs=h, name=name)
         mmd_model = Model(inputs=[z, y], outputs=h_mmd, name='decoder_mmd')
 
