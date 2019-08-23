@@ -78,8 +78,8 @@ def create_model(net_train_adata, net_valid_adata,
                   domain_encoder=domain_encoder,
                   n_epochs=10000,
                   batch_size=batch_size_choices,
-                  early_stop_limit=250,
-                  lr_reducer=100,
+                  early_stop_limit=500,
+                  lr_reducer=0,
                   )
 
     target_adata_train = net_train_adata.copy()[net_train_adata.obs[domain_key] == "ATAC-seq"]
