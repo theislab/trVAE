@@ -30,6 +30,7 @@ def data():
                      'domain_encoder': {'Baron': 0, 'Muraro': 1, 'Wang': 2, 'Segerstolpe': 3},
                      'source_domains': ['Baron'],
                      'target_domains': ['Muraro', 'Wang', 'Segerstolpe'],
+                     'cell_types': ['acinar', 'beta', 'delta', 'ductal', 'gamma'],
                      'domain': 'sample',
                      'label': 'celltype'},
     }
@@ -41,8 +42,13 @@ def data():
     source_domains = data_dict['source_domains']
     target_domains = data_dict['target_domains']
     domain_encoder = data_dict['domain_encoder']
+    celltypes = data_dict.get('cell_types', None)
 
     adata = sc.read(f"./data/{data_name}/{data_name}.h5ad")
+
+    if celltypes:
+        adata = adata.copy()[adata.obs[label_key].isin(celltypes)]
+
     train_adata, valid_adata = train_test_split(adata, 0.80)
 
     net_train_adata = train_adata.copy()
