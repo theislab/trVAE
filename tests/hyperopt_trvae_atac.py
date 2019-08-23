@@ -66,8 +66,8 @@ def create_model(net_train_adata, net_valid_adata,
 
     alpha_choices = {{choice([0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001])}}
     beta_choices = {{choice([1, 100, 500, 1000, 1500, 2000, 5000])}}
-    gamma_choices = {{choice([1, 10])}}
-    eta_choices = {{choice([0.01, 0.1, 1, 2, 5, 7, 10, 20, 50])}}
+    gamma_choices = {{choice([1, 10, 100, 1000, 5000, 10000])}}
+    eta_choices = {{choice([0.01, 0.1, 1, 5, 10, 50])}}
     batch_size_choices = {{choice([128, 256, 512, 1024, 1500])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5])}}
 
