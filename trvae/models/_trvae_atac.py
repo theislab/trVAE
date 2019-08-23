@@ -141,13 +141,9 @@ class trVAEATAC:
 
     def _classifier(self, name='classifier_from_mmd_latent'):
         mmd_latent = Input(shape=(self.mmd_dim,))
-        h = Dense(64, kernel_initializer=self.init_w, use_bias=False)(mmd_latent)
-        h = BatchNormalization()(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
 
         h = Dense(self.n_labels, activation='softmax', name='classifier_prob',
-                  kernel_initializer=self.init_w, use_bias=True)(h)
+                  kernel_initializer=self.init_w, use_bias=True)(mmd_latent)
 
         model = Model(inputs=mmd_latent, outputs=h, name=name)
         return model
