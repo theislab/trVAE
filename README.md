@@ -10,3 +10,19 @@ A Keras (with tensorflow backend) implementation of trVAE. trVAE is a deep gener
 </div>
 <div float="right">
 </div>
+
+## Getting Started
+
+## Installation
+
+### Installation with pip
+
+### Development version installation
+
+## Examples
+
+## Reproducing paper results:
+In order to reproduce paper results visit [here](https://github.com/Naghipourfar/trVAE_reproducibility).
+
+
+## References
