@@ -72,7 +72,7 @@ for cell_type in cell_types:
 
     cell_type_adata = train_adata[train_adata.obs[cell_type_key] == cell_type]
 
-    recon_adata = predict_transition(cell_type_adata, "Control", "Hpoly.Day10", cell_type)
+    recon_adata = predict_transition(cell_type_adata, "Control", "Hpoly.Day3", cell_type)
     recon_adata = recon_adata.concatenate(predict_transition(recon_adata, "Control", "Hpoly.Day10", cell_type))
     recon_adata = recon_adata.concatenate(predict_transition(recon_adata, "Control", "Salmonella", cell_type))
     recon_adata = recon_adata.concatenate(predict_transition(recon_adata, "Hpoly.Day3", "Hpoly.Day10", cell_type))
