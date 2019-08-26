@@ -16,8 +16,22 @@ A Keras (with tensorflow backend) implementation of trVAE. trVAE is a deep gener
 ## Installation
 
 ### Installation with pip
+To install the latest version from PyPI, simply use the following bash script:
+```bash
+pip install trvae
+```
+or install the development version via pip: 
+```bash
+pip install git+https://github.com/theislab/trvae.git
+```
 
-### Development version installation
+or you can first install flit and clone this repository:
+```bash
+pip install flit
+git clone https://github.com/theislab/trVAE
+cd scgen
+flit install
+```
 
 ## Examples
 
