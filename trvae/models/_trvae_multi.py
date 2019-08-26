@@ -55,6 +55,7 @@ class trVAEMulti:
         self.model_to_use = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.output_activation = kwargs.get("output_activation", 'relu')
+        self.mmd_computation_way = kwargs.get("mmd_computation_way", "general")
         self.ridge = kwargs.get('ridge', 0.1)
         self.scale_factor = kwargs.get('scale_factor', 1.0)
         self.clip_value = kwargs.get('clip_value', 3.0)
@@ -167,7 +168,7 @@ class trVAEMulti:
 
     def _calculate_loss(self):
         loss = LOSSES['mse'](self.mu, self.log_var, self.alpha, self.eta)
-        mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta, self.kernel_method, "general")
+        mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta, self.kernel_method, self.mmd_computation_way)
 
         return loss, mmd_loss
 
