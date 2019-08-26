@@ -29,7 +29,7 @@ or you can first install flit and clone this repository:
 ```bash
 pip install flit
 git clone https://github.com/theislab/trVAE
-cd scgen
+cd trVAE
 flit install
 ```
 
