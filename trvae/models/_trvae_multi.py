@@ -208,6 +208,8 @@ class trVAEMulti:
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
+        latent = np.nan_to_num(latent)
+
         latent_adata = anndata.AnnData(X=latent)
         latent_adata.obs = adata.obs.copy(deep=True)
 
@@ -239,6 +241,7 @@ class trVAEMulti:
 
         x = [adata.X, encoder_labels, decoder_labels]
         mmd_latent = self.cvae_model.predict(x)[1]
+        mmd_latent = np.nan_to_num(mmd_latent)
 
         mmd_adata = anndata.AnnData(X=mmd_latent)
         mmd_adata.obs = adata.obs.copy(deep=True)
@@ -273,6 +276,7 @@ class trVAEMulti:
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
         reconstructed = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[0]
+        reconstructed = np.nan_to_num(reconstructed)
 
         reconstructed_adata = anndata.AnnData(X=reconstructed)
         reconstructed_adata.obs = adata.obs.copy(deep=True)
