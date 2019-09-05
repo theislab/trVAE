@@ -92,7 +92,7 @@ def remove_sparsity(adata):
     return adata
 
 
-def create_dictionary(conditions, target_conditions=None):
+def create_dictionary(conditions, target_conditions=[]):
     if isinstance(target_conditions, list):
         target_conditions = [target_conditions]
 
