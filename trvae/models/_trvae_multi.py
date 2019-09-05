@@ -415,7 +415,8 @@ class trVAEMulti:
             self.save_model()
 
     def get_corrected(self, adata, labels, return_z=False):
+        reference_labels = np.zeros(adata.shape[0])
         adata.obsm['mmd_latent'] = self.to_mmd_layer(adata, labels, -1, return_adata=False)
-        adata.obsm['reconstructed'] = self.predict(adata, labels, labels, return_adata=False)
+        adata.obsm['reconstructed'] = self.predict(adata, reference_labels, labels, return_adata=False)
         if return_z:
             adata.obsm['z_latent'] = self.to_latent(adata, labels, return_adata=False)
