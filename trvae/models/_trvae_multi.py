@@ -41,26 +41,24 @@ class trVAEMulti:
                 number of latent space dimensions.
     """
 
-    def __init__(self, x_dimension, z_dimension=100, n_conditions=3, **kwargs):
+    def __init__(self, x_dimension, n_conditions, z_dimension=40, **kwargs):
         self.x_dim = x_dimension
         self.z_dim = z_dimension
         self.mmd_dim = kwargs.get('mmd_dimension', 128)
         self.n_conditions = n_conditions
 
         self.lr = kwargs.get("learning_rate", 0.001)
-        self.alpha = kwargs.get("alpha", 0.001)
+        self.alpha = kwargs.get("alpha", 0.000001)
         self.beta = kwargs.get("beta", 100)
-        self.eta = kwargs.get("eta", 1.0)
+        self.eta = kwargs.get("eta", 100)
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.mmd_computation_way = kwargs.get("mmd_computation_way", "general")
-        self.ridge = kwargs.get('ridge', 0.1)
-        self.scale_factor = kwargs.get('scale_factor', 1.0)
-        self.clip_value = kwargs.get('clip_value', 3.0)
-        self.lambda_l1 = kwargs.get('lambda_l1', 0.01)
-        self.lambda_l2 = kwargs.get('lambda_l2', 0.1)
+        self.clip_value = kwargs.get('clip_value', 1e6)
+        self.lambda_l1 = kwargs.get('lambda_l1', 0.0)
+        self.lambda_l2 = kwargs.get('lambda_l2', 0.0)
 
         self.x = Input(shape=(self.x_dim,), name="data")
         self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_labels")
@@ -407,3 +405,7 @@ class trVAEMulti:
                                 verbose=fit_verbose)
         if save:
             self.save_model()
+
+    def get_corrected(self, adata, labels):
+        adata.obsm['mmd_latent'] = self.to_mmd_layer(adata, labels, -1)
+        adata.obsm['reconstructed'] = self.predict(adata, labels, labels)
