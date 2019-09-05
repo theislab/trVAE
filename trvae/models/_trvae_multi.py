@@ -188,7 +188,7 @@ class trVAEMulti:
                                 metrics={self.cvae_model.outputs[0].name: loss,
                                          self.cvae_model.outputs[1].name: mmd_loss})
 
-    def to_latent(self, adata, encoder_labels):
+    def to_latent(self, adata, encoder_labels, return_adata=True):
         """
             Map `data` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -208,12 +208,15 @@ class trVAEMulti:
         latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
         latent = np.nan_to_num(latent)
 
-        latent_adata = anndata.AnnData(X=latent)
-        latent_adata.obs = adata.obs.copy(deep=True)
+        if return_adata:
+            output = anndata.AnnData(X=latent)
+            output.obs = adata.obs.copy(deep=True)
+        else:
+            output = latent
 
-        return latent_adata
+        return output
 
-    def to_mmd_layer(self, adata, encoder_labels, feed_fake=0):
+    def to_mmd_layer(self, adata, encoder_labels, feed_fake=0, return_adata=True):
         """
             Map `data` in to the pn layer after latent layer. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
@@ -240,13 +243,15 @@ class trVAEMulti:
         x = [adata.X, encoder_labels, decoder_labels]
         mmd_latent = self.cvae_model.predict(x)[1]
         mmd_latent = np.nan_to_num(mmd_latent)
+        if return_adata:
+            output = anndata.AnnData(X=mmd_latent)
+            output.obs = adata.obs.copy(deep=True)
+        else:
+            output = mmd_latent
 
-        mmd_adata = anndata.AnnData(X=mmd_latent)
-        mmd_adata.obs = adata.obs.copy(deep=True)
+        return output
 
-        return mmd_adata
-
-    def predict(self, adata, encoder_labels, decoder_labels):
+    def predict(self, adata, encoder_labels, decoder_labels, return_adata=True):
         """
             Predicts the cell type provided by the user in stimulated condition.
             # Parameters
@@ -276,11 +281,14 @@ class trVAEMulti:
         reconstructed = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[0]
         reconstructed = np.nan_to_num(reconstructed)
 
-        reconstructed_adata = anndata.AnnData(X=reconstructed)
-        reconstructed_adata.obs = adata.obs.copy(deep=True)
-        reconstructed_adata.var_names = adata.var_names
+        if return_adata:
+            output = anndata.AnnData(X=reconstructed)
+            output.obs = adata.obs.copy(deep=True)
+            output.var_names = adata.var_names
+        else:
+            output = reconstructed
 
-        return reconstructed_adata
+        return output
 
     def restore_model(self):
         """
@@ -314,9 +322,9 @@ class trVAEMulti:
 
     def train(self, train_adata, valid_adata=None,
               condition_encoder=None, condition_key='condition',
-              n_epochs=25, batch_size=32,
-              early_stop_limit=20, lr_reducer=10, threshold=0.0025, monitor='val_loss',
-              shuffle=True, verbose=2, save=True):
+              n_epochs=10000, batch_size=1024,
+              early_stop_limit=300, lr_reducer=250, threshold=0.0, monitor='val_loss',
+              shuffle=True, verbose=0, save=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -406,6 +414,8 @@ class trVAEMulti:
         if save:
             self.save_model()
 
-    def get_corrected(self, adata, labels):
-        adata.obsm['mmd_latent'] = self.to_mmd_layer(adata, labels, -1)
-        adata.obsm['reconstructed'] = self.predict(adata, labels, labels)
+    def get_corrected(self, adata, labels, return_z=False):
+        adata.obsm['mmd_latent'] = self.to_mmd_layer(adata, labels, -1, return_adata=False)
+        adata.obsm['reconstructed'] = self.predict(adata, labels, labels, return_adata=False)
+        if return_z:
+            adata.obsm['z_latent'] = self.to_latent(adata, labels, return_adata=False)
