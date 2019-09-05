@@ -4,7 +4,8 @@ from scipy import sparse
 from sklearn.preprocessing import LabelEncoder
 
 
-def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True, n_top_genes=2000):
+def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True,
+              n_top_genes=2000):
     if filter_min_counts:
         sc.pp.filter_genes(adata, min_counts=1)
         sc.pp.filter_cells(adata, min_counts=1)
@@ -89,3 +90,14 @@ def remove_sparsity(adata):
     if sparse.issparse(adata.X):
         adata.X = adata.X.A
     return adata
+
+
+def create_dictionary(conditions, target_conditions=None):
+    if isinstance(target_conditions, list):
+        target_conditions = [target_conditions]
+
+    dictionary = {}
+    conditions = [e for e in conditions if e not in target_conditions]
+    for idx, condition in enumerate(conditions):
+        dictionary[condition] = idx
+    return dictionary
