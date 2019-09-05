@@ -1,0 +1,11 @@
+get_version
+anndata
+scanpy
+adjustText
+tensorflow
+numpy
+scipy
+pandas
+keras
+matplotlib
+seaborn
