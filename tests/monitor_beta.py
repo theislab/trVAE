@@ -83,7 +83,7 @@ def train_network(data_dict=None,
 
     # Calculate ASW for MMD Layer
 
-    encoder_labels = trvae.utils.label_encoder(adata, label_encoder, condition_key)
+    encoder_labels, _ = trvae.utils.label_encoder(adata, label_encoder, condition_key)
     mmd_latent = network.to_mmd_layer(adata, encoder_labels, feed_fake=-1, return_adata=True)
 
     asw = trvae.mt.asw(mmd_latent, condition_key)
