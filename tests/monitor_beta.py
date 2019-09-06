@@ -26,6 +26,7 @@ def train_network(data_dict=None,
                   mmd_dimension=128,
                   alpha=0.00005,
                   beta=100,
+                  eta=1.0,
                   kernel='multi-scale-rbf',
                   n_epochs=5000,
                   batch_size=512,
@@ -63,7 +64,7 @@ def train_network(data_dict=None,
                                      mmd_dimension=mmd_dimension,
                                      alpha=alpha,
                                      beta=beta,
-                                     eta=1.0,
+                                     eta=eta,
                                      kernel=kernel,
                                      learning_rate=learning_rate,
                                      output_activation="relu",
@@ -92,7 +93,7 @@ def train_network(data_dict=None,
     ari = trvae.mt.ari(mmd_latent, cell_type_key)
     nmi = trvae.mt.nmi(mmd_latent, cell_type_key)
 
-    row = [alpha, z_dim, mmd_dimension, beta, asw, nmi, ari, ebm]
+    row = [alpha, eta, z_dim, mmd_dimension, beta, asw, nmi, ari, ebm]
     with open("../monitor_beta.csv", 'a') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(row)
@@ -106,7 +107,7 @@ if __name__ == '__main__':
                                  help='name of dataset you want to train')
 
     args = vars(parser.parse_args())
-    row = ["Alpha", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM"]
+    row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM"]
     with open("../monitor_beta.csv", 'w+') as file:
         writer = csv.writer(file)
         writer.writerow(row)
