@@ -63,6 +63,7 @@ def train_network(data_dict=None,
                                      mmd_dimension=mmd_dimension,
                                      alpha=alpha,
                                      beta=beta,
+                                     eta=1.0,
                                      kernel=kernel,
                                      learning_rate=learning_rate,
                                      output_activation="relu",
@@ -92,7 +93,7 @@ def train_network(data_dict=None,
     nmi = trvae.mt.nmi(mmd_latent, cell_type_key)
 
     row = [alpha, z_dim, mmd_dimension, beta, asw, nmi, ari, ebm]
-    with open("./monitor_beta.csv", 'a') as csvFile:
+    with open("../monitor_beta.csv", 'a') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(row)
     csvFile.close()
@@ -106,7 +107,7 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
     row = ["Alpha", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM"]
-    with open("./monitor_beta.csv", 'w+') as file:
+    with open("../monitor_beta.csv", 'w+') as file:
         writer = csv.writer(file)
         writer.writerow(row)
     file.close()
