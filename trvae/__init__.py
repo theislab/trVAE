@@ -1,4 +1,4 @@
-"""RCVAE - Regularized Conditional Variational Autoencoders"""
+"""trVAE - Regularized Conditional Variational Autoencoders"""
 
 from . import models as archs
 from . import utils as tl
@@ -13,7 +13,7 @@ __author__ = ', '.join([
 ])
 
 __email__ = ', '.join([
-    'mohsen.naghipourfar@gmail.de',
+    'mohsen.naghipourfar@gmail.com',
     'Mohammad.lotfollahi@helmholtz-muenchen.de',
 ])
 
