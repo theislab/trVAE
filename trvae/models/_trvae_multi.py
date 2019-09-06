@@ -408,6 +408,7 @@ class trVAEMulti:
                                 y=y,
                                 epochs=n_epochs,
                                 batch_size=batch_size,
+                                validation_split=0.2,
                                 shuffle=shuffle,
                                 callbacks=callbacks,
                                 verbose=fit_verbose)
