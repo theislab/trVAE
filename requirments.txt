@@ -9,3 +9,5 @@ pandas
 keras
 matplotlib
 seaborn
+keras_vggface
+opencv-python
