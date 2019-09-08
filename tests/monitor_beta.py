@@ -22,8 +22,9 @@ DATASETS = {
 
 
 def train_network(data_dict=None,
+                  filename=None,
                   z_dim=40,
-                  mmd_dimension=128,
+                  mmd_dim=128,
                   alpha=0.00005,
                   beta=100,
                   eta=1.0,
@@ -61,14 +62,14 @@ def train_network(data_dict=None,
     network = trvae.archs.trVAEMulti(x_dimension=net_train_data.shape[1],
                                      z_dimension=z_dim,
                                      n_conditions=n_conditions,
-                                     mmd_dimension=mmd_dimension,
+                                     mmd_dimension=mmd_dim,
                                      alpha=alpha,
                                      beta=beta,
                                      eta=eta,
                                      kernel=kernel,
                                      learning_rate=learning_rate,
                                      output_activation="relu",
-                                     model_path=f"../models/trVAEMulti/Monitor/{data_name}/{spec_cell_type}/{beta}/",
+                                     model_path=f"../models/trVAEMulti/Monitor/{data_name}/{spec_cell_type}/{filename}/{beta}/",
                                      dropout_rate=dropout_rate,
                                      )
 
@@ -93,11 +94,11 @@ def train_network(data_dict=None,
     ari = trvae.mt.ari(mmd_latent, cell_type_key)
     nmi = trvae.mt.nmi(mmd_latent, cell_type_key)
 
-    row = [alpha, eta, z_dim, mmd_dimension, beta, asw, nmi, ari, ebm]
-    with open("../monitor_beta.csv", 'a') as csvFile:
-        writer = csv.writer(csvFile)
+    row = [alpha, eta, z_dim, mmd_dim, beta, asw, nmi, ari, ebm]
+    with open(f"../{filename}.csv", 'a') as file:
+        writer = csv.writer(file)
         writer.writerow(row)
-    csvFile.close()
+    file.close()
 
 
 if __name__ == '__main__':
@@ -105,14 +106,24 @@ if __name__ == '__main__':
     arguments_group = parser.add_argument_group("Parameters")
     arguments_group.add_argument('-d', '--data', type=str, required=True,
                                  help='name of dataset you want to train')
+    arguments_group.add_argument('-z', '--z_dim', type=int, required=True,
+                                 help='z_dim')
+    arguments_group.add_argument('-m', '--mmd_dim', type=int, required=True,
+                                 help='mmd_dim')
+    arguments_group.add_argument('-a', '--alpha', type=float, required=True,
+                                 help='alpha')
+    arguments_group.add_argument('-e', '--eta', type=float, required=True,
+                                 help='eta')
 
     args = vars(parser.parse_args())
     row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM"]
-    with open("../monitor_beta.csv", 'w+') as file:
+    filename = f"alpha={args['alpha']}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
+    with open(f"../{filename}.csv", 'w+') as file:
         writer = csv.writer(file)
         writer.writerow(row)
     file.close()
 
     data_dict = DATASETS[args['data']]
-    for beta in np.arange(0, 1e6, 50).tolist():
-        train_network(data_dict=data_dict, beta=beta)
+    del args['data']
+    for beta in np.arange(0, 1000, 50).tolist():
+        train_network(data_dict=data_dict, beta=beta, filename=filename, **args)
