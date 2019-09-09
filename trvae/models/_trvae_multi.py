@@ -5,14 +5,14 @@ import anndata
 import keras
 import numpy as np
 from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, Activation
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
 from scipy import sparse
 
-from trvae.models._losses import LOSSES
 from trvae.models._activations import ACTIVATIONS
+from trvae.models._losses import LOSSES
 from trvae.models._utils import sample_z, print_message
 from trvae.utils import label_encoder, remove_sparsity
 
@@ -21,20 +21,46 @@ log = logging.getLogger(__file__)
 
 class trVAEMulti:
     """
-        Regularized C-VAE vector Network class. This class contains the implementation of Conditional
+        trVAE Network class. This class contains the implementation of Regularized Conditional
         Variational Auto-encoder network.
         # Parameters
             kwargs:
+                key: `mmd_dimension`: int
+                    dimension of MMD layer in trVAE
+
+                key: `kernel_method`: str
+                        kernel method for MMD loss calculation
+
+                key: `output_activation`: str
+                        activation of output layer in trVAE
+
                 key: `dropout_rate`: float
                         dropout rate
+
                 key: `learning_rate`: float
                     learning rate of optimization algorithm
+
                 key: `model_path`: basestring
                     path to save the model after training
+
                 key: `alpha`: float
-                    alpha coefficient for loss.
+                    alpha coefficient for KL loss.
+
                 key: `beta`: float
-                    beta coefficient for loss.
+                    beta coefficient for MMD loss.
+
+                key: `eta`: float
+                    eta coefficient for reconstruction loss.
+
+                key: `lambda_l1`: float
+                    lambda coefficient for L1 regularization
+
+                key: `lambda_l2`: float
+                    lambda coefficient for L2 regularization
+
+                key: `clip_value`: float
+                    clip_value for optimizer
+
             x_dimension: integer
                 number of gene expression space dimensions.
             z_dimension: integer
@@ -86,6 +112,8 @@ class trVAEMulti:
                     A dense layer consists of means of gaussian distributions of latent space dimensions.
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
+                model: Model
+                    A keras Model object for Encoder subnetwork of trVAE
         """
         xy = concatenate([self.x, self.encoder_labels], axis=1)
         h = Dense(800, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(xy)
@@ -114,8 +142,10 @@ class trVAEMulti:
             # Parameters
                 No parameters are needed.
             # Returns
-                h: Tensor
-                    A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
+                decoder_model: Model
+                    A keras Model object for Decoder subnetwork of trVAE
+                decoder_mmd_model: Model
+                    A keras Model object for MMD Decoder subnetwork of trVAE
         """
         zy = concatenate([self.z, self.decoder_labels], axis=1)
         h = Dense(self.mmd_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(zy)
@@ -165,6 +195,16 @@ class trVAEMulti:
                                 name="cvae")
 
     def _calculate_loss(self):
+        """
+            Computes the MSE and MMD loss for trVAE using `LOSSES` dictionary
+            # Parameters
+                No parameters are needed.
+            # Returns
+                loss: function
+                    mse loss function
+                mmd_loss: function
+                    mmd loss function
+        """
         loss = LOSSES['mse'](self.mu, self.log_var, self.alpha, self.eta)
         mmd_loss = LOSSES['mmd'](self.n_conditions, self.beta, self.kernel_method, self.mmd_computation_way)
 
@@ -190,17 +230,19 @@ class trVAEMulti:
 
     def to_latent(self, adata, encoder_labels, return_adata=True):
         """
-            Map `data` in to the latent space. This function will feed data
+            Map `adata` in to the latent space. This function will feed data
             in encoder part of C-VAE and compute the latent space coordinates
             for each sample in data.
             # Parameters
-                data: `~anndata.AnnData`
+                adata: `~anndata.AnnData`
                     Annotated data matrix to be mapped to latent space. `data.X` has to be in shape [n_obs, n_vars].
-                labels: numpy nd-array
+                encoder_labels: numpy nd-array
                     `numpy nd-array` of labels to be fed as CVAE's condition array.
+                return_adata: boolean
+                    if `True`, will output as an `anndata` object or put the results in the `obsm` attribute of `adata`
             # Returns
-                latent: numpy nd-array
-                    returns array containing latent space encoding of 'data'
+                output: `~anndata.AnnData`
+                    returns `anndata` object containing latent space encoding of 'adata'
         """
         adata = remove_sparsity(adata)
 
@@ -218,17 +260,21 @@ class trVAEMulti:
 
     def to_mmd_layer(self, adata, encoder_labels, feed_fake=0, return_adata=True):
         """
-            Map `data` in to the pn layer after latent layer. This function will feed data
-            in encoder part of C-VAE and compute the latent space coordinates
-            for each sample in data.
+            Map `adata` in to the MMD layer of trVAE network. This function will compute output
+            activation of MMD layer in trVAE.
             # Parameters
-                data: `~anndata.AnnData`
+                adata: `~anndata.AnnData`
                     Annotated data matrix to be mapped to latent space. `data.X` has to be in shape [n_obs, n_vars].
-                labels: numpy nd-array
+                encoder_labels: numpy nd-array
                     `numpy nd-array` of labels to be fed as CVAE's condition array.
+                feed_fake: int
+                    if `feed_fake` is non-negative, `decoder_labels` will be identical to `encoder_labels`.
+                    if `feed_fake` is not non-negative, `decoder_labels` will be fed with `feed_fake` value.
+                return_adata: boolean
+                    if `True`, will output as an `anndata` object or put the results in the `obsm` attribute of `adata`
             # Returns
-                latent: numpy nd-array
-                    returns array containing latent space encoding of 'data'
+                output: `~anndata.AnnData`
+                    returns `anndata` object containing MMD latent space encoding of 'adata'
         """
         if feed_fake >= 0:
             decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
@@ -255,22 +301,32 @@ class trVAEMulti:
         """
             Predicts the cell type provided by the user in stimulated condition.
             # Parameters
-                data: `~anndata.AnnData`
+                adata: `~anndata.AnnData`
                     Annotated data matrix whether in primary space.
-                labels: numpy nd-array
-                    `numpy nd-array` of labels to be fed as CVAE's condition array.
+                encoder_labels: `numpy nd-array`
+                    `numpy nd-array` of labels to be fed as encoder's condition array.
+                decoder_labels: `numpy nd-array`
+                    `numpy nd-array` of labels to be fed as decoder's condition array.
+                return_adata: boolean
+                    if `True`, will output as an `anndata` object or put the results in the `obsm` attribute of `adata`
             # Returns
-                stim_pred: numpy nd-array
-                    `numpy nd-array` of predicted cells in primary space.
+                output: `~anndata.AnnData`
+                    `anndata` object of predicted cells in primary space.
             # Example
             ```python
             import scanpy as sc
-            import scgen
-            train_data = sc.read("train_kang.h5ad")
-            validation_data = sc.read("./data/validation.h5ad")
-            network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
-            network.train(n_epochs=20)
-            prediction = network.predict('CD4T', obs_key={"cell_type": ["CD8T", "NK"]})
+            import trvae
+            train_data = sc.read("train.h5ad")
+            valid_adata = sc.read("validation.h5ad")
+            n_conditions = len(train_adata.obs['condition'].unique().tolist())
+            network = trvae.archs.trVAEMulti(train_adata.shape[1], n_conditions)
+            network.train(train_adata, valid_adata, le=None,
+                          condition_key="condition", cell_type_key="cell_label",
+                          n_epochs=1000, batch_size=256
+                          )
+            encoder_labels, _ = trvae.utils.label_encoder(train_adata, condition_key="condition")
+            decoder_labels, _ = trvae.utils.label_encoder(train_adata, condition_key="condition")
+            pred_adata = network.predict(train_adata, encoder_labels, decoder_labels)
             ```
         """
         adata = remove_sparsity(adata)
@@ -300,10 +356,11 @@ class trVAEMulti:
             # Example
             ```python
             import scanpy as sc
-            import scgen
-            train_data = sc.read("./data/train_kang.h5ad")
-            validation_data = sc.read("./data/valiation.h5ad")
-            network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
+            import trvae
+            train_data = sc.read("train.h5ad")
+            valid_adata = sc.read("validation.h5ad")
+            n_conditions = len(train_adata.obs['condition'].unique().tolist())
+            network = trvae.archs.trVAEMulti(train_adata.shape[1], n_conditions)
             network.restore_model()
             ```
         """
@@ -331,8 +388,21 @@ class trVAEMulti:
             in the constructor function. This function is using `early stopping`
             technique to prevent overfitting.
             # Parameters
+                train_adata: `~anndata.AnnData`
+                    `AnnData` object for training trVAE
+                valid_adata: `~anndata.AnnData`
+                    `AnnData` object for validating trVAE (if None, trVAE will automatically split the data with
+                    fraction of 80%/20%.
+                condition_encoder: dict
+                    dictionary of encoded conditions (if None, trVAE will make one for data)
+                condition_key: str
+                    name of conditions (domains) column in obs matrix
+                cell_type_key: str
+                    name of cell_types (labels) column in obs matrix
                 n_epochs: int
                     number of epochs to iterate and optimize network weights
+                batch_size: int
+                    number of samples to be used in each batch for network weights optimization
                 early_stop_limit: int
                     number of consecutive epochs in which network loss is not going lower.
                     After this limit, the network will stop training.
@@ -340,22 +410,28 @@ class trVAEMulti:
                     Threshold for difference between consecutive validation loss values
                     if the difference is upper than this `threshold`, this epoch will not
                     considered as an epoch in early stopping.
-                full_training: bool
-                    if `True`: Network will be trained with all batches of data in each epoch.
-                    if `False`: Network will be trained with a random batch of data in each epoch.
-                initial_run: bool
-                    if `True`: The network will initiate training and log some useful initial messages.
-                    if `False`: Network will resume the training using `restore_model` function in order
-                        to restore last model which has been trained with some training dataset.
+                monitor: str
+                    metric to be monitored for early stopping.
+                shuffle: boolean
+                    if `True`, `train_adata` will be shuffled before training.
+                verbose: int
+                    level of verbosity
+                save: boolean
+                    if `True`, the model will be saved in the specified path after training.
             # Returns
                 Nothing will be returned
             # Example
             ```python
             import scanpy as sc
-            import scgen
-            train_data = sc.read(train_katrain_kang.h5ad           >>> validation_data = sc.read(valid_kang.h5ad)
-            network = scgen.CVAE(train_data=train_data, use_validation=True, validation_data=validation_data, model_path="./saved_models/", conditions={"ctrl": "control", "stim": "stimulated"})
-            network.train(n_epochs=20)
+            import trvae
+            train_data = sc.read("train.h5ad")
+            valid_adata = sc.read("validation.h5ad")
+            n_conditions = len(train_adata.obs['condition'].unique().tolist())
+            network = trvae.archs.trVAEMulti(train_adata.shape[1], n_conditions)
+            network.train(train_adata, valid_adata, le=None,
+                          condition_key="condition", cell_type_key="cell_label",
+                          n_epochs=1000, batch_size=256
+                          )
             ```
         """
         train_labels_encoded, _ = label_encoder(train_adata, condition_encoder, condition_key)
@@ -416,6 +492,28 @@ class trVAEMulti:
             self.save_model()
 
     def get_corrected(self, adata, labels, return_z=False):
+        """
+            Computes all trVAE's outputs (Latent (optional), MMD Latent, reconstruction)
+            # Parameters
+                adata: `~anndata.AnnData`
+                    Annotated data matrix whether in primary space.
+                labels: `numpy nd-array`
+                    `numpy nd-array` of labels to be fed as encoder's condition array.
+                return_z: boolean
+                    if `True`, will also put z_latent in the `obsm` attribute of `adata`
+            # Returns
+                Nothing will be returned.
+            # Example
+            ```python
+            import scanpy as sc
+            import trvae
+            train_data = sc.read("train.h5ad")
+            valid_adata = sc.read("validation.h5ad")
+            n_conditions = len(train_adata.obs['condition'].unique().tolist())
+            network = trvae.archs.trVAEMulti(train_adata.shape[1], n_conditions)
+            network.restore_model()
+            ```
+        """
         reference_labels = np.zeros(adata.shape[0])
         adata.obsm['mmd_latent'] = self.to_mmd_layer(adata, labels, -1, return_adata=False)
         adata.obsm['reconstructed'] = self.predict(adata, reference_labels, labels, return_adata=False)
