@@ -2,8 +2,9 @@ import argparse
 import csv
 import os
 
-import scanpy as sc
 import numpy as np
+import scanpy as sc
+
 import trvae
 from trvae.utils import normalize, train_test_split
 
@@ -94,7 +95,9 @@ def train_network(data_dict=None,
     ari = trvae.mt.ari(mmd_latent, cell_type_key)
     nmi = trvae.mt.nmi(mmd_latent, cell_type_key)
 
-    row = [alpha, eta, z_dim, mmd_dim, beta, asw, nmi, ari, ebm]
+    rec, mmd = network.get_reconstruction_error(net_valid_data, condition_key)
+
+    row = [alpha, eta, z_dim, mmd_dim, beta, asw, nmi, ari, ebm, rec, mmd]
     with open(f"../{filename}.csv", 'a') as file:
         writer = csv.writer(file)
         writer.writerow(row)
@@ -116,7 +119,7 @@ if __name__ == '__main__':
                                  help='eta')
 
     args = vars(parser.parse_args())
-    row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM"]
+    row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM", "sse_loss", 'mmd_loss']
     filename = f"alpha={args['alpha']}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
     with open(f"../{filename}.csv", 'w+') as file:
         writer = csv.writer(file)
