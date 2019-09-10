@@ -4,7 +4,7 @@ import os
 import anndata
 import keras
 import numpy as np
-from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback
+from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback, ModelCheckpoint
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
@@ -364,15 +364,15 @@ class trVAEMulti:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(os.path.join(self.model_to_use, 'mmd_cvae.h5'), compile=False)
-        self.encoder_model = load_model(os.path.join(self.model_to_use, 'encoder.h5'), compile=False)
-        self.decoder_model = load_model(os.path.join(self.model_to_use, 'decoder.h5'), compile=False)
-        self.decoder_mmd_model = load_model(os.path.join(self.model_to_use, 'decoder_mmd.h5'), compile=False)
+        self.cvae_model = load_model(filepath=os.path.join(self.model_to_use, "best_model.h5"), compile=False)
+        self.encoder_model = self.cvae_model.get_layer("encoder")
+        self.decoder_model = self.cvae_model.get_layer("decoder")
+        self.decoder_mmd_model = self.cvae_model.get_layer("decoder_mmd")
         self._loss_function()
 
     def save_model(self):
         os.makedirs(self.model_to_use, exist_ok=True)
-        self.cvae_model.save(os.path.join(self.model_to_use, "mmd_cvae.h5"), overwrite=True)
+
         self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
         self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
         self.decoder_mmd_model.save(os.path.join(self.model_to_use, "decoder_mmd.h5"), overwrite=True)
@@ -454,6 +454,10 @@ class trVAEMulti:
             fit_verbose = 0
         else:
             fit_verbose = verbose
+        if save:
+            os.makedirs(self.model_to_use, exist_ok=True)
+            callbacks.append(ModelCheckpoint(filepath=os.path.join(self.model_to_use, "best_model.h5"),
+                                             save_best_only=True, monitor=monitor, period=50))
 
         if sparse.issparse(train_adata.X):
             train_adata.X = train_adata.X.A
@@ -471,25 +475,27 @@ class trVAEMulti:
             x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
             y_valid = [valid_adata.X, valid_labels_encoded]
 
-            self.cvae_model.fit(x=x,
-                                y=y,
-                                epochs=n_epochs,
-                                batch_size=batch_size,
-                                validation_data=(x_valid, y_valid),
-                                shuffle=shuffle,
-                                callbacks=callbacks,
-                                verbose=fit_verbose)
+            history = self.cvae_model.fit(x=x,
+                                          y=y,
+                                          epochs=n_epochs,
+                                          batch_size=batch_size,
+                                          validation_data=(x_valid, y_valid),
+                                          shuffle=shuffle,
+                                          callbacks=callbacks,
+                                          verbose=fit_verbose)
         else:
-            self.cvae_model.fit(x=x,
-                                y=y,
-                                epochs=n_epochs,
-                                batch_size=batch_size,
-                                validation_split=0.2,
-                                shuffle=shuffle,
-                                callbacks=callbacks,
-                                verbose=fit_verbose)
-        if save:
-            self.save_model()
+            history = self.cvae_model.fit(x=x,
+                                          y=y,
+                                          epochs=n_epochs,
+                                          batch_size=batch_size,
+                                          validation_split=0.2,
+                                          shuffle=shuffle,
+                                          callbacks=callbacks,
+                                          verbose=fit_verbose)
+            self.cvae_model = load_model(filepath=os.path.join(self.model_to_use, "best_model.h5"))
+            self.encoder_model = self.cvae_model.get_layer("encoder")
+            self.decoder_model = self.cvae_model.get_layer("decoder")
+            self.decoder_mmd_model = self.cvae_model.get_layer("decoder_mmd")
 
     def get_corrected(self, adata, labels, return_z=False):
         """
@@ -519,3 +525,14 @@ class trVAEMulti:
         adata.obsm['reconstructed'] = self.predict(adata, reference_labels, labels, return_adata=False)
         if return_z:
             adata.obsm['z_latent'] = self.to_latent(adata, labels, return_adata=False)
+
+    def get_reconstruction_error(self, adata, condition_key):
+        adata = remove_sparsity(adata)
+
+        labels_encoded, _ = label_encoder(adata, None, condition_key)
+        labels_onehot = to_categorical(labels_encoded, num_classes=self.n_conditions)
+
+        x = [adata.X, labels_onehot, labels_onehot]
+        y = [adata.X, labels_encoded]
+
+        return self.cvae_model.evaluate(x, y, verbose=0)
