@@ -117,6 +117,8 @@ if __name__ == '__main__':
                                  help='alpha')
     arguments_group.add_argument('-e', '--eta', type=float, required=True,
                                  help='eta')
+    arguments_group.add_argument('-b', '--batch_size', type=float, required=False, default=512,
+                                 help='batch_size')
 
     args = vars(parser.parse_args())
     row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM", "sse_loss", 'mmd_loss']
@@ -129,4 +131,6 @@ if __name__ == '__main__':
     data_dict = DATASETS[args['data']]
     del args['data']
     for beta in np.arange(0, 1000, 50).tolist():
+        if beta == 0:
+            args['batch_size'] = 32
         train_network(data_dict=data_dict, beta=beta, filename=filename, **args)
