@@ -103,6 +103,14 @@ def train_network(data_dict=None,
         writer.writerow(row)
     file.close()
 
+    os.makedirs(f"./results/Monitor/{filename}/", exist_ok=True)
+    sc.settings.figdir = f"./results/Monitor/{filename}/"
+
+    sc.pp.neighbors(mmd_latent)
+    sc.tl.umap(mmd_latent)
+    sc.pl.umap(mmd_latent, color=condition_key, frameon=False, title="", save=f"_trVAE_MMD_condition.pdf")
+    sc.pl.umap(mmd_latent, color=cell_type_key, frameon=False, title="", save=f"_trVAE_MMD_cell_type.pdf")
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')
@@ -113,8 +121,6 @@ if __name__ == '__main__':
                                  help='z_dim')
     arguments_group.add_argument('-m', '--mmd_dim', type=int, required=True,
                                  help='mmd_dim')
-    arguments_group.add_argument('-a', '--alpha', type=float, required=True,
-                                 help='alpha')
     arguments_group.add_argument('-e', '--eta', type=float, required=True,
                                  help='eta')
     arguments_group.add_argument('-b', '--batch_size', type=float, required=False, default=512,
@@ -124,20 +130,21 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
     row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM", "sse_loss", 'mmd_loss']
-    filename = f"alpha={args['alpha']}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
-    with open(f"../{filename}.csv", 'w+') as file:
-        writer = csv.writer(file)
-        writer.writerow(row)
-    file.close()
 
     data_dict = DATASETS[args['data']]
     step = args['step']
     prev_batch_size = args['batch_size']
     del args['data']
     del args['step']
-    for beta in np.arange(0, 1000, step).tolist():
-        if beta == 0:
-            args['batch_size'] = 32
-        else:
-            args['batch_size'] = prev_batch_size
-        train_network(data_dict=data_dict, beta=beta, filename=filename, **args)
+    for alpha in [1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
+        filename = f"alpha={alpha}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
+        with open(f"../{filename}.csv", 'w+') as file:
+            writer = csv.writer(file)
+            writer.writerow(row)
+        file.close()
+        for beta in np.arange(0, 1000, step).tolist():
+            if beta == 0:
+                args['batch_size'] = 32
+            else:
+                args['batch_size'] = prev_batch_size
+            train_network(data_dict=data_dict, alpha=alpha, beta=beta, filename=filename, **args)
