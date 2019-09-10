@@ -95,7 +95,7 @@ def train_network(data_dict=None,
     ari = trvae.mt.ari(mmd_latent, cell_type_key)
     nmi = trvae.mt.nmi(mmd_latent, cell_type_key)
 
-    rec, mmd = network.get_reconstruction_error(net_valid_data, condition_key)
+    _, rec, mmd = network.get_reconstruction_error(net_valid_data, condition_key)
 
     row = [alpha, eta, z_dim, mmd_dim, beta, asw, nmi, ari, ebm, rec, mmd]
     with open(f"../{filename}.csv", 'a') as file:
