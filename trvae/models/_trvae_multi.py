@@ -68,6 +68,7 @@ class trVAEMulti:
     """
 
     def __init__(self, x_dimension, n_conditions, z_dimension=40, **kwargs):
+
         self.x_dim = x_dimension
         self.z_dim = z_dimension
         self.mmd_dim = kwargs.get('mmd_dimension', 128)

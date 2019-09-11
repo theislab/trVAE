@@ -12,11 +12,11 @@ from trvae.utils import normalize, train_test_split
 
 DATASETS = {
     "Kang": {'name': 'kang',
-             'source_conditions': ['CTRL'],
-             'target_conditions': ['STIM'],
+             'source_conditions': ['control'],
+             'target_conditions': ['stimulated'],
              "cell_type_key": "cell_type", "condition_key": "condition",
              'spec_cell_types': ['NK'],
-             "label_encoder": {"CTRL": 0, "STIM": 1}},
+             "label_encoder": {"control": 0, "stimulated": 1}},
 
 }
 
