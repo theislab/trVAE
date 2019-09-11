@@ -80,7 +80,8 @@ def train_network(data_dict=None,
                   early_stop_limit=early_stop_limit,
                   lr_reducer=int(0.8 * early_stop_limit),
                   verbose=verbose,
-                  save=True)
+                  save=True,
+                  monitor_best=False)
 
     # Calculate ASW for MMD Layer
 
