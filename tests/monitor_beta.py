@@ -144,10 +144,6 @@ if __name__ == '__main__':
                                  help='eta')
     arguments_group.add_argument('-b', '--batch_size', type=float, required=False, default=512,
                                  help='batch_size')
-    arguments_group.add_argument('-s', '--step', type=int, required=False, default=100,
-                                 help='batch_size')
-    arguments_group.add_argument('-x', '--max_beta', type=int, required=False, default=1000,
-                                 help='maximum value for beta')
     arguments_group.add_argument('-l', '--early_stop_limit', type=int, required=False, default=50,
                                  help='patience')
 
@@ -168,7 +164,7 @@ if __name__ == '__main__':
             writer = csv.writer(file)
             writer.writerow(row)
         file.close()
-        for beta in range(max_beta, -step, -step):
+        for beta in [10000, 7500, 5000, 2500, 1000, 750, 500, 250, 200, 100, 50, 10, 5, 1, 0, 0.1, 0.01]:
             if beta == 0:
                 args['batch_size'] = 32
             else:
