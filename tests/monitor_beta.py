@@ -5,6 +5,7 @@ import os
 import numpy as np
 import scanpy as sc
 import tensorflow as tf
+from keras import backend as K
 
 import trvae
 from trvae.utils import normalize, train_test_split
@@ -110,7 +111,8 @@ def train_network(data_dict=None,
     sc.pl.umap(mmd_latent, color=condition_key, frameon=False, title="", save=f"_trVAE_MMD_condition_{beta}.pdf")
     sc.pl.umap(mmd_latent, color=cell_type_key, frameon=False, title="", save=f"_trVAE_MMD_cell_type_{beta}.pdf")
 
-    tf.reset_default_graph()
+    K.clear_session()
+
 
 
 if __name__ == '__main__':
