@@ -372,16 +372,13 @@ class trVAEMulti:
 
     def save_model(self):
         os.makedirs(self.model_to_use, exist_ok=True)
-
-        self.encoder_model.save(os.path.join(self.model_to_use, "encoder.h5"), overwrite=True)
-        self.decoder_model.save(os.path.join(self.model_to_use, "decoder.h5"), overwrite=True)
-        self.decoder_mmd_model.save(os.path.join(self.model_to_use, "decoder_mmd.h5"), overwrite=True)
+        self.cvae_model.save(os.path.join(self.model_to_use, "best_model.h5"), overwrite=True)
 
     def train(self, train_adata, valid_adata=None,
               condition_encoder=None, condition_key='condition',
               n_epochs=10000, batch_size=1024,
               early_stop_limit=300, lr_reducer=250, threshold=0.0, monitor='val_loss',
-              shuffle=True, verbose=0, save=True):
+              shuffle=True, verbose=0, save=True, monitor_best=True):
         """
             Trains the network `n_epochs` times with given `train_data`
             and validates the model using validation_data if it was given
@@ -454,7 +451,7 @@ class trVAEMulti:
             fit_verbose = 0
         else:
             fit_verbose = verbose
-        if save:
+        if monitor_best:
             os.makedirs(self.model_to_use, exist_ok=True)
             callbacks.append(ModelCheckpoint(filepath=os.path.join(self.model_to_use, "best_model.h5"),
                                              save_best_only=True, monitor=monitor, period=50))
@@ -492,10 +489,10 @@ class trVAEMulti:
                                           shuffle=shuffle,
                                           callbacks=callbacks,
                                           verbose=fit_verbose)
-            self.cvae_model = load_model(filepath=os.path.join(self.model_to_use, "best_model.h5"))
-            self.encoder_model = self.cvae_model.get_layer("encoder")
-            self.decoder_model = self.cvae_model.get_layer("decoder")
-            self.decoder_mmd_model = self.cvae_model.get_layer("decoder_mmd")
+            if monitor_best:
+                self.restore_model()
+            elif save and not monitor_best:
+                self.save_model()
 
     def get_corrected(self, adata, labels, return_z=False):
         """
