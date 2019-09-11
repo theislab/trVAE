@@ -24,6 +24,7 @@ def create_data(data_dict):
     target_keys = data_dict.get("target_conditions")
     cell_type_key = data_dict.get("cell_type_key", None)
     condition_key = data_dict.get('condition_key', 'condition')
+    spec_cell_type = data_dict.get("spec_cell_types", None)[0]
 
     adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
@@ -33,7 +34,7 @@ def create_data(data_dict):
 
     train_adata, valid_adata = train_test_split(adata, 0.80)
 
-    spec_cell_type = data_dict.get("spec_cell_types", None)[0]
+
 
     net_train_adata = train_adata.copy()[~((train_adata.obs[cell_type_key] == spec_cell_type) &
                                            (train_adata.obs[condition_key].isin(target_keys)))]
@@ -65,6 +66,7 @@ def train_network(data_dict=None,
     cell_type_key = data_dict.get("cell_type_key", None)
     condition_key = data_dict.get('condition_key', 'condition')
     label_encoder = data_dict.get('label_encoder', None)
+    spec_cell_type = data_dict.get("spec_cell_types", None)[0]
 
     n_conditions = len(net_train_adata.obs[condition_key].unique().tolist())
 
