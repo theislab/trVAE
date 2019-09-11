@@ -8,9 +8,6 @@ import scanpy as sc
 import trvae
 from trvae.utils import normalize, train_test_split
 
-if not os.getcwd().endswith("tests"):
-    os.chdir("./tests")
-
 DATASETS = {
     "Kang": {'name': 'kang',
              'source_conditions': ['CTRL'],
@@ -44,7 +41,7 @@ def train_network(data_dict=None,
     label_encoder = data_dict.get('label_encoder', None)
     condition_key = data_dict.get('condition_key', 'condition')
 
-    adata = sc.read(f"../data/{data_name}/{data_name}_normalized.h5ad")
+    adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
 
     if adata.shape[0] > 2000:
         sc.pp.highly_variable_genes(adata, n_top_genes=2000)
@@ -70,7 +67,7 @@ def train_network(data_dict=None,
                                      kernel=kernel,
                                      learning_rate=learning_rate,
                                      output_activation="relu",
-                                     model_path=f"../models/trVAEMulti/Monitor/{data_name}/{spec_cell_type}/{filename}/{beta}/",
+                                     model_path=f"./models/trVAEMulti/Monitor/{data_name}/{spec_cell_type}/{filename}/{beta}/",
                                      dropout_rate=dropout_rate,
                                      )
 
@@ -98,7 +95,7 @@ def train_network(data_dict=None,
     _, rec, mmd = network.get_reconstruction_error(net_valid_data, condition_key)
 
     row = [alpha, eta, z_dim, mmd_dim, beta, asw, nmi, ari, ebm, rec, mmd]
-    with open(f"../{filename}.csv", 'a') as file:
+    with open(f"./{filename}.csv", 'a') as file:
         writer = csv.writer(file)
         writer.writerow(row)
     file.close()
@@ -108,8 +105,8 @@ def train_network(data_dict=None,
 
     sc.pp.neighbors(mmd_latent)
     sc.tl.umap(mmd_latent)
-    sc.pl.umap(mmd_latent, color=condition_key, frameon=False, title="", save=f"_trVAE_MMD_condition.pdf")
-    sc.pl.umap(mmd_latent, color=cell_type_key, frameon=False, title="", save=f"_trVAE_MMD_cell_type.pdf")
+    sc.pl.umap(mmd_latent, color=condition_key, frameon=False, title="", save=f"_trVAE_MMD_condition_{beta}.pdf")
+    sc.pl.umap(mmd_latent, color=cell_type_key, frameon=False, title="", save=f"_trVAE_MMD_cell_type_{beta}.pdf")
 
 
 if __name__ == '__main__':
@@ -142,7 +139,7 @@ if __name__ == '__main__':
     del args['max_beta']
     for alpha in [1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
         filename = f"alpha={alpha}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
-        with open(f"../{filename}.csv", 'w+') as file:
+        with open(f"./{filename}.csv", 'w+') as file:
             writer = csv.writer(file)
             writer.writerow(row)
         file.close()
