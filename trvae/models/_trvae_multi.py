@@ -223,7 +223,7 @@ class trVAEMulti:
                 Nothing will be returned.
         """
         loss, mmd_loss = self._calculate_loss()
-        self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr, clipvalue=self.clip_value)
+        self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
         self.cvae_model.compile(optimizer=self.cvae_optimizer,
                                 loss=[loss, mmd_loss],
                                 metrics={self.cvae_model.outputs[0].name: loss,
