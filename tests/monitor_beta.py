@@ -155,8 +155,6 @@ if __name__ == '__main__':
     max_beta = args['max_beta']
     prev_batch_size = args['batch_size']
     del args['data']
-    del args['step']
-    del args['max_beta']
     adata, net_train_adata, net_valid_adata = create_data(data_dict)
     for alpha in [1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
         filename = f"alpha={alpha}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
