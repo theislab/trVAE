@@ -165,6 +165,8 @@ if __name__ == '__main__':
                 args['batch_size'] = 32
             else:
                 args['batch_size'] = prev_batch_size
+            if beta <= 500:
+                args['early_stop_limit'] = 500
             train_network(data_dict=data_dict, alpha=alpha, beta=beta, filename=filename,
                           adata=adata, net_train_adata=net_train_adata, net_valid_adata=net_valid_adata,
                           **args)
