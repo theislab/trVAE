@@ -151,8 +151,6 @@ if __name__ == '__main__':
     row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM", "sse_loss", 'mmd_loss']
 
     data_dict = DATASETS[args['data']]
-    step = args['step']
-    max_beta = args['max_beta']
     prev_batch_size = args['batch_size']
     del args['data']
     adata, net_train_adata, net_valid_adata = create_data(data_dict)
