@@ -15,26 +15,32 @@ DATASETS = {
              "cell_type_key": "cell_type", "condition_key": "condition",
              'spec_cell_types': ['NK'],
              "label_encoder": {"control": 0, "stimulated": 1}},
+    "Haber": {'name': 'haber',
+              'source_conditions': ['Control'],
+              'target_conditions': ['Hpoly.Day10'],
+              "cell_type_key": "cell_label", "condition_key": "condition",
+              'spec_cell_types': ['Tuft'],
+              "label_encoder": {"Control": 0, "Hpoly.Day10": 1}},
 
 }
 
 
 def create_data(data_dict):
     data_name = data_dict['name']
+    source_keys = data_dict.get("source_conditions")
     target_keys = data_dict.get("target_conditions")
     cell_type_key = data_dict.get("cell_type_key", None)
     condition_key = data_dict.get('condition_key', 'condition')
     spec_cell_type = data_dict.get("spec_cell_types", None)[0]
 
     adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
+    adata = adata[adata.obs[condition_key].isin(source_keys + target_keys)]
 
     if adata.shape[0] > 2000:
         sc.pp.highly_variable_genes(adata, n_top_genes=2000)
         adata = adata[:, adata.var['highly_variable']]
 
     train_adata, valid_adata = train_test_split(adata, 0.80)
-
-
 
     net_train_adata = train_adata.copy()[~((train_adata.obs[cell_type_key] == spec_cell_type) &
                                            (train_adata.obs[condition_key].isin(target_keys)))]
