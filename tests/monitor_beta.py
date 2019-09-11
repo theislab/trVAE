@@ -158,7 +158,7 @@ if __name__ == '__main__':
             writer = csv.writer(file)
             writer.writerow(row)
         file.close()
-        for beta in range(0, max_beta + step, step):
+        for beta in range(max_beta, -step, -step):
             if beta == 0:
                 args['batch_size'] = 32
             else:
