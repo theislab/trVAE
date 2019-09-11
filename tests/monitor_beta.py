@@ -127,22 +127,26 @@ if __name__ == '__main__':
                                  help='batch_size')
     arguments_group.add_argument('-s', '--step', type=int, required=False, default=100,
                                  help='batch_size')
+    arguments_group.add_argument('-x', '--max_beta', type=int, required=False, default=1000,
+                                 help='batch_size')
 
     args = vars(parser.parse_args())
     row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM", "sse_loss", 'mmd_loss']
 
     data_dict = DATASETS[args['data']]
     step = args['step']
+    max_beta = args['max_beta']
     prev_batch_size = args['batch_size']
     del args['data']
     del args['step']
+    del args['max_beta']
     for alpha in [1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
         filename = f"alpha={alpha}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
         with open(f"../{filename}.csv", 'w+') as file:
             writer = csv.writer(file)
             writer.writerow(row)
         file.close()
-        for beta in np.arange(0, 1000, step).tolist():
+        for beta in np.arange(0, max_beta + step, step).tolist():
             if beta == 0:
                 args['batch_size'] = 32
             else:
