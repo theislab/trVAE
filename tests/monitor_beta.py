@@ -4,6 +4,7 @@ import os
 
 import numpy as np
 import scanpy as sc
+import tensorflow as tf
 
 import trvae
 from trvae.utils import normalize, train_test_split
@@ -109,6 +110,8 @@ def train_network(data_dict=None,
     sc.pl.umap(mmd_latent, color=condition_key, frameon=False, title="", save=f"_trVAE_MMD_condition_{beta}.pdf")
     sc.pl.umap(mmd_latent, color=cell_type_key, frameon=False, title="", save=f"_trVAE_MMD_cell_type_{beta}.pdf")
 
+    tf.reset_default_graph()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sample a trained autoencoder.')
@@ -144,7 +147,7 @@ if __name__ == '__main__':
             writer = csv.writer(file)
             writer.writerow(row)
         file.close()
-        for beta in np.arange(0, max_beta + step, step).tolist():
+        for beta in range(0, max_beta + step, step):
             if beta == 0:
                 args['batch_size'] = 32
             else:
