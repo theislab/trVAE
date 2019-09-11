@@ -2,9 +2,7 @@ import argparse
 import csv
 import os
 
-import numpy as np
 import scanpy as sc
-import tensorflow as tf
 from keras import backend as K
 
 import trvae
@@ -21,6 +19,29 @@ DATASETS = {
 }
 
 
+def create_data(data_dict):
+    data_name = data_dict['name']
+    target_keys = data_dict.get("target_conditions")
+    cell_type_key = data_dict.get("cell_type_key", None)
+    condition_key = data_dict.get('condition_key', 'condition')
+
+    adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
+
+    if adata.shape[0] > 2000:
+        sc.pp.highly_variable_genes(adata, n_top_genes=2000)
+        adata = adata[:, adata.var['highly_variable']]
+
+    train_adata, valid_adata = train_test_split(adata, 0.80)
+
+    spec_cell_type = data_dict.get("spec_cell_types", None)[0]
+
+    net_train_adata = train_adata.copy()[~((train_adata.obs[cell_type_key] == spec_cell_type) &
+                                           (train_adata.obs[condition_key].isin(target_keys)))]
+    net_valid_adata = valid_adata.copy()[~((valid_adata.obs[cell_type_key] == spec_cell_type) &
+                                           (valid_adata.obs[condition_key].isin(target_keys)))]
+    return adata, net_train_adata, net_valid_adata
+
+
 def train_network(data_dict=None,
                   filename=None,
                   z_dim=20,
@@ -35,31 +56,19 @@ def train_network(data_dict=None,
                   dropout_rate=0.2,
                   learning_rate=0.001,
                   verbose=2,
+                  adata=None,
+                  net_train_adata=None,
+                  net_valid_adata=None,
                   ):
     print(f"Training network with beta = {beta}")
     data_name = data_dict['name']
-    target_keys = data_dict.get("target_conditions")
     cell_type_key = data_dict.get("cell_type_key", None)
-    label_encoder = data_dict.get('label_encoder', None)
     condition_key = data_dict.get('condition_key', 'condition')
+    label_encoder = data_dict.get('label_encoder', None)
 
-    adata = sc.read(f"./data/{data_name}/{data_name}_normalized.h5ad")
+    n_conditions = len(net_train_adata.obs[condition_key].unique().tolist())
 
-    if adata.shape[0] > 2000:
-        sc.pp.highly_variable_genes(adata, n_top_genes=2000)
-        adata = adata[:, adata.var['highly_variable']]
-
-    train_data, valid_data = train_test_split(adata, 0.80)
-
-    spec_cell_type = data_dict.get("spec_cell_types", None)[0]
-
-    net_train_data = train_data.copy()[~((train_data.obs[cell_type_key] == spec_cell_type) &
-                                         (train_data.obs[condition_key].isin(target_keys)))]
-    net_valid_data = valid_data.copy()[~((valid_data.obs[cell_type_key] == spec_cell_type) &
-                                         (valid_data.obs[condition_key].isin(target_keys)))]
-    n_conditions = len(net_train_data.obs[condition_key].unique().tolist())
-
-    network = trvae.archs.trVAEMulti(x_dimension=net_train_data.shape[1],
+    network = trvae.archs.trVAEMulti(x_dimension=net_train_adata.shape[1],
                                      z_dimension=z_dim,
                                      n_conditions=n_conditions,
                                      mmd_dimension=mmd_dim,
@@ -73,8 +82,8 @@ def train_network(data_dict=None,
                                      dropout_rate=dropout_rate,
                                      )
 
-    network.train(net_train_data,
-                  net_valid_data,
+    network.train(net_train_adata,
+                  net_valid_adata,
                   label_encoder,
                   condition_key,
                   n_epochs=n_epochs,
@@ -95,7 +104,7 @@ def train_network(data_dict=None,
     ari = trvae.mt.ari(mmd_latent, cell_type_key)
     nmi = trvae.mt.nmi(mmd_latent, cell_type_key)
 
-    _, rec, mmd = network.get_reconstruction_error(net_valid_data, condition_key)
+    _, rec, mmd = network.get_reconstruction_error(net_valid_adata, condition_key)
 
     row = [alpha, eta, z_dim, mmd_dim, beta, asw, nmi, ari, ebm, rec, mmd]
     with open(f"./{filename}.csv", 'a') as file:
@@ -112,7 +121,6 @@ def train_network(data_dict=None,
     sc.pl.umap(mmd_latent, color=cell_type_key, frameon=False, title="", save=f"_trVAE_MMD_cell_type_{beta}.pdf")
 
     K.clear_session()
-
 
 
 if __name__ == '__main__':
@@ -143,6 +151,7 @@ if __name__ == '__main__':
     del args['data']
     del args['step']
     del args['max_beta']
+    adata, net_train_adata, net_valid_adata = create_data(data_dict)
     for alpha in [1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
         filename = f"alpha={alpha}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
         with open(f"./{filename}.csv", 'w+') as file:
@@ -154,4 +163,6 @@ if __name__ == '__main__':
                 args['batch_size'] = 32
             else:
                 args['batch_size'] = prev_batch_size
-            train_network(data_dict=data_dict, alpha=alpha, beta=beta, filename=filename, **args)
+            train_network(data_dict=data_dict, alpha=alpha, beta=beta, filename=filename,
+                          adata=adata, net_train_adata=net_train_adata, net_valid_adata=net_valid_adata,
+                          **args)
