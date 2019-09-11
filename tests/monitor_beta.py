@@ -148,7 +148,7 @@ if __name__ == '__main__':
                                  help='batch_size')
     arguments_group.add_argument('-x', '--max_beta', type=int, required=False, default=1000,
                                  help='maximum value for beta')
-    arguments_group.add_argument('-x', '--early_stop_limit', type=int, required=False, default=50,
+    arguments_group.add_argument('-l', '--early_stop_limit', type=int, required=False, default=50,
                                  help='patience')
 
     args = vars(parser.parse_args())
