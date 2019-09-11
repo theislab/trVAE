@@ -147,7 +147,9 @@ if __name__ == '__main__':
     arguments_group.add_argument('-s', '--step', type=int, required=False, default=100,
                                  help='batch_size')
     arguments_group.add_argument('-x', '--max_beta', type=int, required=False, default=1000,
-                                 help='batch_size')
+                                 help='maximum value for beta')
+    arguments_group.add_argument('-x', '--early_stop_limit', type=int, required=False, default=50,
+                                 help='patience')
 
     args = vars(parser.parse_args())
     row = ["Alpha", "Eta", "Z", "MMD", "beta", "ASW", "NMI", "ARI", "EBM", "sse_loss", 'mmd_loss']
