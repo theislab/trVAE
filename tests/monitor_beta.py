@@ -154,15 +154,15 @@ if __name__ == '__main__':
     prev_batch_size = args['batch_size']
     del args['data']
     adata, net_train_adata, net_valid_adata = create_data(data_dict)
-    for alpha in [0.01, 0.001, 0.0001, 0.00001, 0.000001]:
+    for alpha in [1.0, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001]:
         filename = f"alpha={alpha}, eta={args['eta']}, Z={int(args['z_dim'])}, MMD={int(args['mmd_dim'])}"
         with open(f"./{filename}.csv", 'w+') as file:
             writer = csv.writer(file)
             writer.writerow(row)
         file.close()
-        for beta in [500, 250, 200, 100, 50, 10, 5, 1, 0]:
+        for beta in [1e5, 5e4, 1e4, 5000, 1000, 500, 250, 200, 100, 50, 10, 5, 1, 0]:
             if beta == 0:
-                args['batch_size'] = 32
+                args['batch_size'] = 64
             else:
                 args['batch_size'] = prev_batch_size
             if beta <= 500:
