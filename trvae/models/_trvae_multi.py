@@ -67,7 +67,7 @@ class trVAEMulti:
                 number of latent space dimensions.
     """
 
-    def __init__(self, x_dimension, n_conditions, z_dimension=40, **kwargs):
+    def __init__(self, x_dimension, n_conditions, z_dimension=20, **kwargs):
 
         self.x_dim = x_dimension
         self.z_dim = z_dimension
