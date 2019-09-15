@@ -4,10 +4,9 @@ import os
 import anndata
 import keras
 import numpy as np
-from keras.engine.saving import load_model
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
-from keras.models import Model
+from keras.models import Model, load_model
 from keras.utils import to_categorical
 
 from trvae.models._activations import ACTIVATIONS
