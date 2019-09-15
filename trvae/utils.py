@@ -1,3 +1,6 @@
+from random import shuffle
+
+import anndata
 import numpy as np
 import scanpy as sc
 from scipy import sparse
@@ -101,3 +104,38 @@ def create_dictionary(conditions, target_conditions=[]):
     for idx, condition in enumerate(conditions):
         dictionary[condition] = idx
     return dictionary
+
+
+def shuffle_adata(adata):
+    """
+        Shuffles the `adata`.
+
+        # Parameters
+        adata: `~anndata.AnnData`
+            Annotated data matrix.
+        labels: numpy nd-array
+            list of encoded labels
+
+        # Returns
+            adata: `~anndata.AnnData`
+                Shuffled annotated data matrix.
+            labels: numpy nd-array
+                Array of shuffled labels if `labels` is not None.
+
+        # Example
+        ```python
+        import scgen
+        import anndata
+        import pandas as pd
+        train_data = anndata.read("./data/train.h5ad")
+        train_labels = pd.read_csv("./data/train_labels.csv", header=None)
+        train_data, train_labels = shuffle_data(train_data, train_labels)
+        ```
+    """
+    adata = remove_sparsity(adata)
+
+    ind_list = [i for i in range(adata.shape[0])]
+    shuffle(ind_list)
+    new_adata = adata[ind_list, :]
+    return new_adata
+
