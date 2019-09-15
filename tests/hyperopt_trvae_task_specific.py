@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import argparse
-import os
 
 import numpy as np
 import scanpy as sc
@@ -24,12 +23,12 @@ def data():
                   'condition_key': 'condition',
                   'cell_type_key': 'cell_label'},
         "Kang": {'name': 'kang', 'need_merge': False,
-                  'source_conditions': ['control'],
-                  'target_conditions': ['stimulated'],
-                  'transition': ('control', 'stimulated', 'control_to_stimulated'),
-                  'condition_encoder': {'control': 0, 'stimulated': 1},
-                  'condition_key': 'condition',
-                  'cell_type_key': 'cell_type'},
+                 'source_conditions': ['control'],
+                 'target_conditions': ['stimulated'],
+                 'transition': ('control', 'stimulated', 'control_to_stimulated'),
+                 'condition_encoder': {'control': 0, 'stimulated': 1},
+                 'condition_key': 'condition',
+                 'cell_type_key': 'cell_type'},
     }
 
     data_key = "Kang"
@@ -48,9 +47,9 @@ def data():
 
     if cell_type and target_conditions:
         net_train_adata = train_adata.copy()[~((train_adata.obs[cell_type_key].isin(cell_type)) &
-                                              (train_adata.obs[condition_key].isin(target_conditions)))]
+                                               (train_adata.obs[condition_key].isin(target_conditions)))]
         net_valid_adata = valid_adata.copy()[~((valid_adata.obs[cell_type_key].isin(cell_type)) &
-                                              (valid_adata.obs[condition_key].isin(target_conditions)))]
+                                               (valid_adata.obs[condition_key].isin(target_conditions)))]
     elif target_conditions:
         net_train_adata = train_adata.copy()[~(train_adata.obs[condition_key].isin(target_conditions))]
         net_valid_adata = valid_adata.copy()[~(valid_adata.obs[condition_key].isin(target_conditions))]
@@ -61,7 +60,8 @@ def data():
 
     source_condition, target_condition, _ = data_dict['transition']
 
-    return train_adata, net_train_adata, net_valid_adata, condition_key, cell_type_key, cell_type[0], condition_encoder, data_name, source_condition, target_condition
+    return train_adata, net_train_adata, net_valid_adata, condition_key, cell_type_key, cell_type[
+        0], condition_encoder, data_name, source_condition, target_condition
 
 
 def create_model(train_adata,
@@ -69,7 +69,6 @@ def create_model(train_adata,
                  condition_key, cell_type_key,
                  cell_type, condition_encoder,
                  data_name, source_condition, target_condition):
-
     n_conditions = len(net_train_adata.obs[condition_key].unique().tolist())
 
     z_dim_choices = {{choice([10, 20, 40, 50, 60, 80, 100])}}
@@ -81,21 +80,21 @@ def create_model(train_adata,
     batch_size_choices = {{choice([128, 256, 512, 1024, 1500])}}
     dropout_rate_choices = {{choice([0.1, 0.2, 0.5])}}
 
-    network = trvae.archs.trVAEMulti(x_dimension=net_train_adata.shape[1],
-                                     z_dimension=z_dim_choices,
-                                     n_conditions=n_conditions,
-                                     mmd_dimension=mmd_dim_choices,
-                                     alpha=alpha_choices,
-                                     beta=beta_choices,
-                                     eta=eta_choices,
-                                     kernel='multi-scale-rbf',
-                                     learning_rate=0.001,
-                                     clip_value=1e6,
-                                     loss_fn='mse',
-                                     model_path=f"./models/trVAETaskSpecific/hyperopt/{data_name}/{cell_type}/{target_condition}/",
-                                     dropout_rate=dropout_rate_choices,
-                                     output_activation="relu",
-                                     )
+    network = trvae.archs.trVAETaskSpecific(x_dimension=net_train_adata.shape[1],
+                                            z_dimension=z_dim_choices,
+                                            n_conditions=n_conditions,
+                                            mmd_dimension=mmd_dim_choices,
+                                            alpha=alpha_choices,
+                                            beta=beta_choices,
+                                            eta=eta_choices,
+                                            kernel='multi-scale-rbf',
+                                            learning_rate=0.001,
+                                            clip_value=1e6,
+                                            loss_fn='mse',
+                                            model_path=f"./models/trVAETaskSpecific/hyperopt/{data_name}/{cell_type}/{target_condition}/",
+                                            dropout_rate=dropout_rate_choices,
+                                            output_activation="relu",
+                                            )
 
     network.train(net_train_adata,
                   net_valid_adata,
