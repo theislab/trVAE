@@ -445,10 +445,10 @@ class trVAETaskSpecific:
         x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
         y_valid = valid_adata.X
 
-        x_mmd_valid = [valid_adata.X, valid_labels_onehot, to_categorical(np.ones_like(valid_labels_onehot),
+        x_mmd_valid = [valid_adata.X, valid_labels_onehot, to_categorical(np.ones_like(valid_labels_encoded),
                                                                           num_classes=self.n_conditions)]
         y_mmd_valid = valid_labels_encoded
-
+        patinece, best_loss = 0, 1e9
         for i in range(n_epochs):
             kl_recon_loss, mmd_loss = 0.0, 0.0
             for j in range(train_adata.shape[0] // batch_size):
@@ -458,7 +458,7 @@ class trVAETaskSpecific:
                 y_train_batch = train_adata.X[batch_idx]
 
                 x_mmd_train_batch = [train_adata.X[batch_idx], train_labels_onehot[batch_idx],
-                                     to_categorical(np.ones_like(train_labels_onehot[batch_idx]),
+                                     to_categorical(np.ones_like(train_labels_encoded[batch_idx]),
                                                     num_classes=self.n_conditions)]
                 y_mmd_train_batch = train_labels_encoded[batch_idx]
 
@@ -476,6 +476,15 @@ class trVAETaskSpecific:
             print(f"Epoch {i}/{n_epochs}:")
             print(
                 f" - KL_recon_loss: {kl_recon_loss:.4f} - MMD_loss: {mmd_loss:.4f} - val_KL_recon_loss: {kl_recon_loss_valid: .4f} - val_MMD_loss: {mmd_loss_valid: .4f}")
+            if patinece > early_stop_limit:
+                break
+            else:
+                if kl_recon_loss_valid + mmd_loss_valid > best_loss:
+                    patinece += 1
+                else:
+                    best_loss = kl_recon_loss_valid + mmd_loss_valid
+                    patinece = 0
+
 
     def get_corrected(self, adata, labels, return_z=False):
         """
