@@ -6,7 +6,7 @@ import keras
 import numpy as np
 from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
 from keras.layers.advanced_activations import LeakyReLU
-from keras.models import Model, load_model
+from keras.models import Model
 from keras.utils import to_categorical
 
 from trvae.models._activations import ACTIVATIONS
@@ -359,10 +359,10 @@ class trVAETaskSpecific:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(filepath=os.path.join(self.model_to_use, "best_model.h5"), compile=False)
-        self.encoder_model = self.cvae_model.get_layer("encoder")
-        self.decoder_model = self.cvae_model.get_layer("decoder")
-        self.decoder_mmd_model = self.cvae_model.get_layer("decoder_mmd")
+        # self.cvae_model = load_model(filepath=os.path.join(self.model_to_use, "best_model.h5"), compile=False)
+        # self.encoder_model = self.cvae_model.get_layer("encoder")
+        # self.decoder_model = self.cvae_model.get_layer("decoder")
+        # self.decoder_mmd_model = self.cvae_model.get_layer("decoder_mmd")
         self._loss_function()
 
     def save_model(self):
@@ -484,6 +484,123 @@ class trVAETaskSpecific:
                     best_loss = kl_recon_loss_valid + mmd_loss_valid
                     patinece = 0
 
+    def train_epoch(self, train_adata, valid_adata=None,
+                    condition_encoder=None, condition_key='condition',
+                    n_epochs=10000, batch_size=1024,
+                    early_stop_limit=300, lr_reducer=250, threshold=0.0, monitor='val_loss',
+                    shuffle=True, verbose=0, save=True, monitor_best=True):
+        """
+            Trains the network `n_epochs` times with given `train_data`
+            and validates the model using validation_data if it was given
+            in the constructor function. This function is using `early stopping`
+            technique to prevent overfitting.
+            # Parameters
+                train_adata: `~anndata.AnnData`
+                    `AnnData` object for training trVAE
+                valid_adata: `~anndata.AnnData`
+                    `AnnData` object for validating trVAE (if None, trVAE will automatically split the data with
+                    fraction of 80%/20%.
+                condition_encoder: dict
+                    dictionary of encoded conditions (if None, trVAE will make one for data)
+                condition_key: str
+                    name of conditions (domains) column in obs matrix
+                cell_type_key: str
+                    name of cell_types (labels) column in obs matrix
+                n_epochs: int
+                    number of epochs to iterate and optimize network weights
+                batch_size: int
+                    number of samples to be used in each batch for network weights optimization
+                early_stop_limit: int
+                    number of consecutive epochs in which network loss is not going lower.
+                    After this limit, the network will stop training.
+                threshold: float
+                    Threshold for difference between consecutive validation loss values
+                    if the difference is upper than this `threshold`, this epoch will not
+                    considered as an epoch in early stopping.
+                monitor: str
+                    metric to be monitored for early stopping.
+                shuffle: boolean
+                    if `True`, `train_adata` will be shuffled before training.
+                verbose: int
+                    level of verbosity
+                save: boolean
+                    if `True`, the model will be saved in the specified path after training.
+            # Returns
+                Nothing will be returned
+            # Example
+            ```python
+            import scanpy as sc
+            import trvae
+            train_data = sc.read("train.h5ad")
+            valid_adata = sc.read("validation.h5ad")
+            n_conditions = len(train_adata.obs['condition'].unique().tolist())
+            network = trvae.archs.trVAEMulti(train_adata.shape[1], n_conditions)
+            network.train(train_adata, valid_adata, le=None,
+                          condition_key="condition", cell_type_key="cell_label",
+                          n_epochs=1000, batch_size=256
+                          )
+            ```
+        """
+        if not valid_adata:
+            train_adata, valid_adata = train_test_split(train_adata, 0.80)
+
+        train_adata = remove_sparsity(train_adata)
+        valid_adata = remove_sparsity(valid_adata)
+
+        train_adata = shuffle_adata(train_adata)
+        valid_adata = shuffle_adata(valid_adata)
+
+        train_labels_encoded, _ = label_encoder(train_adata, condition_encoder, condition_key)
+        train_labels_onehot = to_categorical(train_labels_encoded, num_classes=self.n_conditions)
+
+        valid_labels_encoded, _ = label_encoder(valid_adata, condition_encoder, condition_key)
+        valid_labels_onehot = to_categorical(valid_labels_encoded, num_classes=self.n_conditions)
+
+        x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
+        y_valid = valid_adata.X
+
+        x_mmd_valid = [valid_adata.X, valid_labels_onehot, to_categorical(np.ones_like(valid_labels_encoded),
+                                                                          num_classes=self.n_conditions)]
+        y_mmd_valid = valid_labels_encoded
+        patinece, best_loss = 0, 1e9
+
+        x_train = [train_adata.X, train_labels_onehot, train_labels_onehot]
+        y_train = train_adata.X
+
+        x_mmd_train = [train_adata.X, train_labels_onehot, to_categorical(np.ones_like(train_labels_encoded),
+                                                                          num_classes=self.n_conditions)]
+        y_mmd_train = train_labels_encoded
+
+        for i in range(n_epochs):
+            cvae_history = self.cvae_model.fit(x=x_train,
+                                               y=y_train,
+                                               batch_size=batch_size,
+                                               epochs=1,
+                                               verbose=0,
+                                               )
+            cvae_mmd_history = self.cvae_model.fit(x=x_mmd_train,
+                                                   y=y_mmd_train,
+                                                   batch_size=batch_size,
+                                                   epochs=1,
+                                                   verbose=0,
+                                                   )
+
+            kl_recon_loss = cvae_history.history['loss']
+            mmd_loss = cvae_mmd_history.history['loss']
+            kl_recon_loss_valid = self.cvae_model.evaluate(x=x_valid, y=y_valid, verbose=0)
+            mmd_loss_valid = self.cvae_mmd_model.evaluate(x=x_mmd_valid, y=y_mmd_valid, verbose=0)
+
+            print(f"Epoch {i}/{n_epochs}:")
+            print(
+                f" - KL_recon_loss: {kl_recon_loss:.4f} - MMD_loss: {mmd_loss:.4f} - val_KL_recon_loss: {kl_recon_loss_valid: .4f} - val_MMD_loss: {mmd_loss_valid: .4f}")
+            if patinece > early_stop_limit:
+                break
+            else:
+                if kl_recon_loss_valid + mmd_loss_valid > best_loss:
+                    patinece += 1
+                else:
+                    best_loss = kl_recon_loss_valid + mmd_loss_valid
+                    patinece = 0
 
     def get_corrected(self, adata, labels, return_z=False):
         """
