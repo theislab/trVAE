@@ -89,7 +89,6 @@ class trVAETaskSpecific:
         self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_labels")
         self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
-        self.after_mmd_trainable = Input(shape=(), name="after_mmd_trainable")
 
         self.init_w = keras.initializers.glorot_normal()
         self.regularizer = keras.regularizers.l1_l2(self.lambda_l1, self.lambda_l2)
@@ -183,7 +182,7 @@ class trVAETaskSpecific:
         mmd_output = self.decoder_mmd_model(
             [self.encoder_model(inputs[:2])[2], self.decoder_labels])
 
-        reconstruction_output = Lambda(lambda x: x, name="kl_mse", trainable=self.after_mmd_trainable)(decoder_output)
+        reconstruction_output = Lambda(lambda x: x, name="kl_mse")(decoder_output)
         mmd_output = Lambda(lambda x: x, name="mmd_output")(mmd_output)
 
         self.cvae_model = Model(inputs=inputs,
