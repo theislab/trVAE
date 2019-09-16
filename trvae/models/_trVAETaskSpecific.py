@@ -585,14 +585,13 @@ class trVAETaskSpecific:
                                                    verbose=0,
                                                    )
 
-            kl_recon_loss = cvae_history.history['loss']
-            mmd_loss = cvae_mmd_history.history['loss']
+            kl_recon_loss = cvae_history.history['loss'][0]
+            mmd_loss = cvae_mmd_history.history['loss'][0]
             kl_recon_loss_valid = self.cvae_model.evaluate(x=x_valid, y=y_valid, verbose=0)
             mmd_loss_valid = self.cvae_mmd_model.evaluate(x=x_mmd_valid, y=y_mmd_valid, verbose=0)
 
             print(f"Epoch {i}/{n_epochs}:")
-            print(
-                f" - KL_recon_loss: {kl_recon_loss:.4f} - MMD_loss: {mmd_loss:.4f} - val_KL_recon_loss: {kl_recon_loss_valid: .4f} - val_MMD_loss: {mmd_loss_valid: .4f}")
+            print(f" - KL_recon_loss: {kl_recon_loss:.4f} - MMD_loss: {mmd_loss:.4f} - val_KL_recon_loss: {kl_recon_loss_valid: .4f} - val_MMD_loss: {mmd_loss_valid: .4f}")
             if patinece > early_stop_limit:
                 break
             else:
