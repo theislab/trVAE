@@ -486,7 +486,7 @@ class trVAETaskSpecific:
 
     def train_epoch(self, train_adata, valid_adata=None,
                     condition_encoder=None, condition_key='condition',
-                    n_epochs=10000, batch_size=1024,
+                    n_epochs=10000, batch_size=1024, n_epochs_cvae=1, n_epochs_mmd=1,
                     early_stop_limit=300, lr_reducer=250, threshold=0.0, monitor='val_loss',
                     shuffle=True, verbose=0, save=True, monitor_best=True):
         """
@@ -572,18 +572,20 @@ class trVAETaskSpecific:
         y_mmd_train = train_labels_encoded
 
         for i in range(n_epochs):
-            cvae_history = self.cvae_model.fit(x=x_train,
-                                               y=y_train,
-                                               batch_size=batch_size,
-                                               epochs=1,
-                                               verbose=0,
-                                               )
-            cvae_mmd_history = self.cvae_model.fit(x=x_mmd_train,
-                                                   y=y_mmd_train,
+            for j in range(n_epochs_cvae):
+                cvae_history = self.cvae_model.fit(x=x_train,
+                                                   y=y_train,
                                                    batch_size=batch_size,
                                                    epochs=1,
                                                    verbose=0,
                                                    )
+            for j in range(n_epochs_mmd):
+                cvae_mmd_history = self.cvae_mmd_model.fit(x=x_mmd_train,
+                                                           y=y_mmd_train,
+                                                           batch_size=batch_size,
+                                                           epochs=1,
+                                                           verbose=0,
+                                                           )
 
             kl_recon_loss = cvae_history.history['loss'][0]
             mmd_loss = cvae_mmd_history.history['loss'][0]
@@ -591,7 +593,8 @@ class trVAETaskSpecific:
             mmd_loss_valid = self.cvae_mmd_model.evaluate(x=x_mmd_valid, y=y_mmd_valid, verbose=0)
 
             print(f"Epoch {i}/{n_epochs}:")
-            print(f" - KL_recon_loss: {kl_recon_loss:.4f} - MMD_loss: {mmd_loss:.4f} - val_KL_recon_loss: {kl_recon_loss_valid: .4f} - val_MMD_loss: {mmd_loss_valid: .4f}")
+            print(
+                f" - KL_recon_loss: {kl_recon_loss:.4f} - MMD_loss: {mmd_loss:.4f} - val_KL_recon_loss: {kl_recon_loss_valid: .4f} - val_MMD_loss: {mmd_loss_valid: .4f}")
             if patinece > early_stop_limit:
                 break
             else:
