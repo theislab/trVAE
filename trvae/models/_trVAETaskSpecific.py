@@ -127,7 +127,7 @@ class trVAETaskSpecific:
         mean = Dense(self.z_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
-        model = Model(inputs=[self.x, self.encoder_labels, self.after_mmd_trainable], outputs=[mean, log_var, z],
+        model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z],
                       name=name)
         return mean, log_var, model
 
