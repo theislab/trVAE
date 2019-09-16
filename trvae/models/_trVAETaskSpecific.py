@@ -459,12 +459,12 @@ class trVAETaskSpecific:
                                                     num_classes=self.n_conditions)]
                 y_mmd_train_batch = [np.zeros_like(train_adata.X[batch_idx]), train_labels_encoded[batch_idx]]
 
-                kl_recon_loss_batch, _ = self.cvae_model.train_on_batch(x=x_train_batch,
-                                                                        y=y_train_batch)
+                _, kl_recon_loss_batch, _ = self.cvae_model.train_on_batch(x=x_train_batch,
+                                                                           y=y_train_batch)
 
-                _, mmd_loss_batch = self.cvae_model.train_on_batch(x=x_mmd_train_batch,
-                                                                   y=y_mmd_train_batch
-                                                                   )
+                _, _, mmd_loss_batch = self.cvae_model.train_on_batch(x=x_mmd_train_batch,
+                                                                      y=y_mmd_train_batch
+                                                                      )
 
                 kl_recon_loss += kl_recon_loss_batch / (train_adata.shape[0] // batch_size)
                 mmd_loss += mmd_loss_batch / (train_adata.shape[0] // batch_size)
