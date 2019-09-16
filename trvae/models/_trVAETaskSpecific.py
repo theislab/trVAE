@@ -469,8 +469,8 @@ class trVAETaskSpecific:
                 kl_recon_loss += kl_recon_loss_batch / (train_adata.shape[0] // batch_size)
                 mmd_loss += mmd_loss_batch / (train_adata.shape[0] // batch_size)
 
-            kl_recon_loss_valid = self.cvae_model.evaluate(x=x_valid, y=y_valid, verbose=0)
-            mmd_loss_valid = self.cvae_model.evaluate(x=x_mmd_valid, y=y_mmd_valid, verbose=0)
+            _, kl_recon_loss_valid, _ = self.cvae_model.evaluate(x=x_valid, y=y_valid, verbose=0)
+            _, _, mmd_loss_valid = self.cvae_model.evaluate(x=x_mmd_valid, y=y_mmd_valid, verbose=0)
 
             print(f"Epoch {i}/{n_epochs}:")
             print(
