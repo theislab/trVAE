@@ -9,7 +9,11 @@ from ._utils import compute_mmd, _nelem, _nan2zero, _nan2inf, _reduce_mean
 def kl_recon(mu, log_var, alpha=0.1, eta=1.0):
     def kl_recon_loss(y_true, y_pred):
         kl_loss = 0.5 * K.mean(K.exp(log_var) + K.square(mu) - 1. - log_var, 1)
-        recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
+        is_all_zero = K.equal(y_true, 0)
+        if K.eval(is_all_zero):
+            recon_loss = 0.0
+        else:
+            recon_loss = 0.5 * K.sum(K.square((y_true - y_pred)), axis=1)
         return _nan2inf(eta * recon_loss + alpha * kl_loss)
 
     return kl_recon_loss

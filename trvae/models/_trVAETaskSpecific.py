@@ -89,6 +89,7 @@ class trVAETaskSpecific:
         self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_labels")
         self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
+        self.after_mmd_trainable = Input(shape=(), name="after_mmd_trainable")
 
         self.init_w = keras.initializers.glorot_normal()
         self.regularizer = keras.regularizers.l1_l2(self.lambda_l1, self.lambda_l2)
@@ -126,7 +127,8 @@ class trVAETaskSpecific:
         mean = Dense(self.z_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
-        model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
+        model = Model(inputs=[self.x, self.encoder_labels, self.after_mmd_trainable], outputs=[mean, log_var, z],
+                      name=name)
         return mean, log_var, model
 
     def _mmd_decoder(self, name="decoder"):
@@ -146,17 +148,22 @@ class trVAETaskSpecific:
         h = Dense(self.mmd_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(zy)
         h = BatchNormalization(axis=1, scale=True)(h)
         h_mmd = LeakyReLU(name="mmd")(h)
-        h = Dropout(self.dr_rate)(h_mmd)
-        h = Dense(800, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
-        h = BatchNormalization(axis=1, scale=True)(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+        h = Dropout(self.dr_rate, trainable=self.after_mmd_trainable)(h_mmd)
+        h = Dense(800, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False,
+                  trainable=self.after_mmd_trainable)(h)
+        h = BatchNormalization(axis=1, scale=True, trainable=self.after_mmd_trainable)(h)
+        h = LeakyReLU(trainable=self.after_mmd_trainable)(h)
+        h = Dropout(self.dr_rate, trainable=self.after_mmd_trainable)(h)
 
-        h = Dense(self.x_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=True)(h)
-        h = ACTIVATIONS[self.output_activation](h)
+        h = Dense(self.x_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=True,
+                  trainable=self.after_mmd_trainable)(h)
+        output_activation = ACTIVATIONS[self.output_activation]
+        output_activation.trainable = self.after_mmd_trainable
+        h = output_activation(h)
 
-        decoder_model = Model(inputs=[self.z, self.decoder_labels], outputs=h, name=name)
-        decoder_mmd_model = Model(inputs=[self.z, self.decoder_labels], outputs=h_mmd, name='decoder_mmd')
+        decoder_model = Model(inputs=[self.z, self.decoder_labels, self.after_mmd_trainable], outputs=h, name=name)
+        decoder_mmd_model = Model(inputs=[self.z, self.decoder_labels, self.after_mmd_trainable], outputs=h_mmd,
+                                  name='decoder_mmd')
         return decoder_model, decoder_mmd_model
 
     def _create_network(self):
@@ -172,21 +179,20 @@ class trVAETaskSpecific:
                 Nothing will be returned.
         """
 
-        inputs = [self.x, self.encoder_labels, self.decoder_labels]
+        inputs = [self.x, self.encoder_labels, self.decoder_labels, self.after_mmd_trainable]
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
         self.decoder_model, self.decoder_mmd_model = self._mmd_decoder(name="decoder")
-        decoder_output = self.decoder_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
-        mmd_output = self.decoder_mmd_model([self.encoder_model(inputs[:2])[2], self.decoder_labels])
+        decoder_output = self.decoder_model(
+            [self.encoder_model(inputs[:2])[2], self.decoder_labels, self.after_mmd_trainable])
+        mmd_output = self.decoder_mmd_model(
+            [self.encoder_model(inputs[:2])[2], self.decoder_labels, self.after_mmd_trainable])
 
-        reconstruction_output = Lambda(lambda x: x, name="kl_mse")(decoder_output)
-        mmd_output = Lambda(lambda x: x, name="mmd")(mmd_output)
+        reconstruction_output = Lambda(lambda x: x, name="kl_mse", trainable=self.after_mmd_trainable)(decoder_output)
+        mmd_output = Lambda(lambda x: x, name="mmd_output")(mmd_output)
 
         self.cvae_model = Model(inputs=inputs,
-                                outputs=reconstruction_output,
+                                outputs=[reconstruction_output, mmd_output],
                                 name="cvae")
-        self.cvae_mmd_model = Model(inputs=inputs,
-                                    outputs=mmd_output,
-                                    name="cvae_mmd")
 
     def _calculate_loss(self):
         """
@@ -218,10 +224,7 @@ class trVAETaskSpecific:
         loss, mmd_loss = self._calculate_loss()
         self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
         self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                loss=loss)
-
-        self.cvae_mmd_model.compile(optimizer=self.cvae_optimizer,
-                                    loss=mmd_loss)
+                                loss=[loss, mmd_loss])
 
     def to_latent(self, adata, encoder_labels, return_adata=True):
         """
@@ -242,7 +245,7 @@ class trVAETaskSpecific:
         adata = remove_sparsity(adata)
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
-        latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
+        latent = self.encoder_model.predict([adata.X, encoder_labels, True])[2]
         latent = np.nan_to_num(latent)
 
         if return_adata:
@@ -281,8 +284,8 @@ class trVAETaskSpecific:
 
         adata = remove_sparsity(adata)
 
-        x = [adata.X, encoder_labels, decoder_labels]
-        mmd_latent = self.cvae_mmd_model.predict(x)
+        x = [adata.X, encoder_labels, decoder_labels, True]
+        mmd_latent = self.cvae_model.predict(x)[1]
         mmd_latent = np.nan_to_num(mmd_latent)
         if return_adata:
             output = anndata.AnnData(X=mmd_latent)
@@ -329,7 +332,7 @@ class trVAETaskSpecific:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        reconstructed = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])
+        reconstructed = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels, True])[0]
         reconstructed = np.nan_to_num(reconstructed)
 
         if return_adata:
@@ -441,36 +444,38 @@ class trVAETaskSpecific:
         valid_labels_encoded, _ = label_encoder(valid_adata, condition_encoder, condition_key)
         valid_labels_onehot = to_categorical(valid_labels_encoded, num_classes=self.n_conditions)
 
-        x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
-        y_valid = valid_adata.X
+        x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot, True]
+        y_valid = [valid_adata.X, np.zeros_like(valid_labels_encoded)]
 
         x_mmd_valid = [valid_adata.X, valid_labels_onehot, to_categorical(np.ones_like(valid_labels_encoded),
-                                                                          num_classes=self.n_conditions)]
-        y_mmd_valid = valid_labels_encoded
+                                                                          num_classes=self.n_conditions), False]
+        y_mmd_valid = [np.zeros_like(valid_adata.X), valid_labels_encoded]
         patinece, best_loss = 0, 1e9
         for i in range(n_epochs):
             kl_recon_loss, mmd_loss = 0.0, 0.0
             for j in range(train_adata.shape[0] // batch_size):
                 batch_idx = range(j * batch_size, (j + 1) * batch_size)
                 x_train_batch = [train_adata.X[batch_idx], train_labels_onehot[batch_idx],
-                                 train_labels_onehot[batch_idx]]
-                y_train_batch = train_adata.X[batch_idx]
+                                 train_labels_onehot[batch_idx], True]
+                y_train_batch = [train_adata.X[batch_idx], np.zeros_like(train_labels_encoded[batch_idx])]
 
                 x_mmd_train_batch = [train_adata.X[batch_idx], train_labels_onehot[batch_idx],
                                      to_categorical(np.ones_like(train_labels_encoded[batch_idx]),
-                                                    num_classes=self.n_conditions)]
-                y_mmd_train_batch = train_labels_encoded[batch_idx]
+                                                    num_classes=self.n_conditions), False]
+                y_mmd_train_batch = [np.zeros_like(train_adata.X[batch_idx]), train_labels_encoded[batch_idx]]
 
-                kl_recon_loss_batch = self.cvae_model.train_on_batch(x=x_train_batch,
-                                                                     y=y_train_batch)
-                mmd_loss_batch = self.cvae_mmd_model.train_on_batch(x=x_mmd_train_batch,
-                                                                    y=y_mmd_train_batch
-                                                                    )
+                kl_recon_loss_batch, _ = self.cvae_model.train_on_batch(x=x_train_batch,
+                                                                        y=y_train_batch)
+
+                _, mmd_loss_batch = self.cvae_model.train_on_batch(x=x_mmd_train_batch,
+                                                                   y=y_mmd_train_batch
+                                                                   )
+
                 kl_recon_loss += kl_recon_loss_batch / (train_adata.shape[0] // batch_size)
                 mmd_loss += mmd_loss_batch / (train_adata.shape[0] // batch_size)
 
             kl_recon_loss_valid = self.cvae_model.evaluate(x=x_valid, y=y_valid, verbose=0)
-            mmd_loss_valid = self.cvae_mmd_model.evaluate(x=x_mmd_valid, y=y_mmd_valid, verbose=0)
+            mmd_loss_valid = self.cvae_model.evaluate(x=x_mmd_valid, y=y_mmd_valid, verbose=0)
 
             print(f"Epoch {i}/{n_epochs}:")
             print(
@@ -556,20 +561,20 @@ class trVAETaskSpecific:
         valid_labels_encoded, _ = label_encoder(valid_adata, condition_encoder, condition_key)
         valid_labels_onehot = to_categorical(valid_labels_encoded, num_classes=self.n_conditions)
 
-        x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
-        y_valid = valid_adata.X
+        x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot, True]
+        y_valid = [valid_adata.X, np.zeros_like(valid_labels_encoded)]
 
         x_mmd_valid = [valid_adata.X, valid_labels_onehot, to_categorical(np.ones_like(valid_labels_encoded),
-                                                                          num_classes=self.n_conditions)]
-        y_mmd_valid = valid_labels_encoded
+                                                                          num_classes=self.n_conditions), False]
+        y_mmd_valid = [np.zeros_like(valid_adata.X), valid_labels_encoded]
         patinece, best_loss = 0, 1e9
 
-        x_train = [train_adata.X, train_labels_onehot, train_labels_onehot]
-        y_train = train_adata.X
+        x_train = [train_adata.X, train_labels_onehot, train_labels_onehot, True]
+        y_train = [train_adata.X, np.zeros_like(train_labels_encoded)]
 
         x_mmd_train = [train_adata.X, train_labels_onehot, to_categorical(np.ones_like(train_labels_encoded),
-                                                                          num_classes=self.n_conditions)]
-        y_mmd_train = train_labels_encoded
+                                                                          num_classes=self.n_conditions), False]
+        y_mmd_train = [np.zeros_like(train_adata.X), train_labels_encoded]
 
         for i in range(n_epochs):
             for j in range(n_epochs_cvae):
@@ -580,12 +585,12 @@ class trVAETaskSpecific:
                                                    verbose=0,
                                                    )
             for j in range(n_epochs_mmd):
-                cvae_mmd_history = self.cvae_mmd_model.fit(x=x_mmd_train,
-                                                           y=y_mmd_train,
-                                                           batch_size=batch_size,
-                                                           epochs=1,
-                                                           verbose=0,
-                                                           )
+                cvae_mmd_history = self.cvae_model.fit(x=x_mmd_train,
+                                                       y=y_mmd_train,
+                                                       batch_size=batch_size,
+                                                       epochs=1,
+                                                       verbose=0,
+                                                       )
 
             kl_recon_loss = cvae_history.history['loss'][0]
             mmd_loss = cvae_mmd_history.history['loss'][0]
@@ -639,7 +644,7 @@ class trVAETaskSpecific:
         labels_encoded, _ = label_encoder(adata, None, condition_key)
         labels_onehot = to_categorical(labels_encoded, num_classes=self.n_conditions)
 
-        x = [adata.X, labels_onehot, labels_onehot]
+        x = [adata.X, labels_onehot, labels_onehot, True]
         y = [adata.X, labels_encoded]
 
         return self.cvae_model.evaluate(x, y, verbose=0)
