@@ -75,15 +75,15 @@ class trVAEMulti:
         self.n_conditions = n_conditions
 
         self.lr = kwargs.get("learning_rate", 0.001)
-        self.alpha = kwargs.get("alpha", 0.000001)
-        self.beta = kwargs.get("beta", 100)
+        self.alpha = kwargs.get("alpha", 1e-5)
+        self.beta = kwargs.get("beta", 10)
         self.eta = kwargs.get("eta", 100)
-        self.dr_rate = kwargs.get("dropout_rate", 0.2)
+        self.dr_rate = kwargs.get("dropout_rate", 0.1)
         self.model_to_use = kwargs.get("model_path", "./")
         self.kernel_method = kwargs.get("kernel", "multi-scale-rbf")
         self.output_activation = kwargs.get("output_activation", 'relu')
         self.mmd_calc_mode = kwargs.get("mmd_computation_way", "general")
-        self.clip_value = kwargs.get('clip_value', 1e6)
+        self.clip_value = kwargs.get('clip_value', 5)
         self.lambda_l1 = kwargs.get('lambda_l1', 0.0)
         self.lambda_l2 = kwargs.get('lambda_l2', 0.0)
 
@@ -370,7 +370,7 @@ class trVAEMulti:
     def train(self, train_adata, valid_adata=None,
               condition_encoder=None, condition_key='condition',
               n_epochs=10000, batch_size=1024,
-              early_stop_limit=300, lr_reducer=250, threshold=0.0, monitor='val_loss',
+              early_stop_limit=100, lr_reducer=80, threshold=0.0, monitor='val_loss',
               shuffle=True, verbose=0, save=True, monitor_best=True):
         """
             Trains the network `n_epochs` times with given `train_data`
