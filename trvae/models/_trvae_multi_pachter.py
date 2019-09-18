@@ -20,7 +20,7 @@ from trvae.utils import label_encoder, remove_sparsity
 log = logging.getLogger(__file__)
 
 
-class trVAEMulti:
+class trVAEMultiPachter:
     """
         trVAE Network class. This class contains the implementation of Regularized Conditional
         Variational Auto-encoder network.
@@ -68,12 +68,13 @@ class trVAEMulti:
                 number of latent space dimensions.
     """
 
-    def __init__(self, x_dimension, n_conditions, z_dimension=20, **kwargs):
+    def __init__(self, x_dimension, n_conditions, n_condition_dims, z_dimension=20, **kwargs):
 
         self.x_dim = x_dimension
         self.z_dim = z_dimension
         self.mmd_dim = kwargs.get('mmd_dimension', 128)
         self.n_conditions = n_conditions
+        self.n_condition_dims = n_condition_dims
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 1e-5)
@@ -89,8 +90,8 @@ class trVAEMulti:
         self.lambda_l2 = kwargs.get('lambda_l2', 0.0)
 
         self.x = Input(shape=(self.x_dim,), name="data")
-        self.encoder_labels = Input(shape=(self.n_conditions,), name="encoder_labels")
-        self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
+        self.encoder_labels = Input(shape=(self.n_condition_dims,), name="encoder_labels")
+        self.decoder_labels = Input(shape=(self.n_condition_dims,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
         self.init_w = keras.initializers.glorot_normal()
@@ -369,7 +370,7 @@ class trVAEMulti:
         self.cvae_model.save(os.path.join(self.model_to_use, "best_model.h5"), overwrite=True)
 
     def train(self, train_adata, valid_adata=None,
-              condition_encoder=None, condition_key='condition',
+              condition_key=None, condition_keys=None,
               n_epochs=10000, batch_size=1024,
               early_stop_limit=100, lr_reducer=80, threshold=0.0, monitor='val_loss',
               shuffle=True, verbose=0, save=True, monitor_best=True):
@@ -425,8 +426,8 @@ class trVAEMulti:
                           )
             ```
         """
-        train_labels_encoded, _ = label_encoder(train_adata, condition_encoder, condition_key)
-        train_labels_onehot = to_categorical(train_labels_encoded, num_classes=self.n_conditions)
+        train_labels = train_adata.obs[condition_keys].values
+        train_conditions = train_adata.obs[condition_key].values
 
         callbacks = [
             History(),
@@ -453,18 +454,18 @@ class trVAEMulti:
         if sparse.issparse(train_adata.X):
             train_adata.X = train_adata.X.A
 
-        x = [train_adata.X, train_labels_onehot, train_labels_onehot]
-        y = [train_adata.X, train_labels_encoded]
+        x = [train_adata.X, train_labels, train_labels]
+        y = [train_adata.X, LabelEncoder().fit_transform(train_conditions).reshape(-1, 1)]
 
         if valid_adata is not None:
             if sparse.issparse(valid_adata.X):
                 valid_adata.X = valid_adata.X.A
 
-            valid_labels_encoded, _ = label_encoder(valid_adata, condition_encoder, condition_key)
-            valid_labels_onehot = to_categorical(valid_labels_encoded, num_classes=self.n_conditions)
+            valid_labels = valid_adata.obs[condition_keys].values
+            valid_conditions = valid_adata.obs[condition_key].values
 
-            x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
-            y_valid = [valid_adata.X, valid_labels_encoded]
+            x_valid = [valid_adata.X, valid_labels, valid_labels]
+            y_valid = [valid_adata.X, LabelEncoder().fit_transform(valid_conditions).reshape(-1, 1)]
 
             history = self.cvae_model.fit(x=x,
                                           y=y,

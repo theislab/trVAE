@@ -7,3 +7,4 @@ from ._trvae_atac import trVAEATAC
 from ._vae import VAE
 from ._mmdcvae import MMDCVAE
 from ._trVAETaskSpecific import trVAETaskSpecific
+from ._trvae_multi_pachter import trVAEMultiPachter
