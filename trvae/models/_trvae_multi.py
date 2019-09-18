@@ -10,6 +10,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
 from scipy import sparse
+from sklearn.preprocessing import LabelEncoder
 
 from trvae.models._activations import ACTIVATIONS
 from trvae.models._losses import LOSSES
@@ -464,6 +465,124 @@ class trVAEMulti:
 
             x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
             y_valid = [valid_adata.X, valid_labels_encoded]
+
+            history = self.cvae_model.fit(x=x,
+                                          y=y,
+                                          epochs=n_epochs,
+                                          batch_size=batch_size,
+                                          validation_data=(x_valid, y_valid),
+                                          shuffle=shuffle,
+                                          callbacks=callbacks,
+                                          verbose=fit_verbose)
+        else:
+            history = self.cvae_model.fit(x=x,
+                                          y=y,
+                                          epochs=n_epochs,
+                                          batch_size=batch_size,
+                                          validation_split=0.2,
+                                          shuffle=shuffle,
+                                          callbacks=callbacks,
+                                          verbose=fit_verbose)
+            if monitor_best:
+                self.restore_model()
+            elif save and not monitor_best:
+                self.save_model()
+
+    def train_pachter(self, train_adata, valid_adata=None,
+                      condition_encoder=None, condition_keys=None,
+                      n_epochs=10000, batch_size=1024,
+                      early_stop_limit=100, lr_reducer=80, threshold=0.0, monitor='val_loss',
+                      shuffle=True, verbose=0, save=True, monitor_best=True):
+        """
+            Trains the network `n_epochs` times with given `train_data`
+            and validates the model using validation_data if it was given
+            in the constructor function. This function is using `early stopping`
+            technique to prevent overfitting.
+            # Parameters
+                train_adata: `~anndata.AnnData`
+                    `AnnData` object for training trVAE
+                valid_adata: `~anndata.AnnData`
+                    `AnnData` object for validating trVAE (if None, trVAE will automatically split the data with
+                    fraction of 80%/20%.
+                condition_encoder: dict
+                    dictionary of encoded conditions (if None, trVAE will make one for data)
+                condition_key: str
+                    name of conditions (domains) column in obs matrix
+                cell_type_key: str
+                    name of cell_types (labels) column in obs matrix
+                n_epochs: int
+                    number of epochs to iterate and optimize network weights
+                batch_size: int
+                    number of samples to be used in each batch for network weights optimization
+                early_stop_limit: int
+                    number of consecutive epochs in which network loss is not going lower.
+                    After this limit, the network will stop training.
+                threshold: float
+                    Threshold for difference between consecutive validation loss values
+                    if the difference is upper than this `threshold`, this epoch will not
+                    considered as an epoch in early stopping.
+                monitor: str
+                    metric to be monitored for early stopping.
+                shuffle: boolean
+                    if `True`, `train_adata` will be shuffled before training.
+                verbose: int
+                    level of verbosity
+                save: boolean
+                    if `True`, the model will be saved in the specified path after training.
+            # Returns
+                Nothing will be returned
+            # Example
+            ```python
+            import scanpy as sc
+            import trvae
+            train_data = sc.read("train.h5ad")
+            valid_adata = sc.read("validation.h5ad")
+            n_conditions = len(train_adata.obs['condition'].unique().tolist())
+            network = trvae.archs.trVAEMulti(train_adata.shape[1], n_conditions)
+            network.train(train_adata, valid_adata, le=None,
+                          condition_key="condition", cell_type_key="cell_label",
+                          n_epochs=1000, batch_size=256
+                          )
+            ```
+        """
+        train_labels = train_adata.obs[condition_keys].values
+
+        callbacks = [
+            History(),
+            CSVLogger(filename="./csv_logger.log"),
+        ]
+
+        if early_stop_limit > 0:
+            callbacks.append(EarlyStopping(patience=early_stop_limit, monitor=monitor, min_delta=threshold))
+
+        if lr_reducer > 0:
+            callbacks.append(ReduceLROnPlateau(monitor=monitor, patience=lr_reducer, verbose=verbose))
+
+        if verbose > 2:
+            callbacks.append(
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_message(epoch, logs, n_epochs, verbose)))
+            fit_verbose = 0
+        else:
+            fit_verbose = verbose
+        if monitor_best:
+            os.makedirs(self.model_to_use, exist_ok=True)
+            callbacks.append(ModelCheckpoint(filepath=os.path.join(self.model_to_use, "best_model.h5"),
+                                             save_best_only=True, monitor=monitor, period=50))
+
+        if sparse.issparse(train_adata.X):
+            train_adata.X = train_adata.X.A
+
+        x = [train_adata.X, train_labels, train_labels]
+        y = [train_adata.X, LabelEncoder().fit_transform(train_labels).reshape(-1, 1)]
+
+        if valid_adata is not None:
+            if sparse.issparse(valid_adata.X):
+                valid_adata.X = valid_adata.X.A
+
+            valid_labels = valid_adata.obs[condition_keys].values
+
+            x_valid = [valid_adata.X, valid_labels, valid_labels]
+            y_valid = [valid_adata.X, LabelEncoder().fit_transform(valid_labels).reshape(-1, 1)]
 
             history = self.cvae_model.fit(x=x,
                                           y=y,
