@@ -489,7 +489,7 @@ class trVAEMulti:
                 self.save_model()
 
     def train_pachter(self, train_adata, valid_adata=None,
-                      condition_encoder=None, condition_keys=None,
+                      condition_encoder=None, condition_key=None, condition_keys=None,
                       n_epochs=10000, batch_size=1024,
                       early_stop_limit=100, lr_reducer=80, threshold=0.0, monitor='val_loss',
                       shuffle=True, verbose=0, save=True, monitor_best=True):
@@ -546,6 +546,7 @@ class trVAEMulti:
             ```
         """
         train_labels = train_adata.obs[condition_keys].values
+        train_conditions = train_adata.obs[condition_key].values
 
         callbacks = [
             History(),
@@ -573,16 +574,17 @@ class trVAEMulti:
             train_adata.X = train_adata.X.A
 
         x = [train_adata.X, train_labels, train_labels]
-        y = [train_adata.X, LabelEncoder().fit_transform(train_labels).reshape(-1, 1)]
+        y = [train_adata.X, LabelEncoder().fit_transform(train_conditions).reshape(-1, 1)]
 
         if valid_adata is not None:
             if sparse.issparse(valid_adata.X):
                 valid_adata.X = valid_adata.X.A
 
             valid_labels = valid_adata.obs[condition_keys].values
+            valid_conditions = valid_adata.obs[condition_key].values
 
             x_valid = [valid_adata.X, valid_labels, valid_labels]
-            y_valid = [valid_adata.X, LabelEncoder().fit_transform(valid_labels).reshape(-1, 1)]
+            y_valid = [valid_adata.X, LabelEncoder().fit_transform(valid_conditions).reshape(-1, 1)]
 
             history = self.cvae_model.fit(x=x,
                                           y=y,
