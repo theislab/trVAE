@@ -241,7 +241,6 @@ class trVAEMultiPachter:
         """
         adata = remove_sparsity(adata)
 
-        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         latent = self.encoder_model.predict([adata.X, encoder_labels])[2]
         latent = np.nan_to_num(latent)
 
@@ -275,9 +274,6 @@ class trVAEMultiPachter:
             decoder_labels = np.zeros(shape=encoder_labels.shape) + feed_fake
         else:
             decoder_labels = encoder_labels
-
-        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
-        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
         adata = remove_sparsity(adata)
 
@@ -325,9 +321,6 @@ class trVAEMultiPachter:
             ```
         """
         adata = remove_sparsity(adata)
-
-        encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
-        decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
         reconstructed = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[0]
         reconstructed = np.nan_to_num(reconstructed)
