@@ -1,0 +1,30 @@
+[build-system]
+requires = ["flit"]
+build-backend = "flit.buildapi"
+
+[tool.flit.metadata]
+module = "trvae"
+author = "Mohsen Naghipourfar"
+author-email = "mohsen.naghipourfar@helmholtz-muenchen.de"
+home-page = "https://github.com/theislab/trVAE"
+description-file = 'README.md'
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
+requires = [
+    "future-fstrings",
+    "get_version",
+    "anndata",
+    "scanpy",
+    "adjustText",
+    "tensorflow",
+    "numpy",
+    "scipy",
+    "pandas",
+    "keras",
+    "matplotlib"]
+
+[tool.flit.metadata.requires-extra]
+test = [
+    "pytest",
+]
