@@ -1,0 +1,12 @@
+language: python
+dist: xenial
+cache: pip
+python:
+  - "3.6"
+
+install:
+  - python setup.py -d
+  - conda install -c bioconda scanpy
+
+script:
+  - PYTHONPATH=. pytest
