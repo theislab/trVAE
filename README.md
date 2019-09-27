@@ -1,4 +1,4 @@
-# trVAE
+# trVAE [![Build Status](https://travis-ci.org/theislab/trVAE.svg?branch=master)](https://travis-ci.org/theislab/trVAE)
 
 <img align="center" src="./sketch/sketch.png?raw=true">
 

@@ -5,8 +5,9 @@ python:
   - "3.6"
 
 install:
-  - python setup.py
-  - conda install -c bioconda scanpy
+  - pip install flit future-fstrings
+  - flit install
+  - pip install scanpy
 
 script:
   - PYTHONPATH=. pytest
