@@ -5,7 +5,7 @@ python:
   - "3.6"
 
 install:
-  - python setup.py -d
+  - python setup.py
   - conda install -c bioconda scanpy
 
 script:
