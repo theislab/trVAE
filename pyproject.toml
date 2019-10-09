@@ -22,7 +22,10 @@ requires = [
     "scipy",
     "pandas",
     "keras",
-    "matplotlib"]
+    "matplotlib",
+    "seaborn",
+    "keras_vggface",
+    "opencv-python"]
 
 [tool.flit.metadata.requires-extra]
 test = [
