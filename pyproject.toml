@@ -5,7 +5,7 @@ build-backend = "flit.buildapi"
 [tool.flit.metadata]
 module = "trvae"
 author = "Mohsen Naghipourfar"
-author-email = "mohsen.naghipourfar@helmholtz-muenchen.de"
+author-email = "mohsen.naghipourfar@gmail.com"
 home-page = "https://github.com/theislab/trVAE"
 description-file = 'README.md'
 classifiers = [
