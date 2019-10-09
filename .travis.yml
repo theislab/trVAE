@@ -10,4 +10,4 @@ install:
   - pip install scanpy
 
 script:
-  - PYTHONPATH=. pytest
+  - PYTHONPATH=. python -m tests.test_trVAE_pkg
