@@ -1,3 +1,8 @@
+#The code here is exact copy taken from https://github.com/theislab/dca, all the credits go to 
+#@gokceneraslan
+
+
+
 from keras import backend as K
 from keras.engine.topology import Layer
 
