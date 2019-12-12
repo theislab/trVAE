@@ -1,3 +1,5 @@
+#NB and ZINB classes are taken 
+#from awesome https://github.com/theislab/dca repo and credits go to author the of the package, @gokceneraslan 
 import tensorflow as tf
 from keras import backend as K, Model
 from keras.applications.imagenet_utils import preprocess_input
