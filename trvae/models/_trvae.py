@@ -122,7 +122,7 @@ class trVAE:
                     A keras Model object for Encoder subnetwork of trVAE
         """
         h = concatenate([self.x, self.encoder_labels], axis=1)
-        for idx, units in self.architecture:
+        for idx, units in enumerate(self.architecture):
             h = Dense(units, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
             h = BatchNormalization(axis=1, scale=True)(h)
             h = LeakyReLU()(h)
@@ -147,7 +147,7 @@ class trVAE:
                     A keras Model object for MMD Decoder subnetwork of trVAE
         """
         h = concatenate([self.z, self.decoder_labels], axis=1)
-        for idx, units in self.architecture[::-1]:
+        for idx, units in enumerate(self.architecture[::-1]):
             h = Dense(units, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
             h = BatchNormalization(axis=1, scale=True)(h)
             if idx == 0:
