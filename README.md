@@ -28,6 +28,8 @@ flit install
 
 ## Examples
 
+* For perturbation prediction check this [example](https://nbviewer.jupyter.org/github/theislab/trVAE/blob/master/examples/trVAE_Haber.ipynb) from Haber et al..
+
 ## Reproducing paper results:
 In order to reproduce paper results visit [here](https://github.com/Naghipourfar/trVAE_reproducibility).
 
