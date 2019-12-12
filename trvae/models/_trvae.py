@@ -20,7 +20,7 @@ from trvae.utils import label_encoder, remove_sparsity
 log = logging.getLogger(__file__)
 
 
-class trVAEMulti:
+class trVAE:
     """
         trVAE Network class. This class contains the implementation of Regularized Conditional
         Variational Auto-encoder network.
@@ -68,12 +68,16 @@ class trVAEMulti:
                 number of latent space dimensions.
     """
 
-    def __init__(self, x_dimension, n_conditions, z_dimension=20, **kwargs):
+    def __init__(self, x_dimension, n_conditions, z_dimension=20, architecture=None, **kwargs):
+
+        if architecture is None:
+            architecture = [256, 128, 32]
 
         self.x_dim = x_dimension
         self.z_dim = z_dimension
         self.mmd_dim = kwargs.get('mmd_dimension', 128)
         self.n_conditions = n_conditions
+        self.architecture = architecture
 
         self.lr = kwargs.get("learning_rate", 0.001)
         self.alpha = kwargs.get("alpha", 1e-5)
@@ -117,15 +121,12 @@ class trVAEMulti:
                 model: Model
                     A keras Model object for Encoder subnetwork of trVAE
         """
-        xy = concatenate([self.x, self.encoder_labels], axis=1)
-        h = Dense(512, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(xy)
-        h = BatchNormalization(axis=1, scale=True)(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
-        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
-        h = BatchNormalization(axis=1, scale=True)(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+        h = concatenate([self.x, self.encoder_labels], axis=1)
+        for idx, units in self.architecture:
+            h = Dense(units, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
+            h = BatchNormalization(axis=1, scale=True)(h)
+            h = LeakyReLU()(h)
+            h = Dropout(self.dr_rate)(h)
         mean = Dense(self.z_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer)(h)
         log_var = Dense(self.z_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
@@ -145,15 +146,14 @@ class trVAEMulti:
                 decoder_mmd_model: Model
                     A keras Model object for MMD Decoder subnetwork of trVAE
         """
-        zy = concatenate([self.z, self.decoder_labels], axis=1)
-        h = Dense(self.mmd_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(zy)
-        h = BatchNormalization(axis=1, scale=True)(h)
-        h_mmd = LeakyReLU(name="mmd")(h)
-        h = Dropout(self.dr_rate)(h_mmd)
-        h = Dense(512, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
-        h = BatchNormalization(axis=1, scale=True)(h)
-        h = LeakyReLU()(h)
-        h = Dropout(self.dr_rate)(h)
+        h = concatenate([self.z, self.decoder_labels], axis=1)
+        for idx, units in self.architecture[::-1]:
+            h = Dense(units, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
+            h = BatchNormalization(axis=1, scale=True)(h)
+            if idx == 0:
+                h_mmd = LeakyReLU(name="mmd")(h)
+                h = h_mmd
+            h = Dropout(self.dr_rate)(h)
 
         h = Dense(self.x_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=True)(h)
         h = ACTIVATIONS[self.output_activation](h)
@@ -174,7 +174,6 @@ class trVAEMulti:
             # Returns
                 Nothing will be returned.
         """
-
         inputs = [self.x, self.encoder_labels, self.decoder_labels]
         self.mu, self.log_var, self.encoder_model = self._encoder(name="encoder")
         self.decoder_model, self.decoder_mmd_model = self._mmd_decoder(name="decoder")
