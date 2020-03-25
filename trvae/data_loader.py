@@ -2,7 +2,7 @@ import os
 import tarfile
 import zipfile
 
-import anndata
+import anndata as ad
 import cv2
 import keras
 import numpy as np
@@ -109,7 +109,7 @@ def prepare_and_load_celeba(file_path, attr_path, landmark_path,
     images_df.index = indices
 
     if save:
-        data = anndata.AnnData(X=images_df.values)
+        data = ad.AnnData(X=images_df.values)
         attr_df = attr_df.loc[images_df.index]
         print(data.shape, attr_df.shape)
         data.obs['labels'] = attr_df[gender].values
@@ -159,7 +159,7 @@ def prepare_and_load_edge2shoe(file_path,
     data = np.concatenate([images, edges], axis=0)
 
     if save:
-        data = anndata.AnnData(X=data)
+        data = ad.AnnData(X=data)
         data.obs['id'] = np.concatenate([np.arange(images.shape[0]), np.arange(images.shape[0])])
         data.obs['condition'] = ['shoe'] * images.shape[0] + ['edge'] * images.shape[0]
         sc.write(filename=os.path.join(data_path, f"edges2shoes_{img_width}x{img_height}.h5ad"), adata=data)

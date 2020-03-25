@@ -1,5 +1,5 @@
 import matplotlib
-import numpy
+import np as np 
 import pandas as pd
 import scanpy as sc
 from adjustText import adjust_text
@@ -71,14 +71,14 @@ def reg_mean_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_m
         adata_diff = adata[:, diff_genes]
         stim_diff = adata_diff[adata_diff.obs[condition_key] == axis_keys["y"]]
         ctrl_diff = adata_diff[adata_diff.obs[condition_key] == axis_keys["x"]]
-        x_diff = numpy.average(ctrl_diff.X, axis=0)
-        y_diff = numpy.average(stim_diff.X, axis=0)
+        x_diff = np.average(ctrl_diff.X, axis=0)
+        y_diff = np.average(stim_diff.X, axis=0)
         m, b, r_value_diff, p_value_diff, std_err_diff = stats.linregress(x_diff, y_diff)
         print('reg_mean_top100:', r_value_diff ** 2)
     if "y1" in axis_keys.keys():
         real_stim = adata[adata.obs[condition_key] == axis_keys["y1"]]
-    x = numpy.average(ctrl.X, axis=0)
-    y = numpy.average(stim.X, axis=0)
+    x = np.average(ctrl.X, axis=0)
+    y = np.average(stim.X, axis=0)
     m, b, r_value, p_value, std_err = stats.linregress(x, y)
     print('reg_mean_all:', r_value ** 2)
     df = pd.DataFrame({axis_keys["x"]: x, axis_keys["y"]: y})
@@ -86,14 +86,14 @@ def reg_mean_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_m
     ax.tick_params(labelsize=fontsize)
     if "range" in kwargs:
         start, stop, step = kwargs.get("range")
-        ax.set_xticks(numpy.arange(start, stop, step))
-        ax.set_yticks(numpy.arange(start, stop, step))
+        ax.set_xticks(np.arange(start, stop, step))
+        ax.set_yticks(np.arange(start, stop, step))
     # _p1 = pyplot.scatter(x, y, marker=".", label=f"{axis_keys['x']}-{axis_keys['y']}")
     # pyplot.plot(x, m * x + b, "-", color="green")
     ax.set_xlabel(labels["x"], fontsize=fontsize)
     ax.set_ylabel(labels["y"], fontsize=fontsize)
     # if "y1" in axis_keys.keys():
-    # y1 = numpy.average(real_stim.X, axis=0)
+    # y1 = np.average(real_stim.X, axis=0)
     # _p2 = pyplot.scatter(x, y1, marker="*", c="red", alpha=.5, label=f"{axis_keys['x']}-{axis_keys['y1']}")
     if gene_list is not None:
         texts = []
@@ -182,14 +182,14 @@ def reg_var_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_va
         adata_diff = adata[:, diff_genes]
         stim_diff = adata_diff[adata_diff.obs[condition_key] == axis_keys["y"]]
         ctrl_diff = adata_diff[adata_diff.obs[condition_key] == axis_keys["x"]]
-        x_diff = numpy.var(ctrl_diff.X, axis=0)
-        y_diff = numpy.var(stim_diff.X, axis=0)
+        x_diff = np.var(ctrl_diff.X, axis=0)
+        y_diff = np.var(stim_diff.X, axis=0)
         m, b, r_value_diff, p_value_diff, std_err_diff = stats.linregress(x_diff, y_diff)
         print('reg_var_top100:', r_value_diff ** 2)
     if "y1" in axis_keys.keys():
         real_stim = adata[adata.obs[condition_key] == axis_keys["y1"]]
-    x = numpy.var(ctrl.X, axis=0)
-    y = numpy.var(stim.X, axis=0)
+    x = np.var(ctrl.X, axis=0)
+    y = np.var(stim.X, axis=0)
     m, b, r_value, p_value, std_err = stats.linregress(x, y)
     print('reg_var_all:', r_value ** 2)
     df = pd.DataFrame({axis_keys["x"]: x, axis_keys["y"]: y})
@@ -197,14 +197,14 @@ def reg_var_plot(adata, condition_key, axis_keys, labels, path_to_save="./reg_va
     ax.tick_params(labelsize=fontsize)
     if "range" in kwargs:
         start, stop, step = kwargs.get("range")
-        ax.set_xticks(numpy.arange(start, stop, step))
-        ax.set_yticks(numpy.arange(start, stop, step))
+        ax.set_xticks(np.arange(start, stop, step))
+        ax.set_yticks(np.arange(start, stop, step))
     # _p1 = pyplot.scatter(x, y, marker=".", label=f"{axis_keys['x']}-{axis_keys['y']}")
     # pyplot.plot(x, m * x + b, "-", color="green")
     ax.set_xlabel(labels['x'], fontsize=fontsize)
     ax.set_ylabel(labels['y'], fontsize=fontsize)
     if "y1" in axis_keys.keys():
-        y1 = numpy.var(real_stim.X, axis=0)
+        y1 = np.var(real_stim.X, axis=0)
         _p2 = pyplot.scatter(x, y1, marker="*", c="grey", alpha=.5, label=f"{axis_keys['x']}-{axis_keys['y1']}")
     if gene_list is not None:
         for i in gene_list:
@@ -282,12 +282,12 @@ def binary_classifier(scg_object, adata, delta, condition_key, conditions, path_
     stim = adata[adata.obs[condition_key] == conditions["stim"], :]
     all_latent_cd = scg_object.to_latent(cd.X)
     all_latent_stim = scg_object.to_latent(stim.X)
-    dot_cd = numpy.zeros((len(all_latent_cd)))
-    dot_sal = numpy.zeros((len(all_latent_stim)))
+    dot_cd = np.zeros((len(all_latent_cd)))
+    dot_sal = np.zeros((len(all_latent_stim)))
     for ind, vec in enumerate(all_latent_cd):
-        dot_cd[ind] = numpy.dot(delta, vec)
+        dot_cd[ind] = np.dot(delta, vec)
     for ind, vec in enumerate(all_latent_stim):
-        dot_sal[ind] = numpy.dot(delta, vec)
+        dot_sal[ind] = np.dot(delta, vec)
     pyplot.hist(dot_cd, label=conditions["ctrl"], bins=50, )
     pyplot.hist(dot_sal, label=conditions["stim"], bins=50)
     # pyplot.legend(loc=1, prop={'size': 7})

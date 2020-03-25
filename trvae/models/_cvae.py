@@ -1,6 +1,6 @@
 import os
 import logging
-import tensorflow
+import tensorflow as tf
 from scipy import sparse
 
 from trvae.utils import label_encoder
@@ -31,7 +31,7 @@ class CVAE:
     """
 
     def __init__(self, x_dimension, z_dimension=100, **kwargs):
-        tensorflow.reset_default_graph()
+        tf.reset_default_graph()
         self.x_dim = x_dimension
         self.z_dim = z_dimension
 
@@ -40,19 +40,19 @@ class CVAE:
         self.dr_rate = kwargs.get("dropout_rate", 0.2)
         self.model_to_use = kwargs.get("model_path", "../models/cvae")
 
-        self.is_training = tensorflow.placeholder(tensorflow.bool, name='training_flag')
-        self.global_step = tensorflow.Variable(0, name='global_step', trainable=False, dtype=tensorflow.int32)
-        self.x = tensorflow.placeholder(tensorflow.float32, shape=[None, self.x_dim], name="data")
-        self.z = tensorflow.placeholder(tensorflow.float32, shape=[None, self.z_dim], name="latent")
-        self.y = tensorflow.placeholder(tensorflow.float32, shape=[None, 1], name="labels")
-        self.time_step = tensorflow.placeholder(tensorflow.int32)
-        self.size = tensorflow.placeholder(tensorflow.int32)
-        self.init_w = tensorflow.contrib.layers.xavier_initializer()
+        self.is_training = tf.placeholder(tf.bool, name='training_flag')
+        self.global_step = tf.Variable(0, name='global_step', trainable=False, dtype=tf.int32)
+        self.x = tf.placeholder(tf.float32, shape=[None, self.x_dim], name="data")
+        self.z = tf.placeholder(tf.float32, shape=[None, self.z_dim], name="latent")
+        self.y = tf.placeholder(tf.float32, shape=[None, 1], name="labels")
+        self.time_step = tf.placeholder(tf.int32)
+        self.size = tf.placeholder(tf.int32)
+        self.init_w = tf.contrib.layers.xavier_initializer()
         self._create_network()
         self._loss_function()
-        init = tensorflow.global_variables_initializer()
-        self.sess = tensorflow.InteractiveSession()
-        self.saver = tensorflow.train.Saver(max_to_keep=1)
+        init = tf.global_variables_initializer()
+        self.sess = tf.InteractiveSession()
+        self.saver = tf.train.Saver(max_to_keep=1)
         self.sess.run(init)
 
     def _encoder(self):
@@ -68,17 +68,17 @@ class CVAE:
                 log_var: Tensor
                     A dense layer consists of log transformed variances of gaussian distributions of latent space dimensions.
         """
-        with tensorflow.variable_scope("encoder", reuse=tensorflow.AUTO_REUSE):
-            xy = tensorflow.concat([self.x, self.y], axis=1)
-            h = tensorflow.layers.dense(inputs=xy, units=700, kernel_initializer=self.init_w, use_bias=False)
-            h = tensorflow.layers.batch_normalization(h, axis=1, training=self.is_training)
-            h = tensorflow.nn.leaky_relu(h)
-            h = tensorflow.layers.dense(inputs=h, units=400, kernel_initializer=self.init_w, use_bias=False)
-            h = tensorflow.layers.batch_normalization(h, axis=1, training=self.is_training)
-            h = tensorflow.nn.leaky_relu(h)
-            h = tensorflow.layers.dropout(h, self.dr_rate, training=self.is_training)
-            mean = tensorflow.layers.dense(inputs=h, units=self.z_dim, kernel_initializer=self.init_w)
-            log_var = tensorflow.layers.dense(inputs=h, units=self.z_dim, kernel_initializer=self.init_w)
+        with tf.variable_scope("encoder", reuse=tf.AUTO_REUSE):
+            xy = tf.concat([self.x, self.y], axis=1)
+            h = tf.layers.dense(inputs=xy, units=700, kernel_initializer=self.init_w, use_bias=False)
+            h = tf.layers.batch_normalization(h, axis=1, training=self.is_training)
+            h = tf.nn.leaky_relu(h)
+            h = tf.layers.dense(inputs=h, units=400, kernel_initializer=self.init_w, use_bias=False)
+            h = tf.layers.batch_normalization(h, axis=1, training=self.is_training)
+            h = tf.nn.leaky_relu(h)
+            h = tf.layers.dropout(h, self.dr_rate, training=self.is_training)
+            mean = tf.layers.dense(inputs=h, units=self.z_dim, kernel_initializer=self.init_w)
+            log_var = tf.layers.dense(inputs=h, units=self.z_dim, kernel_initializer=self.init_w)
             return mean, log_var
 
     def _decoder(self):
@@ -92,17 +92,17 @@ class CVAE:
                 h: Tensor
                     A Tensor for last dense layer with the shape of [n_vars, ] to reconstruct data.
         """
-        with tensorflow.variable_scope("decoder", reuse=tensorflow.AUTO_REUSE):
-            xy = tensorflow.concat([self.z_mean, self.y], axis=1)
-            h = tensorflow.layers.dense(inputs=xy, units=400, kernel_initializer=self.init_w, use_bias=False)
-            h = tensorflow.layers.batch_normalization(h, axis=1, training=self.is_training)
-            h_mmd = tensorflow.nn.leaky_relu(h)
-            h = tensorflow.layers.dense(inputs=h_mmd, units=700, kernel_initializer=self.init_w, use_bias=False)
-            h = tensorflow.layers.batch_normalization(h, axis=1, training=self.is_training)
-            h = tensorflow.nn.leaky_relu(h)
-            h = tensorflow.layers.dropout(h, self.dr_rate, training=self.is_training)
-            h = tensorflow.layers.dense(inputs=h, units=self.x_dim, kernel_initializer=self.init_w, use_bias=True)
-            h = tensorflow.nn.relu(h)
+        with tf.variable_scope("decoder", reuse=tf.AUTO_REUSE):
+            xy = tf.concat([self.z_mean, self.y], axis=1)
+            h = tf.layers.dense(inputs=xy, units=400, kernel_initializer=self.init_w, use_bias=False)
+            h = tf.layers.batch_normalization(h, axis=1, training=self.is_training)
+            h_mmd = tf.nn.leaky_relu(h)
+            h = tf.layers.dense(inputs=h_mmd, units=700, kernel_initializer=self.init_w, use_bias=False)
+            h = tf.layers.batch_normalization(h, axis=1, training=self.is_training)
+            h = tf.nn.leaky_relu(h)
+            h = tf.layers.dropout(h, self.dr_rate, training=self.is_training)
+            h = tf.layers.dense(inputs=h, units=self.x_dim, kernel_initializer=self.init_w, use_bias=True)
+            h = tf.nn.relu(h)
             return h, h_mmd
 
     def _sample_z(self):
@@ -115,8 +115,8 @@ class CVAE:
             # Returns
                 The computed Tensor of samples with shape [size, z_dim].
         """
-        eps = tensorflow.random_normal(shape=[self.size, self.z_dim])
-        return self.mu + tensorflow.exp(self.log_var / 2) * eps
+        eps = tf.random_normal(shape=[self.size, self.z_dim])
+        return self.mu + tf.exp(self.log_var / 2) * eps
 
     def _create_network(self):
         """
@@ -146,16 +146,16 @@ class CVAE:
             # Returns
                 returns the computed RBF kernel between x and y
         """
-        x_size = tensorflow.shape(x)[0]
-        y_size = tensorflow.shape(y)[0]
-        dim = tensorflow.shape(x)[1]
-        tiled_x = tensorflow.tile(tensorflow.reshape(x, tensorflow.stack([x_size, 1, dim])),
-                                  tensorflow.stack([1, y_size, 1]))
-        tiled_y = tensorflow.tile(tensorflow.reshape(y, tensorflow.stack([1, y_size, dim])),
-                                  tensorflow.stack([x_size, 1, 1]))
-        return tensorflow.exp(
-            -tensorflow.reduce_mean(tensorflow.square(tiled_x - tiled_y), axis=2) / tensorflow.cast(dim,
-                                                                                                    tensorflow.float32))
+        x_size = tf.shape(x)[0]
+        y_size = tf.shape(y)[0]
+        dim = tf.shape(x)[1]
+        tiled_x = tf.tile(tf.reshape(x, tf.stack([x_size, 1, dim])),
+                                  tf.stack([1, y_size, 1]))
+        tiled_y = tf.tile(tf.reshape(y, tf.stack([1, y_size, dim])),
+                                  tf.stack([x_size, 1, 1]))
+        return tf.exp(
+            -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2) / tf.cast(dim,
+                                                                                                    tf.float32))
 
     def _loss_function(self):
         """
@@ -168,12 +168,12 @@ class CVAE:
             # Returns
                 Nothing will be returned.
         """
-        self.kl_loss = 0.5 * tensorflow.reduce_sum(
-            tensorflow.exp(self.log_var) + tensorflow.square(self.mu) - 1. - self.log_var, 1)
-        self.recon_loss = 0.5 * tensorflow.reduce_sum(tensorflow.square((self.x - self.x_hat)), 1)
-        self.vae_loss = tensorflow.reduce_mean(self.recon_loss + self.alpha * self.kl_loss)
-        with tensorflow.control_dependencies(tensorflow.get_collection(tensorflow.GraphKeys.UPDATE_OPS)):
-            self.solver = tensorflow.train.AdamOptimizer(learning_rate=self.lr).minimize(self.vae_loss)
+        self.kl_loss = 0.5 * tf.reduce_sum(
+            tf.exp(self.log_var) + tf.square(self.mu) - 1. - self.log_var, 1)
+        self.recon_loss = 0.5 * tf.reduce_sum(tf.square((self.x - self.x_hat)), 1)
+        self.vae_loss = tf.reduce_mean(self.recon_loss + self.alpha * self.kl_loss)
+        with tf.control_dependencies(tf.get_collection(tf.GraphKeys.UPDATE_OPS)):
+            self.solver = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(self.vae_loss)
 
     def to_latent(self, data, labels):
         """
@@ -322,7 +322,7 @@ class CVAE:
         """
         if initial_run:
             log.info("----Training----")
-            assign_step_zero = tensorflow.assign(self.global_step, 0)
+            assign_step_zero = tf.assign(self.global_step, 0)
             _init_step = self.sess.run(assign_step_zero)
         if not initial_run:
             self.saver.restore(self.sess, self.model_to_use)
@@ -336,7 +336,7 @@ class CVAE:
         min_delta = threshold
         patience_cnt = 0
         for it in range(n_epochs):
-            increment_global_step_op = tensorflow.assign(self.global_step, self.global_step + 1)
+            increment_global_step_op = tf.assign(self.global_step, self.global_step + 1)
             _step = self.sess.run(increment_global_step_op)
             current_step = self.sess.run(self.global_step)
             train_loss = 0
