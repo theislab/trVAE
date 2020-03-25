@@ -1,5 +1,5 @@
 import matplotlib
-import np as np 
+import numpy as np 
 import pandas as pd
 import scanpy as sc
 from adjustText import adjust_text
