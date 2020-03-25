@@ -217,9 +217,9 @@ class trVAE:
         loss, mmd_loss = self._calculate_loss()
         self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
         self.cvae_model.compile(optimizer=self.cvae_optimizer,
-                                loss=[loss, mmd_loss],
-                                metrics={self.cvae_model.outputs[0].name: loss,
-                                         self.cvae_model.outputs[1].name: mmd_loss})
+                                loss=[loss, mmd_loss])
+                               # metrics={self.cvae_model.outputs[0].name: loss,
+                               #          self.cvae_model.outputs[1].name: mmd_loss})
 
     def to_latent(self, adata, encoder_labels, return_adata=True):
         """
