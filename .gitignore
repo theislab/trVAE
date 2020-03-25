@@ -1,3 +1,7 @@
+data/
+*.h5
+*.h5ad
+*.log
 #OS or Editor files and folders
 .DS_Store
 Thumbs.db
