@@ -4,7 +4,7 @@ import zipfile
 
 import anndata as ad
 import cv2
-import keras
+import tensorflow as tf
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -174,7 +174,7 @@ def resize_image(images, img_width, img_height):
     return np.array(images_list)
 
 
-class PairedDataSequence(keras.utils.Sequence):
+class PairedDataSequence(tf.keras.utils.Sequence):
     def __init__(self, image_paths, batch_size):
         self.image_paths = image_paths
         self.batch_size = batch_size

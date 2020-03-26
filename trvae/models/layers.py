@@ -2,9 +2,9 @@
 #@gokceneraslan
 
 
-
-from keras import backend as K
-from keras.engine.topology import Layer
+import tensorflow as tf
+from tf.keras import backend as K
+from tf.keras.engine.topology import Layer
 
 
 class SliceLayer(Layer):

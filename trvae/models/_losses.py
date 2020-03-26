@@ -31,7 +31,7 @@ def kl_loss(mu, log_var, alpha=0.1):
 
 def mmd(n_conditions, beta, kernel_method='multi-scale-rbf', computation_way="general"):
     def mmd_loss(real_labels, y_pred):
-        with tf.variable_scope("mmd_loss", reuse=tf.AUTO_REUSE):
+        with tf.compat.v1.variable_scope("mmd_loss", reuse=tf.compat.v1.AUTO_REUSE):
             real_labels = K.reshape(K.cast(real_labels, 'int32'), (-1,))
             conditions_mmd = tf.dynamic_partition(y_pred, real_labels, num_partitions=n_conditions)
             loss = 0.0
@@ -105,7 +105,7 @@ class NB(object):
         scale_factor = self.scale_factor
         eps = self.eps
 
-        with tf.name_scope(self.scope):
+        with tf.compat.v1.name_scope(self.scope):
             y_true = tf.cast(y_true, tf.float32)
             y_pred = tf.cast(y_pred, tf.float32) * scale_factor
 
@@ -116,18 +116,18 @@ class NB(object):
             # Clip theta
             theta = tf.minimum(self.theta, 1e6)
 
-            t1 = tf.lgamma(theta + eps) + tf.lgamma(y_true + 1.0) - tf.lgamma(y_true + theta + eps)
-            t2 = (theta + y_true) * tf.log(1.0 + (y_pred / (theta + eps))) + (
-                    y_true * (tf.log(theta + eps) - tf.log(y_pred + eps)))
+            t1 = tf.math.lgamma(theta + eps) + tf.math.lgamma(y_true + 1.0) - tf.math.lgamma(y_true + theta + eps)
+            t2 = (theta + y_true) * tf.math.log(1.0 + (y_pred / (theta + eps))) + (
+                    y_true * (tf.math.log(theta + eps) - tf.math.log(y_pred + eps)))
             final = t1 + t2
 
             final = _nan2inf(final)
 
             if mean:
                 if self.masking:
-                    final = tf.divide(tf.reduce_sum(final), nelem)
+                    final = tf.divide(tf.reduce_sum(input_tensor=final), nelem)
                 else:
-                    final = tf.reduce_mean(final)
+                    final = tf.reduce_mean(input_tensor=final)
 
         return final
 
@@ -142,19 +142,19 @@ class ZINB(NB):
         scale_factor = self.scale_factor
         eps = self.eps
 
-        with tf.name_scope(self.scope):
+        with tf.compat.v1.name_scope(self.scope):
             # reuse existing NB neg.log.lik.
             # mean is always False here, because everything is calculated
             # element-wise. we take the mean only in the end
-            nb_case = super().loss(y_true, y_pred, mean=False) - tf.log(1.0 - self.pi + eps)
+            nb_case = super().loss(y_true, y_pred, mean=False) - tf.math.log(1.0 - self.pi + eps)
 
             y_true = tf.cast(y_true, tf.float32)
             y_pred = tf.cast(y_pred, tf.float32) * scale_factor
             theta = tf.minimum(self.theta, 1e6)
 
             zero_nb = tf.pow(theta / (theta + y_pred + eps), theta)
-            zero_case = -tf.log(self.pi + ((1.0 - self.pi) * zero_nb) + eps)
-            result = tf.where(tf.less(y_true, 1e-8), zero_case, nb_case)
+            zero_case = -tf.math.log(self.pi + ((1.0 - self.pi) * zero_nb) + eps)
+            result = tf.compat.v1.where(tf.less(y_true, 1e-8), zero_case, nb_case)
             ridge = self.ridge_lambda * tf.square(self.pi)
             result += ridge
 
@@ -162,7 +162,7 @@ class ZINB(NB):
                 if self.masking:
                     result = _reduce_mean(result)
                 else:
-                    result = tf.reduce_mean(result)
+                    result = tf.reduce_mean(input_tensor=result)
 
             result = _nan2inf(result)
 

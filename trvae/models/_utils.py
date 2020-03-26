@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras as keras
 from keras import backend as K
 
 
@@ -37,7 +38,7 @@ def compute_kernel(x, y, kernel='rbf', **kwargs):
         distances = squared_distance(x, y)
         s = K.dot(beta, K.reshape(distances, (1, -1)))
 
-        return K.reshape(tf.reduce_sum(tf.exp(-s), 0), K.shape(distances)) / len(sigmas)
+        return K.reshape(tf.reduce_sum(input_tensor=tf.exp(-s), axis=0), K.shape(distances)) / len(sigmas)
 
 
 def squared_distance(x, y):  # returns the pairwise euclidean distance
@@ -80,22 +81,22 @@ def sample_z(args):
 
 
 def _nan2zero(x):
-    return tf.where(tf.is_nan(x), tf.zeros_like(x), x)
+    return tf.where(tf.math.is_nan(x), tf.zeros_like(x), x)
 
 
 def _nan2inf(x):
-    return tf.where(tf.is_nan(x), tf.zeros_like(x) + np.inf, x)
+    return tf.where(tf.math.is_nan(x), tf.zeros_like(x) + np.inf, x)
 
 
 def _nelem(x):
-    nelem = tf.reduce_sum(tf.cast(~tf.is_nan(x), tf.float32))
-    return tf.cast(tf.where(tf.equal(nelem, 0.), 1., nelem), x.dtype)
+    nelem = tf.reduce_sum(input_tensor=tf.cast(~tf.math.is_nan(x), tf.float32))
+    return tf.cast(tf.compat.v1.where(tf.equal(nelem, 0.), 1., nelem), x.dtype)
 
 
 def _reduce_mean(x):
     nelem = _nelem(x)
     x = _nan2zero(x)
-    return tf.divide(tf.reduce_sum(x), nelem)
+    return tf.divide(tf.reduce_sum(input_tensor=x), nelem)
 
 
 def print_message(epoch, logs, n_epochs=10000, duration=50):

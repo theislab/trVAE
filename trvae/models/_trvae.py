@@ -4,9 +4,10 @@ import os
 import anndata
 import keras
 import numpy as np
+import tensorflow as tf
+import tensorflow.keras as keras
 from keras.callbacks import CSVLogger, History, EarlyStopping, ReduceLROnPlateau, LambdaCallback, ModelCheckpoint
-from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers import Dense, BatchNormalization, Dropout, Input, concatenate, Lambda, LeakyReLU
 from keras.models import Model, load_model
 from keras.utils import to_categorical
 from scipy import sparse
@@ -97,14 +98,15 @@ class trVAE:
         self.decoder_labels = Input(shape=(self.n_conditions,), name="decoder_labels")
         self.z = Input(shape=(self.z_dim,), name="latent_data")
 
-        self.init_w = keras.initializers.glorot_normal()
-        self.regularizer = keras.regularizers.l1_l2(self.lambda_l1, self.lambda_l2)
+        self.init_w = keras.initializers.GlorotNormal()
+        self.regularizer = keras.regularizers.L1L2(l1=self.lambda_l1, l2=self.lambda_l2)
+        
         self._create_network()
         self._loss_function()
 
         self.encoder_model.summary()
         self.decoder_model.summary()
-        self.cvae_model.summary()
+        self.trvae_model.summary()
 
     def _encoder(self, name="encoder"):
         """
@@ -123,12 +125,12 @@ class trVAE:
         """
         h = concatenate([self.x, self.encoder_labels], axis=1)
         for idx, units in enumerate(self.architecture):
-            h = Dense(units, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
+            h = Dense(units, kernel_initializer='glorot_normal', kernel_regularizer=self.regularizer)(h)
             h = BatchNormalization(axis=1, scale=True)(h)
             h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
-        mean = Dense(self.z_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer)(h)
-        log_var = Dense(self.z_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer)(h)
+        mean = Dense(self.z_dim, kernel_initializer='glorot_normal', kernel_regularizer=self.regularizer)(h)
+        log_var = Dense(self.z_dim, kernel_initializer='glorot_normal', kernel_regularizer=self.regularizer)(h)
         z = Lambda(sample_z, output_shape=(self.z_dim,))([mean, log_var])
         model = Model(inputs=[self.x, self.encoder_labels], outputs=[mean, log_var, z], name=name)
         return mean, log_var, model
@@ -148,14 +150,14 @@ class trVAE:
         """
         h = concatenate([self.z, self.decoder_labels], axis=1)
         for idx, units in enumerate(self.architecture[::-1]):
-            h = Dense(units, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=False)(h)
+            h = Dense(units, kernel_initializer='glorot_normal', kernel_regularizer=self.regularizer, use_bias=False)(h)
             h = BatchNormalization(axis=1, scale=True)(h)
             if idx == 0:
                 h_mmd = LeakyReLU(name="mmd")(h)
                 h = h_mmd
             h = Dropout(self.dr_rate)(h)
 
-        h = Dense(self.x_dim, kernel_initializer=self.init_w, kernel_regularizer=self.regularizer, use_bias=True)(h)
+        h = Dense(self.x_dim, kernel_initializer='glorot_normal', kernel_regularizer=self.regularizer, use_bias=True)(h)
         h = ACTIVATIONS[self.output_activation](h)
 
         decoder_model = Model(inputs=[self.z, self.decoder_labels], outputs=h, name=name)
@@ -183,9 +185,9 @@ class trVAE:
         reconstruction_output = Lambda(lambda x: x, name="kl_mse")(decoder_output)
         mmd_output = Lambda(lambda x: x, name="mmd")(mmd_output)
 
-        self.cvae_model = Model(inputs=inputs,
+        self.trvae_model = Model(inputs=inputs,
                                 outputs=[reconstruction_output, mmd_output],
-                                name="cvae")
+                                name="trvae")
 
     def _calculate_loss(self):
         """
@@ -215,8 +217,8 @@ class trVAE:
                 Nothing will be returned.
         """
         loss, mmd_loss = self._calculate_loss()
-        self.cvae_optimizer = keras.optimizers.Adam(lr=self.lr)
-        self.cvae_model.compile(optimizer=self.cvae_optimizer,
+        self.trvae_optimizer = keras.optimizers.Adam(lr=self.lr)
+        self.trvae_model.compile(optimizer=self.trvae_optimizer,
                                 loss=[loss, mmd_loss])
                                # metrics={self.cvae_model.outputs[0].name: loss,
                                #          self.cvae_model.outputs[1].name: mmd_loss})
@@ -280,7 +282,7 @@ class trVAE:
         adata = remove_sparsity(adata)
 
         x = [adata.X, encoder_labels, decoder_labels]
-        mmd_latent = self.cvae_model.predict(x)[1]
+        mmd_latent = self.trvae_model.predict(x)[1]
         mmd_latent = np.nan_to_num(mmd_latent)
         if return_adata:
             output = anndata.AnnData(X=mmd_latent)
@@ -327,7 +329,7 @@ class trVAE:
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
 
-        reconstructed = self.cvae_model.predict([adata.X, encoder_labels, decoder_labels])[0]
+        reconstructed = self.trvae_model.predict([adata.X, encoder_labels, decoder_labels])[0]
         reconstructed = np.nan_to_num(reconstructed)
 
         if return_adata:
@@ -357,15 +359,15 @@ class trVAE:
             network.restore_model()
             ```
         """
-        self.cvae_model = load_model(filepath=os.path.join(self.model_to_use, "best_model.h5"), compile=False)
-        self.encoder_model = self.cvae_model.get_layer("encoder")
-        self.decoder_model = self.cvae_model.get_layer("decoder")
-        self.decoder_mmd_model = self.cvae_model.get_layer("decoder_mmd")
+        self.trvae_model = load_model(filepath=os.path.join(self.model_to_use, "best_model.h5"), compile=False)
+        self.encoder_model = self.trvae_model.get_layer("encoder")
+        self.decoder_model = self.trvae_model.get_layer("decoder")
+        self.decoder_mmd_model = self.trvae_model.get_layer("decoder_mmd")
         self._loss_function()
 
     def save_model(self):
         os.makedirs(self.model_to_use, exist_ok=True)
-        self.cvae_model.save(os.path.join(self.model_to_use, "best_model.h5"), overwrite=True)
+        self.trvae_model.save(os.path.join(self.model_to_use, "best_model.h5"), overwrite=True)
 
     def train(self, train_adata, valid_adata=None,
               condition_encoder=None, condition_key='condition',
@@ -465,7 +467,7 @@ class trVAE:
             x_valid = [valid_adata.X, valid_labels_onehot, valid_labels_onehot]
             y_valid = [valid_adata.X, valid_labels_encoded]
 
-            history = self.cvae_model.fit(x=x,
+            history = self.trvae_model.fit(x=x,
                                           y=y,
                                           epochs=n_epochs,
                                           batch_size=batch_size,
@@ -474,7 +476,7 @@ class trVAE:
                                           callbacks=callbacks,
                                           verbose=fit_verbose)
         else:
-            history = self.cvae_model.fit(x=x,
+            history = self.trvae_model.fit(x=x,
                                           y=y,
                                           epochs=n_epochs,
                                           batch_size=batch_size,
@@ -525,4 +527,4 @@ class trVAE:
         x = [adata.X, labels_onehot, labels_onehot]
         y = [adata.X, labels_encoded]
 
-        return self.cvae_model.evaluate(x, y, verbose=0)
+        return self.trvae_model.evaluate(x, y, verbose=0)
