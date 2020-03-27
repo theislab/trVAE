@@ -15,7 +15,7 @@ from sklearn.preprocessing import LabelEncoder
 
 from trvae.models._activations import ACTIVATIONS
 from trvae.models._losses import LOSSES
-from trvae.models._utils import sample_z, print_message
+from trvae.models._utils import sample_z, print_message, print_progress
 from trvae.utils import label_encoder, remove_sparsity
 
 log = logging.getLogger(__file__)
@@ -442,10 +442,12 @@ class trVAE:
 
         if verbose > 2:
             callbacks.append(
-                LambdaCallback(on_epoch_end=lambda epoch, logs: print_message(epoch, logs, n_epochs, verbose)))
+                LambdaCallback(on_epoch_end=lambda epoch, logs: print_progress(epoch, logs, n_epochs)))
             fit_verbose = 0
         else:
             fit_verbose = verbose
+            
+            
         if monitor_best:
             os.makedirs(self.model_to_use, exist_ok=True)
             callbacks.append(ModelCheckpoint(filepath=os.path.join(self.model_to_use, "best_model.h5"),
