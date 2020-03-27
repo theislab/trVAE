@@ -103,12 +103,12 @@ def _reduce_mean(x):
 def print_message(epoch, logs, n_epochs=10000, duration=50):
     if epoch % duration == 0:
         print(f"Epoch {epoch + 1}/{n_epochs}:")
-        print(f" - loss: {logs['loss']:.4f} - kl_sse_loss: {logs['kl_mse_loss']:.4f}"
+        print(f" - loss: {logs['loss']:.4f} - kl_mse_loss: {logs['kl_mse_loss']:.4f}"
               f" - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f}"
-              f" - val_kl_sse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
+              f" - val_kl_mse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
         
 def print_progress(epoch, logs, n_epochs=10000):
-    message = f" - loss: {logs['loss']:.4f} - kl_sse_loss: {logs['kl_mse_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f} - val_kl_sse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}"
+    message = f" - loss: {logs['loss']:.4f} - kl_mse_loss: {logs['kl_mse_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f} - val_kl_mse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}"
     _print_progress_bar(epoch + 1, n_epochs, prefix='', suffix=message, decimals=1, length=20)
 
 def _print_progress_bar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
