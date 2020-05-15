@@ -155,6 +155,8 @@ class trVAE:
             if idx == 0:
                 h_mmd = LeakyReLU(name="mmd")(h)
                 h = h_mmd
+            else:
+                h = LeakyReLU()(h)
             h = Dropout(self.dr_rate)(h)
 
         h = Dense(self.x_dim, kernel_initializer='glorot_normal', kernel_regularizer=self.regularizer, use_bias=True)(h)
