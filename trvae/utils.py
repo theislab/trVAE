@@ -11,8 +11,7 @@ def normalize_hvg(adata, target_sum=1e4, size_factors=True, scale_input=True, lo
     adata_count = adata.copy()
 
     if size_factors:
-        sc.pp.normalize_total(adata, target_sum=target_sum)
-        adata.obs['size_factors'] = adata.obs.n_counts / np.median(adata.obs.n_counts)
+        sc.pp.normalize_total(adata, target_sum=target_sum, key_added='size_factors')
     else:
         adata.obs['size_factors'] = 1.0
 
