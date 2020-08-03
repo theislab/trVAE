@@ -3,7 +3,7 @@
 <img align="center" src="./sketch/sketch.png?raw=true">
 
 ## Introduction
-A Keras  implementation of trVAE (transfer Variational Autoencoder) . trVAE is a deep generative model which learns mapping between multiple different styles (conditions). trVAE can be used for style transfer in images, predicting single-cell perturbations responses and batch removal.
+A Keras (tensorflow < 2.0) implementation of trVAE (transfer Variational Autoencoder) . trVAE is a deep generative model which learns mapping between multiple different styles (conditions). trVAE can be used for style transfer in images, predicting single-cell perturbations responses and batch removal.
 
 * For pytorch implementation check [Here](https://github.com/theislab/trvaep)
 ## Getting Started
