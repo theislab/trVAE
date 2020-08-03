@@ -10,7 +10,7 @@ except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
 
 setup(name='trVAE',
-      version='1.1.0',
+      version='1.1.1',
       description='Condition out-of-sample prediction',
       long_description=long_description,
       long_description_content_type="text/markdown",
