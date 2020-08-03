@@ -1,14 +1,12 @@
 from random import shuffle
 
-import anndata
 import numpy as np
 import scanpy as sc
 from scipy import sparse
-from sklearn.preprocessing import LabelEncoder
 
 
-def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True,
-              n_top_genes=2000):
+def normalize_hvg(adata, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True,
+                  n_top_genes=2000):
     if filter_min_counts:
         sc.pp.filter_genes(adata, min_counts=1)
         sc.pp.filter_cells(adata, min_counts=1)
@@ -47,7 +45,31 @@ def normalize(adata, filter_min_counts=True, size_factors=True, normalize_input=
     return adata
 
 
+def remove_sparsity(adata):
+    if sparse.issparse(adata.X):
+        adata.X = adata.X.A
+
+    return adata
+
+
 def train_test_split(adata, train_frac=0.85):
+    """
+        Split ``adata`` into train and test annotated datasets.
+
+        Parameters
+        ----------
+        adata: :class:`~anndata.AnnData`
+            Annotated data matrix.
+        train_frac: float
+            Fraction of observations (cells) to be used in training dataset. Has to be a value between 0 and 1.
+
+        Returns
+        -------
+        train_adata: :class:`~anndata.AnnData`
+            Training annotated dataset.
+        valid_adata: :class:`~anndata.AnnData`
+            Test annotated dataset.
+    """
     train_size = int(adata.shape[0] * train_frac)
     indices = np.arange(adata.shape[0])
     np.random.shuffle(indices)
@@ -60,7 +82,7 @@ def train_test_split(adata, train_frac=0.85):
     return train_data, valid_data
 
 
-def label_encoder(adata, label_encoder=None, condition_key='condition'):
+def label_encoder(adata, le=None, condition_key='condition'):
     """
         Encode labels of Annotated `adata` matrix using sklearn.preprocessing.LabelEncoder class.
         Parameters
@@ -78,21 +100,21 @@ def label_encoder(adata, label_encoder=None, condition_key='condition'):
         >>> train_data = sc.read("./data/train.h5ad")
         >>> train_labels, label_encoder = label_encoder(train_data)
     """
-    if label_encoder is None:
-        le = LabelEncoder()
-        labels = le.fit_transform(adata.obs[condition_key].tolist())
-    else:
-        le = label_encoder
-        labels = np.zeros(adata.shape[0])
-        for condition, label in label_encoder.items():
-            labels[adata.obs[condition_key] == condition] = label
+    if le is not None:
+        assert isinstance(le, dict)
+
+    unique_conditions = np.unique(adata.obs[condition_key]).tolist()
+    if le is None:
+        le = dict()
+        for idx, condition in enumerate(unique_conditions):
+            le[condition] = idx
+
+    assert set(unique_conditions).issubset(list(le.keys()))
+    labels = np.zeros(adata.shape[0])
+    for condition, label in le.items():
+        labels[adata.obs[condition_key] == condition] = label
+
     return labels.reshape(-1, 1), le
-
-
-def remove_sparsity(adata):
-    if sparse.issparse(adata.X):
-        adata.X = adata.X.A
-    return adata
 
 
 def create_dictionary(conditions, target_conditions=[]):
@@ -104,38 +126,3 @@ def create_dictionary(conditions, target_conditions=[]):
     for idx, condition in enumerate(conditions):
         dictionary[condition] = idx
     return dictionary
-
-
-def shuffle_adata(adata):
-    """
-        Shuffles the `adata`.
-
-        # Parameters
-        adata: `~anndata.AnnData`
-            Annotated data matrix.
-        labels: numpy nd-array
-            list of encoded labels
-
-        # Returns
-            adata: `~anndata.AnnData`
-                Shuffled annotated data matrix.
-            labels: numpy nd-array
-                Array of shuffled labels if `labels` is not None.
-
-        # Example
-        ```python
-        import scgen
-        import anndata
-        import pandas as pd
-        train_data = anndata.read("./data/train.h5ad")
-        train_labels = pd.read_csv("./data/train_labels.csv", header=None)
-        train_data, train_labels = shuffle_data(train_data, train_labels)
-        ```
-    """
-    adata = remove_sparsity(adata)
-
-    ind_list = [i for i in range(adata.shape[0])]
-    shuffle(ind_list)
-    new_adata = adata[ind_list, :]
-    return new_adata
-

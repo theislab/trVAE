@@ -2,12 +2,11 @@ get_version
 anndata
 scanpy
 adjustText
-tensorflow
+tensorflow==1.15.2
 numpy
 scipy
 pandas
-keras
+keras==2.2.4
 matplotlib
 seaborn
-keras_vggface
 opencv-python

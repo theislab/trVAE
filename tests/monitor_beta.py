@@ -6,7 +6,7 @@ import scanpy as sc
 from keras import backend as K
 
 import trvae
-from trvae.utils import normalize, train_test_split
+from trvae.utils import normalize_hvg, train_test_split
 
 DATASETS = {
     "Kang": {'name': 'kang',

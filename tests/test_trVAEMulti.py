@@ -7,7 +7,7 @@ import scanpy as sc
 from scipy import sparse
 
 import trvae
-from trvae.utils import normalize, train_test_split
+from trvae.utils import normalize_hvg, train_test_split
 
 if not os.getcwd().endswith("tests"):
     os.chdir("./tests")
@@ -159,8 +159,8 @@ def train_network(data_dict=None,
     else:
         adata = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if loss_fn != 'mse':
-            adata = normalize(adata,
-                              filter_min_counts=False, normalize_input=False, logtrans_input=True)
+            adata = normalize_hvg(adata,
+                                  filter_min_counts=False, normalize_input=False, logtrans_input=True)
         train_data, valid_data = train_test_split(adata, 0.80)
 
     spec_cell_type = data_dict.get("spec_cell_types", None)
@@ -223,8 +223,8 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
     else:
         data = sc.read(f"../data/{data_name}/{data_name}.h5ad")
         if loss_fn != 'mse':
-            data = normalize(data,
-                             filter_min_counts=False, normalize_input=False, logtrans_input=True)
+            data = normalize_hvg(data,
+                                 filter_min_counts=False, normalize_input=False, logtrans_input=True)
 
     cell_types = data.obs[cell_type_key].unique().tolist()
 
@@ -264,8 +264,8 @@ def visualize_trained_network_results(data_dict, z_dim=100, mmd_dimension=128, l
         for i in range(n_conditions):
             fake_labels.append(np.zeros(train_labels.shape) + i)
 
-        latent_with_true_labels = network.to_latent(feed_data.X, train_labels)
-        latent_with_fake_labels = [network.to_latent(feed_data.X, fake_labels[i]) for i in
+        latent_with_true_labels = network.to_z_latent(feed_data.X, train_labels)
+        latent_with_fake_labels = [network.to_z_latent(feed_data.X, fake_labels[i]) for i in
                                    range(n_conditions)]
         mmd_latent_with_true_labels = network.to_mmd_layer(feed_data, train_labels, feed_fake=0)
         mmd_latent_with_fake_labels = [network.to_mmd_layer(feed_data, train_labels, feed_fake=i) for i in
@@ -501,7 +501,7 @@ def visualize_batch_correction(data_dict, z_dim=100, mmd_dimension=128):
 
         mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=0)
 
-        latent_with_true_labels = network.to_latent(feed_data, train_labels)
+        latent_with_true_labels = network.to_z_latent(feed_data, train_labels)
 
         import matplotlib as mpl
         mpl.rcParams.update(mpl.rcParamsDefault)

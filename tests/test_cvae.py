@@ -113,8 +113,8 @@ def visualize_trained_network_results(data_dict, z_dim=100):
         train_labels, _ = trvae.label_encoder(data)
         fake_labels = np.ones(train_labels.shape)
 
-        latent_with_true_labels = network.to_latent(feed_data, train_labels)
-        latent_with_fake_labels = network.to_latent(feed_data, fake_labels)
+        latent_with_true_labels = network.to_z_latent(feed_data, train_labels)
+        latent_with_fake_labels = network.to_z_latent(feed_data, fake_labels)
         mmd_latent_with_true_labels = network.to_mmd_layer(feed_data, train_labels)
         mmd_latent_with_fake_labels = network.to_mmd_layer(feed_data, fake_labels)
 

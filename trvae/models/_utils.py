@@ -106,12 +106,25 @@ def print_message(epoch, logs, n_epochs=10000, duration=50):
         print(f" - loss: {logs['loss']:.4f} - kl_mse_loss: {logs['kl_mse_loss']:.4f}"
               f" - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f}"
               f" - val_kl_mse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}")
-        
+
+
 def print_progress(epoch, logs, n_epochs=10000):
-    message = f" - loss: {logs['loss']:.4f} - kl_mse_loss: {logs['kl_mse_loss']:.4f} - mmd_loss: {logs['mmd_loss']:.4f} - val_loss: {logs['val_loss']:.4f} - val_kl_mse_loss: {logs['val_kl_mse_loss']:.4f} - val_mmd_loss: {logs['val_mmd_loss']:.4f}"
+    message = f' - loss: {logs["loss"]:.4f}'
+    train_keys = [key for key in sorted(list(logs.keys())) if (not key.startswith('val_') and key != 'loss')]
+
+    for key in train_keys:
+        message += f' - {key}: {logs[key]:.4f}'
+
+    message += f' - val_loss: {logs["val_loss"]:.4f}'
+    valid_keys = [key for key in sorted(list(logs.keys())) if (key.startswith('val_') and key != 'val_loss')]
+
+    for key in valid_keys:
+        message += f' - {key}: {logs[key]:.4f}'
+
     _print_progress_bar(epoch + 1, n_epochs, prefix='', suffix=message, decimals=1, length=20)
 
-def _print_progress_bar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
+
+def _print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filled_len = int(length * iteration // total)
     bar = fill * filled_len + '-' * (length - filled_len)

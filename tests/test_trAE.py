@@ -106,8 +106,8 @@ def visualize_trained_network_results(data_dict, z_dim=100):
 
         feed_data = data.X
 
-        latent_with_true_labels = network.to_latent(feed_data)
-        latent_with_fake_labels = network.to_latent(feed_data)
+        latent_with_true_labels = network.to_z_latent(feed_data)
+        latent_with_fake_labels = network.to_z_latent(feed_data)
 
         cell_type_ctrl = cell_type_adata.copy()[cell_type_adata.obs['condition'] == source_key]
         print(cell_type_ctrl.shape, cell_type_adata.shape)

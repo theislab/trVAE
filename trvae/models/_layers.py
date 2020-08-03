@@ -1,10 +1,9 @@
-#The code here is exact copy taken from https://github.com/theislab/dca, all the credits go to 
-#@gokceneraslan
-
+# The code here is exact copy taken from https://github.com/theislab/dca, all the credits go to
+# @gokceneraslan
 
 import tensorflow as tf
-from tf.keras import backend as K
-from tf.keras.engine.topology import Layer
+from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Layer
 
 
 class SliceLayer(Layer):
@@ -42,3 +41,9 @@ class ColwiseMultLayer(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape[0]
+
+
+LAYERS = {
+    "SliceLayer": SliceLayer,
+    "ColWiseMultLayer": ColwiseMultLayer,
+}

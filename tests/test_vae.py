@@ -110,7 +110,7 @@ def visualize_trained_network_results(data_dict, z_dim=100, subsample=None, arch
 
     feed_data = data.X
 
-    latent = network.to_latent(feed_data)
+    latent = network.to_z_latent(feed_data)
 
     latent = sc.AnnData(X=latent)
     latent.obs[cell_type_key] = data.obs[cell_type_key].values

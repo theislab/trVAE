@@ -99,8 +99,8 @@ def visualize_trained_network_results_multimodal(data_dict, z_dim=100):
     feed_data = data.X
     train_labels, _ = trvae.label_encoder(data)
     fake_labels = np.ones(train_labels.shape)
-    latent_with_true_labels = network.to_latent(feed_data, train_labels)
-    latent_with_fake_labels = network.to_latent(feed_data, fake_labels)
+    latent_with_true_labels = network.to_z_latent(feed_data, train_labels)
+    latent_with_fake_labels = network.to_z_latent(feed_data, fake_labels)
     mmd_latent_with_true_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=False)
     mmd_latent_with_fake_labels = network.to_mmd_layer(network, feed_data, train_labels, feed_fake=True)
 

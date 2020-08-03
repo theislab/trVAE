@@ -491,8 +491,8 @@ def visualize_trained_network_results(data_dict, z_dim=100, arch_style=1, prepro
 
     train_data_feed = np.reshape(train_images, (-1, img_width, img_height, n_channels))
 
-    latent_with_true_labels = network.to_latent(train_data_feed, train_labels)
-    latent_with_fake_labels = network.to_latent(train_data_feed, fake_labels)
+    latent_with_true_labels = network.to_z_latent(train_data_feed, train_labels)
+    latent_with_fake_labels = network.to_z_latent(train_data_feed, fake_labels)
     mmd_latent_with_true_labels = network.to_mmd_layer(network, train_data_feed, train_labels, feed_fake=False)
     mmd_latent_with_fake_labels = network.to_mmd_layer(network, train_data_feed, train_labels, feed_fake=True)
 
