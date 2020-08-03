@@ -9,8 +9,20 @@ A Keras  implementation of trVAE (transfer Variational Autoencoder) . trVAE is a
 ## Getting Started
 
 ## Installation
+Before installing trVAE package, we suggest you to create a new Python 3.6 (or 3.7) 
+virtual env (or conda env) with the following steps:  
 
-### Installation with pip
+### 1.  Installing virtualenv
+```bash
+pip install virtualenv
+```
+
+### 2. Create a virtual with Python 3.6
+```bash
+virtualenv trvae-env --python=python3.6 
+```
+
+### 3. trVAE package installation
 To install the latest version from PyPI, simply use the following bash script:
 ```bash
 pip install trvae
@@ -22,10 +34,10 @@ pip install git+https://github.com/theislab/trvae.git
 
 or you can first install flit and clone this repository:
 ```bash
-pip install flit
 git clone https://github.com/theislab/trVAE
 cd trVAE
-flit install
+pip install -r requirements
+python setup.py install 
 ```
 
 ## Examples
