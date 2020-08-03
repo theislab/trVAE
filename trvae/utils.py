@@ -5,16 +5,13 @@ import scanpy as sc
 from scipy import sparse
 
 
-def normalize_hvg(adata, filter_min_counts=True, size_factors=True, normalize_input=True, logtrans_input=True,
+def normalize_hvg(adata, target_sum=1e4, size_factors=True, scale_input=True, logtrans_input=True,
                   n_top_genes=2000):
-    if filter_min_counts:
-        sc.pp.filter_genes(adata, min_counts=1)
-        sc.pp.filter_cells(adata, min_counts=1)
 
     adata_count = adata.copy()
 
     if size_factors:
-        sc.pp.normalize_per_cell(adata)
+        sc.pp.normalize_total(adata, target_sum=target_sum)
         adata.obs['size_factors'] = adata.obs.n_counts / np.median(adata.obs.n_counts)
     else:
         adata.obs['size_factors'] = 1.0
@@ -28,7 +25,7 @@ def normalize_hvg(adata, filter_min_counts=True, size_factors=True, normalize_in
         adata = adata[:, genes]
         adata_count = adata_count[:, genes]
 
-    if normalize_input:
+    if scale_input:
         sc.pp.scale(adata)
 
     if sparse.issparse(adata_count.X):
