@@ -2,7 +2,7 @@ from pathlib import Path
 
 from setuptools import setup, find_packages
 
-long_description = Path('README.rst').read_text('utf-8')
+long_description = Path('README.md').read_text('utf-8')
 
 try:
     from scarches import __author__, __email__
