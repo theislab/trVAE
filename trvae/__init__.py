@@ -1,4 +1,6 @@
 """trVAE - Regularized Conditional Variational Autoencoders"""
+import warnings
+warnings.filterwarnings(action='ignore')
 
 from . import models
 from . import utils as tl
