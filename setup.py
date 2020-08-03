@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 long_description = Path('README.md').read_text('utf-8')
 
 try:
-    from scarches import __author__, __email__
+    from trvae import __author__, __email__
 except ImportError:  # Deps not yet installed
     __author__ = __email__ = ''
 
