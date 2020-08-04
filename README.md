@@ -1,4 +1,4 @@
-# trVAE [![PyPI version](https://badge.fury.io/py/trvae.svg)](https://badge.fury.io/py/trvae) [![Build Status](https://travis-ci.org/theislab/trVAE.svg?branch=master)](https://travis-ci.org/theislab/trVAE)
+# trVAE [![PyPI version](https://badge.fury.io/py/trVAE.svg)](https://badge.fury.io/py/trVAE) [![Build Status](https://travis-ci.org/theislab/trVAE.svg?branch=master)](https://travis-ci.org/theislab/trVAE)
 
 <img align="center" src="./sketch/sketch.png?raw=true">
 
