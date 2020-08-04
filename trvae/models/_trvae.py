@@ -384,7 +384,7 @@ class trVAE(object):
         else:
             return self.to_mmd_layer(adata, batch_key)
 
-    def predict(self, adata, encoder_labels, decoder_labels):
+    def predict(self, adata, condition_key):
         """Feeds ``adata`` to trVAE and produces the reconstructed data.
 
             Parameters
@@ -402,6 +402,9 @@ class trVAE(object):
                 Annotated data of predicted cells in primary space.
         """
         adata = remove_sparsity(adata)
+
+        encoder_labels, _ = label_encoder(adata, self.condition_encoder, condition_key)
+        decoder_labels, _ = label_encoder(adata, self.condition_encoder, condition_key)
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
