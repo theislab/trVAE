@@ -405,7 +405,7 @@ class trVAE(object):
 
         encoder_labels, _ = label_encoder(adata, self.condition_encoder, condition_key)
         if target_condition is not None:
-            decoder_labels, _ = np.zeros_like(encoder_labels) + self.condition_encoder[
+            decoder_labels = np.zeros_like(encoder_labels) + self.condition_encoder[
                 target_condition]
         else:
             decoder_labels, _ = label_encoder(adata, self.condition_encoder, condition_key)
