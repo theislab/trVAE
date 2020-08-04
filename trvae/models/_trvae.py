@@ -384,16 +384,16 @@ class trVAE(object):
         else:
             return self.to_mmd_layer(adata, batch_key)
 
-    def predict(self, adata, condition_key):
+    def predict(self, adata, condition_key, target_condition=None):
         """Feeds ``adata`` to trVAE and produces the reconstructed data.
 
             Parameters
             ----------
             adata: :class:`~anndata.AnnData`
                 Annotated data matrix whether in primary space.
-            encoder_labels: :class:`~numpy.ndarray`
+            condition_key: str
                 :class:`~numpy.ndarray` of labels to be fed as trVAE'sencoder condition array.
-            decoder_labels: :class:`~numpy.ndarray`
+            target_condition: str
                 :class:`~numpy.ndarray` of labels to be fed as trVAE'sdecoder condition array.
 
             Returns
@@ -404,7 +404,11 @@ class trVAE(object):
         adata = remove_sparsity(adata)
 
         encoder_labels, _ = label_encoder(adata, self.condition_encoder, condition_key)
-        decoder_labels, _ = label_encoder(adata, self.condition_encoder, condition_key)
+        if target_condition is not None:
+            decoder_labels, _ = np.zeros_like(encoder_labels) + self.condition_encoder[
+                target_condition]
+        else:
+            decoder_labels, _ = label_encoder(adata, self.condition_encoder, condition_key)
 
         encoder_labels = to_categorical(encoder_labels, num_classes=self.n_conditions)
         decoder_labels = to_categorical(decoder_labels, num_classes=self.n_conditions)
