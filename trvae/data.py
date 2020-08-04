@@ -1,7 +1,4 @@
 import os
-
-from PIL import Image
-
 import scanpy as sc
 
 
