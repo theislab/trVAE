@@ -747,7 +747,7 @@ class trVAE(object):
         es_patience, best_val_loss = 0, 1e10
         for i in range(n_epochs):
             train_loss = train_recon_loss = train_mmd_loss = 0.0
-            for j in range(min(500, train_adata.shape[0] // batch_size)):
+            for j in range(min(200, train_adata.shape[0] // batch_size)):
                 batch_indices = np.random.choice(train_adata.shape[0], batch_size)
 
                 batch_expr = train_expr[batch_indices, :].A if is_sparse else train_expr[batch_indices, :]
