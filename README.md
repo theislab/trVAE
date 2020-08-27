@@ -49,5 +49,6 @@ python setup.py install
 ## Reproducing paper results:
 In order to reproduce paper results visit [here](https://github.com/Naghipourfar/trVAE_reproducibility).
 
-
+## Reference
+If you found trVAE useful please consider citing  [preprint](https://arxiv.org/abs/1910.01791). 
 
