@@ -1,5 +1,8 @@
 # trVAE [![PyPI version](https://badge.fury.io/py/trVAE.svg)](https://badge.fury.io/py/trVAE) [![Build Status](https://travis-ci.org/theislab/trVAE.svg?branch=master)](https://travis-ci.org/theislab/trVAE) [![Downloads](https://pepy.tech/badge/trvae)](https://pepy.tech/project/trvae)
 
+*Conditional out-of-distribution generation for unpaired data using transfer VAE [(Bioinformatics, 2020)](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1663-x).*
+
+
 <img align="center" src="./sketch/sketch.png?raw=true">
 
 ## Introduction
@@ -50,6 +53,4 @@ python setup.py install
 In order to reproduce paper results visit [here](https://github.com/Naghipourfar/trVAE_reproducibility).
 
 ## Reference
-If you found trVAE useful please consider citing:
-
-Mohammad Lotfollahi, Mohsen Naghipourfar, Fabian J Theis, F Alexander Wolf, Conditional out-of-distribution generation for unpaired data using transfer VAE, Bioinformatics, Volume 36, Issue Supplement_2, December 2020, Pages i610–i617.
+If you found trVAE useful please consider citing the published [manuscript.](https://academic.oup.com/bioinformatics/article/36/Supplement_2/i610/6055927) 
