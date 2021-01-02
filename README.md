@@ -52,5 +52,5 @@ In order to reproduce paper results visit [here](https://github.com/Naghipourfar
 ## Reference
 If you found trVAE useful please consider citing:
 
-[Mohammad Lotfollahi, Mohsen Naghipourfar, Fabian J Theis, F Alexander Wolf, Conditional out-of-distribution generation for unpaired data using transfer VAE, Bioinformatics, Volume 36, Issue Supplement_2, December 2020, Pages i610–i617.](https://academic.oup.com/bioinformatics/article/36/Supplement_2/i610/6055927?guestAccessKey=71253caa-1779-40e8-8597-c217db539fb5).
+[Mohammad Lotfollahi, Mohsen Naghipourfar, Fabian J Theis, F Alexander Wolf, Conditional out-of-distribution generation for unpaired data using transfer VAE, Bioinformatics, Volume 36, Issue Supplement_2, December 2020, Pages i610–i617.](https://academic.oup.com/bioinformatics/article/36/Supplement_2/i610/6055927?guestAccessKey=71253caa-1779-40e8-8597-c217db539fb5)
 
