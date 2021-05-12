@@ -2,7 +2,7 @@
 
 **Conditional out-of-distribution generation for unpaired data using transfer VAE [(Bioinformatics, 2020)](https://doi.org/10.1093/bioinformatics/btaa800).*
 
-*Note: We have upgraded trVAE to a faste and more efficient implementation [Here](https://github.com/theislab/scarches)**
+**Note: We have upgraded trVAE to a faster and more efficient implementation. Please refer to [Here](https://github.com/theislab/scarches)**
 
 <img align="center" src="./sketch/sketch.png?raw=true">
 
