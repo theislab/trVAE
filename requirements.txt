@@ -1,7 +1,7 @@
 anndata
 scanpy
 adjustText
-tensorflow==2.5.1
+tensorflow>=2.5.3
 numpy
 scipy
 pandas
